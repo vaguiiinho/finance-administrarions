@@ -24,4 +24,5 @@ Regras inegociáveis:
 - Todo código novo exige teste. Cobertura mínima de 80% em domain/application.
 
 ## Fluxo de trabalho para features
-Use `/feature <descrição>`. Nunca pule a etapa de aprovação do design.
+planner → architect → ui-designer (só se houver UI) → [aprovação] → tester (red)
+→ backend-dev / frontend-dev → tester (verifica) → code-reviewer → doc-writer
