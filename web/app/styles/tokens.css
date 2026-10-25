@@ -1,0 +1,74 @@
+/*
+ * Tokens de tema (ADR 9.5, design 1.2). Cada token e declarado UMA vez com light-dark(claro, escuro).
+ * Sem preferencia, o color-scheme segue o sistema (ao vivo); com preferencia, o servidor renderiza
+ * o atributo de tema no elemento raiz. Este e o unico arquivo que pode conter cores literais.
+ */
+:root {
+  color-scheme: light dark;
+
+  /* superficies e texto */
+  --bg: light-dark(#F5F7FB, #0B0F1A);
+  --surface: light-dark(#FFFFFF, #121829);
+  --surface-2: light-dark(#EEF1F7, #18203A);
+  --surface-active: light-dark(#E2E7F0, #222B4A);
+  --input-bg: light-dark(#FFFFFF, #0B0F1A);
+  --header-bg: light-dark(rgb(255 255 255 / 0.95), rgb(18 24 41 / 0.95));
+  --border: light-dark(#DDE2EC, #1F2940);
+  --border-strong: light-dark(#737D92, #6E7891);
+  --text: light-dark(#0F172A, #E6EAF5);
+  --text-muted: light-dark(#475569, #8B95AD);
+  --text-disabled: light-dark(#737D92, #6E7891);
+  --skeleton: light-dark(#E2E7F0, #222B4A);
+  --scrim: light-dark(rgb(15 23 42 / 0.45), rgb(11 15 26 / 0.72));
+
+  /* acao, foco e links */
+  --primary: light-dark(#6366F1, #6366F1);
+  --primary-strong: light-dark(#4F46E5, #4F46E5);
+  --primary-strong-hover: light-dark(#4338CA, #4338CA);
+  --primary-strong-active: light-dark(#3730A3, #3730A3);
+  --primary-border: light-dark(#4F46E5, #818CF8);
+  --on-primary: light-dark(#FFFFFF, #FFFFFF);
+  --accent: light-dark(#0E7490, #22D3EE);
+  --focus-color: light-dark(#0E7490, #22D3EE);
+  --focus-ring: 2px solid var(--focus-color);
+  --focus-offset: 2px;
+
+  /* semantica de status e tipo */
+  --success: light-dark(#059669, #34D399);
+  --success-text: light-dark(#047857, #34D399);
+  --warning: light-dark(#B45309, #FBBF24);
+  --warning-text: light-dark(#92400E, #FBBF24);
+  --danger: light-dark(#DC2626, #F87171);
+  --danger-text: light-dark(#B91C1C, #F87171);
+  --income: light-dark(#1D4ED8, #60A5FA);
+  --expense: light-dark(#BE123C, #FB7185);
+
+  /* graficos, tooltip e barras de rolagem */
+  --chart-income: light-dark(#1D4ED8, #60A5FA);
+  --chart-paid: light-dark(#059669, #34D399);
+  --chart-pending: light-dark(#B45309, #FBBF24);
+  --chart-balance-realized: light-dark(#6D28D9, #A78BFA);
+  --chart-balance-projected: light-dark(#BE185D, #F472B6);
+  --chart-axis: light-dark(#475569, #8B95AD);
+  --chart-grid: light-dark(#DDE2EC, #2A3552);
+  --chart-zero-line: light-dark(#475569, #8B95AD);
+  --chart-cursor: light-dark(#EEF1F7, #18203A);
+  --chart-1: light-dark(#0E7490, #22D3EE);
+  --chart-2: light-dark(#4F46E5, #818CF8);
+  --chart-3: light-dark(#BE185D, #F472B6);
+  --chart-4: light-dark(#4D7C0F, #A3E635);
+  --chart-5: light-dark(#C2410C, #FB923C);
+  --chart-6: light-dark(#64748B, #8B95AD);
+  --tooltip-bg: light-dark(#FFFFFF, #18203A);
+  --tooltip-border: light-dark(#737D92, #6E7891);
+  --scrollbar-thumb: light-dark(#737D92, #6E7891);
+  --scrollbar-track: light-dark(#EEF1F7, #18203A);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}

@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# web
 
-## Getting Started
+Interface Next.js 16 (App Router) da aplicação de finanças. Visão geral e como rodar o projeto: [`../README.md`](../README.md).
 
-First, run the development server:
+## Rodar
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+API_URL=http://127.0.0.1:3001 npm run dev    # ver .env.example; a API deve rodar com PORT=3001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`API_URL` é lida apenas no servidor (o navegador nunca chama a API). Padrão do código: `http://127.0.0.1:3001`. A raiz `/` redireciona para `/entries`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Rotas
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Rota | Conteúdo |
+|---|---|
+| `/entries` | Resumo do mês e abas Despesas, Faturas e Receitas; drawer "Novo lançamento" |
+| `/cards` | Cartões (criar e editar) |
+| `/dashboard` | Série de 12 meses e distribuição por categoria (Recharts) |
 
-## Learn More
+## Testes
 
-To learn more about Next.js, take a look at the following resources:
+| Comando | Descrição |
+|---|---|
+| `npm test` | Vitest (inclui a matriz de contraste dos tokens nos dois temas) |
+| `npm run test:cov` | Vitest com cobertura |
+| `npm run test:e2e` | Playwright + axe (Chromium) contra o stub `e2e/stub-api`; sobe o stub (4010) e o `next dev` (3100) |
+| `npm run lint` | ESLint |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Para o Playwright: `npx playwright install-deps` (bibliotecas do sistema) e `npx playwright install chromium`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tema
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Tokens em `app/styles/tokens.css` (`light-dark()`); preferência no cookie `theme`, lida no servidor pelo `app/layout.tsx`. Ver `../docs/design/design-system.md`.

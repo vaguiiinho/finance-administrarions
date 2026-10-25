@@ -18,6 +18,20 @@
     "skipLibCheck": true,
     "strict": true,
     "strictPropertyInitialization": false,
-    "types": ["vitest/globals", "node"]
+    "types": [
+      "vitest/globals",
+      "node"
+    ],
+    "paths": {
+      "@test/*": [
+        "./test/*"
+      ],
+      "@shared/*": [
+        "./src/shared/*"
+      ],
+      "@finance/*": [
+        "./src/modules/finance/*"
+      ]
+    }
   }
 }
