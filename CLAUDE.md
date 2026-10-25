@@ -2,6 +2,13 @@
 
 `api` (NestJS , Prisma, PostgreSQL) e `web` (Next.js App Router).
 
+## Decisões padrão (não perguntar)
+- Valores monetários trafegam como string decimal ("1234.56"); Decimal(12,2) no banco.
+- Datas em UTC no banco/API; exibição em America/Sao_Paulo.
+- Gráficos: Recharts.
+- Erros HTTP no formato { code, message, details }; id inexistente → 404.
+- IDs: UUID v7.
+
 ## Arquitetura (api)
 Clean Architecture + DDD. Dependências apontam sempre para dentro:
 

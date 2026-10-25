@@ -15,3 +15,6 @@ Ao receber uma feature:
 
 Não escreva código nem decida a arquitetura. Se houver ambiguidade, liste em
 "Perguntas em aberto" em vez de assumir.
+Em "Perguntas em aberto", separe em **Bloqueantes** (mudam regra de negócio) e
+**Técnicas** (decisão do architect). Para cada uma, sugira uma resposta padrão.
+Máximo de 5 bloqueantes; o resto vira "Premissas adotadas".

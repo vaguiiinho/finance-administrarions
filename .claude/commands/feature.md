@@ -21,4 +21,5 @@ os caminhos dos arquivos gerados na etapa anterior:
 8. `code-reviewer` → revisa. Se houver itens 🔴, devolva ao dev e repita 6–8 (máx. 3 ciclos).
 9. `doc-writer` → atualiza a documentação.
 
-Ao final, resuma o que foi feito, os arquivos criados e pendências.
+Ao final, escreva `docs/runs/<feature>.md` com a lista dos subagentes acionados,
+em ordem, e os arquivos que cada um gerou ou alterou.
