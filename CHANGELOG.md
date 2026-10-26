@@ -9,6 +9,7 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 #### Added
 
+- Combobox de categoria com botão de seta, placeholder "Selecione ou digite uma nova", estado vazio "Nenhuma categoria ainda. Digite para criar." e opção `Criar categoria "<texto>"` (substitui `Usar`); foco não abre a lista (F1).
 - Follow-ups de UX: combobox ARIA de categoria com a opção `Usar "<texto>"`; destaque de ~2 s do lançamento recém-criado, respeitando mês, aba e filtros; faixa do mês selecionado; scroll-snap; uma única parada de Tab nos gráficos, com setas navegando e exibindo o tooltip; destaque do donut pela legenda; animações dos gráficos sob `prefers-reduced-motion`.
 - Token `--accent-active` (claro `#0C6980`, escuro `#22D3EE`) para o `:active` do botão terciário (5,05:1 no claro).
 - Suíte Playwright + axe executada de ponta a ponta (194 testes): botões em todos os estados (CDP `forcePseudoState`), gráficos nos dois temas, cartões (edição e 409), tema com diálogo aberto.

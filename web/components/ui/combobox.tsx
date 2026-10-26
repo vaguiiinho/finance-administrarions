@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type InputHTMLAttributes, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type InputHTMLAttributes, type KeyboardEvent } from "react";
 import { FieldShell } from "./fields";
 
 interface CategoryComboboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "role"> {
@@ -18,7 +18,7 @@ interface Option {
   key: string;
   label: string;
   value: string;
-  /** "Usar "<texto>"" para categoria nova */
+  /** `Criar categoria "<texto>"` para categoria nova */
   create?: boolean;
 }
 
@@ -26,14 +26,15 @@ const norm = (s: string) => s.trim().toLowerCase();
 
 /**
  * Combobox ARIA 1.2 (input `role=combobox` + `listbox`): busca nas categorias existentes (sem diferenciar maiusculas, B1)
- * e a opcao `Usar "<texto>"` para categoria nova. Setas/Home/End navegam, Enter escolhe, Esc fecha so a lista.
+ * e a opcao `Criar categoria "<texto>"` para categoria nova. Setas/Home/End navegam, Enter escolhe, Esc fecha so a lista.
  * A lista abre ao digitar, com as setas ou ao clicar (inclusive depois de Esc); focar sem interagir nao abre (F1).
- * O valor continua sendo texto livre: sem selecionar nada, o que foi digitado vale.
+ * Um botao de seta (fora da ordem de Tab, foco fica no input) alterna a lista. O valor continua sendo texto livre: sem selecionar nada, o que foi digitado vale.
  */
 export function CategoryCombobox({ label, required, error, help, value, onValueChange, options, onBlur, onFocus, onClick, onKeyDown: onKeyDownProp, ...input }: CategoryComboboxProps) {
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
   const inert = Boolean(input.readOnly || input.disabled);
 
   const items = useMemo<Option[]>(() => {
@@ -44,7 +45,7 @@ export function CategoryCombobox({ label, required, error, help, value, onValueC
     const matches = unique.filter((o) => norm(o).includes(query)).map((o) => ({ key: `o-${norm(o)}`, label: o, value: o }));
     const exact = options.some((o) => norm(o) === query);
     const trimmed = value.trim();
-    return trimmed && !exact ? [...matches, { key: "create", label: `Usar "${trimmed}"`, value: trimmed, create: true }] : matches;
+    return trimmed && !exact ? [...matches, { key: "create", label: `Criar categoria "${trimmed}"`, value: trimmed, create: true }] : matches;
   }, [options, value]);
 
   const choose = (option: Option) => {
@@ -96,7 +97,9 @@ export function CategoryCombobox({ label, required, error, help, value, onValueC
     }
   };
 
-  const expanded = open && !inert && items.length > 0;
+  // sem nenhuma categoria e campo vazio: linha informativa (option desabilitada), fora da navegacao por setas
+  const emptyHint = options.length === 0 && items.length === 0;
+  const expanded = open && !inert && (items.length > 0 || emptyHint);
 
   // a opcao ativa sempre fica visivel na rolagem da lista
   useEffect(() => {
@@ -109,6 +112,7 @@ export function CategoryCombobox({ label, required, error, help, value, onValueC
         <div className="relative">
           <input
             {...input}
+            ref={inputRef}
             id={id}
             type="text"
             role="combobox"
@@ -120,7 +124,8 @@ export function CategoryCombobox({ label, required, error, help, value, onValueC
             aria-describedby={describedBy}
             aria-required={required || undefined}
             autoComplete="off"
-            className="field"
+            className="field pr-11"
+            placeholder={input.placeholder ?? "Selecione ou digite uma nova"}
             value={value}
             onChange={(e) => {
               if (inert) return;
@@ -140,6 +145,27 @@ export function CategoryCombobox({ label, required, error, help, value, onValueC
             }}
             onKeyDown={onKeyDown}
           />
+          <button
+            type="button"
+            tabIndex={-1}
+            aria-label="Mostrar categorias"
+            aria-controls={listId}
+            aria-expanded={expanded}
+            disabled={inert}
+            // mousedown nao tira o foco do input; o clique alterna a lista
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              if (inert) return;
+              inputRef.current?.focus();
+              setActive(-1);
+              setOpen(!expanded);
+            }}
+            className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-lg text-text-muted hover:text-text disabled:cursor-not-allowed"
+          >
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={expanded ? "rotate-180" : ""}>
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
           <ul
             id={listId}
             role="listbox"
@@ -147,6 +173,11 @@ export function CategoryCombobox({ label, required, error, help, value, onValueC
             hidden={!expanded}
             className="absolute inset-x-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border-strong bg-surface py-1 shadow-lg"
           >
+            {expanded && emptyHint ? (
+              <li role="option" aria-disabled="true" aria-selected="false" className="flex min-h-11 items-center px-3 text-text-muted">
+                Nenhuma categoria ainda. Digite para criar.
+              </li>
+            ) : null}
             {expanded
               ? items.map((option, index) => (
                   <li

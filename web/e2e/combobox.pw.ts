@@ -37,7 +37,7 @@ test("F1: a lista abre ao digitar, com seta para baixo e com clique; Esc fecha s
   await category.fill("alim");
   await expect(dialog.getByRole("option", { name: "Alimentação" })).toBeVisible();
   await category.fill("Lazer");
-  await expect(dialog.getByRole("option", { name: 'Usar "Lazer"' })).toBeVisible();
+  await expect(dialog.getByRole("option", { name: 'Criar categoria "Lazer"' })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");

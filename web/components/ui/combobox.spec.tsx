@@ -34,13 +34,13 @@ describe("CategoryCombobox (design 3.9, ARIA combobox + listbox)", () => {
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Alimentação", "Moradia", "Mercado"]);
   });
 
-  it("busca sem diferenciar maiusculas e com trim; opcao `Usar \"texto\"` so para categoria nova", async () => {
+  it("busca sem diferenciar maiusculas e com trim; opcao `Criar categoria \"texto\"` so para categoria nova", async () => {
     render(<Harness />);
     await userEvent.type(input(), "  MER");
-    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Mercado", 'Usar "MER"']);
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Mercado", 'Criar categoria "MER"']);
     await userEvent.clear(input());
     await userEvent.type(input(), "moradia");
-    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Moradia"]); // igual (case-insensitive): sem "Usar"
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Moradia"]); // igual (case-insensitive): sem "Criar"
   });
 
   it("teclado: setas navegam com aria-activedescendant, Enter escolhe, Home/End, Esc fecha so a lista", async () => {
@@ -69,11 +69,11 @@ describe("CategoryCombobox (design 3.9, ARIA combobox + listbox)", () => {
     expect(escape).not.toHaveBeenCalled(); // nao propaga (nao fecha o drawer)
   });
 
-  it("Enter sem opcao ativa mantem o texto livre; escolher `Usar` grava o texto sem espacos nas pontas", async () => {
+  it("Enter sem opcao ativa mantem o texto livre; escolher `Criar categoria` grava o texto sem espacos nas pontas", async () => {
     render(<Harness />);
     await userEvent.type(input(), " Pets {Enter}");
     expect(input()).toHaveValue(" Pets ");
-    await userEvent.click(screen.getByRole("option", { name: 'Usar "Pets"' }));
+    await userEvent.click(screen.getByRole("option", { name: 'Criar categoria "Pets"' }));
     expect(input()).toHaveValue("Pets");
   });
 
@@ -202,5 +202,50 @@ describe("CategoryCombobox - abertura da lista (F1, design 3.9.1/3.9.2)", () => 
     render(<CategoryCombobox label="Categoria" value="" onValueChange={() => {}} options={["Moradia", "moradia", "MORADIA", "Saúde"]} />);
     await userEvent.click(input());
     expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["Moradia", "Saúde"]);
+  });
+});
+
+describe("CategoryCombobox - affordance de selecionar ou criar", () => {
+  const chevron = () => screen.getByRole("button", { name: "Mostrar categorias" });
+
+  it("placeholder orienta selecionar ou digitar", () => {
+    render(<Harness />);
+    expect(input()).toHaveAttribute("placeholder", "Selecione ou digite uma nova");
+  });
+
+  it("chevron: fora do Tab, aponta para a listbox, abre e fecha mantendo o foco no input", async () => {
+    render(<Harness />);
+    expect(chevron()).toHaveAttribute("type", "button");
+    expect(chevron()).toHaveAttribute("tabindex", "-1");
+    expect(chevron().getAttribute("aria-controls")).toBe(screen.getByRole("listbox", { hidden: true }).id);
+    await userEvent.click(chevron());
+    expect(input()).toHaveAttribute("aria-expanded", "true");
+    expect(input()).toHaveFocus();
+    expect(screen.getAllByRole("option")).toHaveLength(3);
+    await userEvent.click(chevron());
+    expect(input()).toHaveAttribute("aria-expanded", "false");
+    expect(input()).toHaveFocus();
+  });
+
+  it("chevron nao abre com readOnly", async () => {
+    render(<CategoryCombobox label="Categoria" value="" onValueChange={() => {}} options={["A"]} readOnly />);
+    await userEvent.click(chevron());
+    expect(input()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("sem categorias, campo vazio: linha desabilitada orienta a digitar", async () => {
+    render(<CategoryCombobox label="Categoria" value="" onValueChange={() => {}} options={[]} />);
+    await userEvent.click(chevron());
+    const row = screen.getByRole("option", { name: "Nenhuma categoria ainda. Digite para criar." });
+    expect(row).toHaveAttribute("aria-disabled", "true");
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    expect(input()).toHaveValue("");
+  });
+
+  it("sem categorias, ao digitar, so a opcao Criar categoria aparece", async () => {
+    render(<Harness />);
+    render(<CategoryCombobox label="Outra" value="Pets" onValueChange={() => {}} options={[]} />);
+    await userEvent.click(screen.getByRole("combobox", { name: /^Outra/ }));
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(['Criar categoria "Pets"']);
   });
 });

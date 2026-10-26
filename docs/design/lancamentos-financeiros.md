@@ -14,7 +14,7 @@
 | 1 | Versão inicial: tudo é despesa, sem cartões, só tema escuro. Aprovados D1-D4, a pasta `web/components/` e o fechamento do drawer sem confirmação. |
 | 2 | Tipo Receita/Despesa, meio conta/cartão, mês de referência, tela `/cards`, filtros e totais com saldos, "Pagar fatura" em barra acima da lista, dashboard revisto (DR3), tratamento de 404/409/422, navbar com três destinos, tema claro e escuro com valores de tokens e tabela de contraste. |
 | 3 | Spec rev. 3. `/entries` reestruturada em **cabeçalho comum** (seletor de mês, "+ Novo lançamento", resumo do mês inteiro) + **abas Despesas / Faturas / Receitas** (D16-D21). Removidos: filtro de período (intervalo de/até e "Todos"), filtro de tipo, status "Recebida" no filtro, barra de fatura (D14) e regra de filtros incompatíveis (D13). Formas de pagamento **PIX e Cartão** (sai "Conta"); "Ainda não paguei" (D23); atalho **"+ Novo cartão" embutido** no drawer (D22). Mês da fatura = **mês do vencimento**; datas de fechamento/vencimento em `dd/MM/yyyy` na aba Faturas. Atalho de `/cards` para a aba Despesas filtrada (DR8). Dashboard só com seletor de mês. Tokens, contraste, D1-D5 mantidos; novos pares de contraste para abas, subtotal, blocos de fatura e painel de novo cartão (sem tokens novos). CAs renumerados conforme a spec rev. 3. |
-| 4 | Fechamento (sem tela nova). Ajustados ao código conferido: combobox de categoria (3.9.1, sem chevron), destaque estático de recém-criado (3.9.2), gráfico estreito e movimento reduzido (5.5), destaque do donut pela legenda (5.6). Desvio 2 (tema com diálogo aberto) em 12, aprovado. Seção 13: divergências para o frontend-dev e matriz de verificação CA82/CA83/CA86. |
+| 4 | Fechamento (sem tela nova). Ajustados ao código conferido: combobox de categoria (3.9.1), destaque estático de recém-criado (3.9.2), gráfico estreito e movimento reduzido (5.5), destaque do donut pela legenda (5.6). Desvio 2 (tema com diálogo aberto) em 12, aprovado. Seção 13: divergências para o frontend-dev e matriz de verificação CA82/CA83/CA86. |
 
 Este documento define estrutura visual, hierarquia, componentes, estados e interação. Não contém código. Nomes de componentes são sugestões para o frontend-dev.
 
@@ -723,7 +723,7 @@ Foco após sucesso: `h3` do bloco (`tabindex="-1"`).
 |---|---|---|---|
 | Tipo | Segmented "Despesa / Receita" | Padrão Despesa (P26). | "Escolha o tipo." |
 | Descrição | input texto | 1-120 após trim; contador "n/120", `--danger-text` acima de 120. | "Informe a descrição." / "A descrição deve ter no máximo 120 caracteres." |
-| Categoria | combobox editável (ARIA 1.2, detalhes abaixo) | Texto livre (B1); sugestões = categorias existentes (RF14, P23); "Usar "<texto>"" no fim; 1-50 após trim. | "Informe a categoria." / "A categoria deve ter no máximo 50 caracteres." |
+| Categoria | combobox editável (ARIA 1.2, detalhes abaixo) | Texto livre (B1); sugestões = categorias existentes (RF14, P23); "Criar categoria "<texto>"" no fim; 1-50 após trim. | "Informe a categoria." / "A categoria deve ter no máximo 50 caracteres." |
 | Data | `type="date"` | Padrão: hoje em SP. Ajuda: "Data da compra (despesa) ou do recebimento (receita)." | "Informe uma data válida." |
 | Valor | texto `inputmode="decimal"`, máscara da direita para a esquerda | String decimal, nunca `Number`; máx. R$ 9.999.999.999,99. | "Informe um valor maior que zero." / "O valor máximo é R$ 9.999.999.999,99." |
 | Forma de pagamento | Segmented "PIX / Cartão" | Padrão PIX (P26). Com Receita: fixa em PIX e o segmento "Cartão" desabilitado (`--text-disabled`), ajuda "Receitas são sempre via PIX." | "Escolha a forma de pagamento." |
@@ -731,11 +731,12 @@ Foco após sucesso: `h3` do bloco (`tabindex="-1"`).
 | Cartão | Select de cartões (RF02): "Nubank · fecha 25 · vence 5" | **Só aparece** com Despesa + Cartão (D12); obrigatório. Botão terciário "+ Novo cartão" alinhado à direita do rótulo (alvo 44px). O formulário **não** calcula nem mostra fatura, vencimento ou mês de referência (P24, R5). | "Escolha o cartão." / 404: "Este cartão não existe mais. Escolha outro." |
 
 **Combobox de categoria** (rev. 4, conferido com `CategoryCombobox`)
-- Input `role="combobox"` + `listbox` "Sugestões"; `aria-expanded`, `aria-controls`, `aria-autocomplete="list"`, `aria-activedescendant` na opção ativa. Sem botão de seta: a lista abre ao digitar e com `↓`/`↑` (ver item F1 da 13.2 sobre abrir ao focar).
-- Filtro por "contém", sem diferenciar maiúsculas (B1): "alim" sugere "Alimentação". A última opção é `Usar "<texto aparado>"`, separada por divisória `--border` e peso 500; só aparece com texto não vazio que não coincida (sem diferenciar maiúsculas) com uma categoria existente.
+- Input `role="combobox"` + `listbox` "Sugestões"; `aria-expanded`, `aria-controls`, `aria-autocomplete="list"`, `aria-activedescendant` na opção ativa. A lista abre ao digitar, com `↓`/`↑`, ao clicar no input e pelo botão de seta; focar (Tab ou programático) não abre (F1, ver 13.2).
+- Affordance (selecionar ou criar): botão de seta (chevron) no campo, `type="button"`, `tabIndex=-1`, `aria-label="Mostrar categorias"`, `aria-controls` da listbox; alterna a lista e mantém o foco no input. Placeholder "Selecione ou digite uma nova". Com o campo vazio a lista mostra todas as categorias; sem nenhuma, uma linha `option` desabilitada "Nenhuma categoria ainda. Digite para criar.". A opção de criar é `Criar categoria "<texto>"`.
+- Filtro por "contém", sem diferenciar maiúsculas (B1): "alim" sugere "Alimentação". A última opção é `Criar categoria "<texto aparado>"`, separada por divisória `--border` e peso 500; só aparece com texto não vazio que não coincida (sem diferenciar maiúsculas) com uma categoria existente.
 - Teclado: `↓`/`↑` circulam (e abrem a lista), `Home`/`End` vão às pontas com a lista aberta, `Enter` escolhe a opção ativa (sem opção ativa, não faz nada e o texto digitado vale), `Esc` fecha só a lista (com a lista fechada, `Esc` fecha o drawer), `Tab` fecha a lista e segue. Ponteiro: clique escolhe sem tirar o foco do input.
 - Visual: lista `--surface`, borda `--border-strong`, sombra, raio 8, altura máx. 224px com rolagem (a opção ativa é rolada para a vista), opções 44px `--text`; ativa `--surface-active`, hover `--surface-2`.
-- Sem categorias (erro de RF14): só a opção `Usar "<texto>"`. Enviando: somente leitura, lista não abre.
+- Sem categorias (erro de RF14): a linha "Nenhuma categoria ainda. Digite para criar." e, ao digitar, só a opção `Criar categoria "<texto>"`. Enviando: somente leitura, lista não abre.
 - A grafia gravada é decidida pela API (CA20: "  alimentação " vira "Alimentação"); o cliente não reescreve o texto.
 
 **Linha "Status inicial"** (D23), sempre visível abaixo da forma (ou do checkbox/cartão), 14px `--text-muted`, referenciada por `aria-describedby` do controle que a altera:
@@ -1316,7 +1317,7 @@ Base: `docs/specs/lancamentos-financeiros-fechamento.md` (RFF01, RFF03, CAF02-CA
 |---|---|---|
 | Eixo Y fixo no gráfico estreito (CAF04, D15) | `monthly-chart.tsx`, `lib/dashboard/chart-data.ts` | Conforme 5.5 (coluna fixa de 76px com a mesma escala, abertura no mês selecionado centralizado, botões de 3 meses). Pendentes: F3, F4, F5. |
 | Destaque ~2s do recém-criado (CAF02) | `entry-drawer-context.tsx`, `expenses-list.tsx`, `income-panel.tsx`, `globals.css` (`.row-highlight`) | Conforme 3.9.2 (estático, fundo + contorno 2px + selo "Novo" com texto oculto, tabela e cards, Despesas e Receitas). Pendentes: F2, F6. |
-| Combobox ARIA de categoria (CAF03, B1) | `components/ui/combobox.tsx` | Conforme 3.9.1 (design ajustado: sem chevron). Pendente: F1. |
+| Combobox ARIA de categoria (CAF03, B1) | `components/ui/combobox.tsx` | Conforme 3.9.1 (com chevron). Pendente: F1. |
 | Gráficos sob `prefers-reduced-motion` (CAF04, CA87) | `lib/hooks/reduced-motion.ts`, `monthly-chart.tsx`, `category-donut.tsx` | Conforme 5.5/5.6 (ao vivo; servidor assume `reduce`; tooltip e eixo fixo nunca animam). |
 | Destaque do donut pela legenda (CAF04) | `category-donut.tsx` | Conforme 5.6 (design ajustado: contorno 3px na fatia; destaque nos dois sentidos, fatia e legenda). |
 
