@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "pw:deps": "bash scripts/pw-deps.sh install && bash scripts/pw-deps.sh check",
+    "test:e2e:local": "bash scripts/pw-deps.sh run playwright test"
   },
   "dependencies": {
     "next": "16.4.3",

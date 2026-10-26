@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import fc from 'fast-check';
 import { unwrap } from '@test/support/result.js';
 import { CalendarDate } from '@shared/domain/value-objects/calendar-date.js';
@@ -53,6 +56,36 @@ describe('calculateInvoiceDates - tabela CA21 (linhas 1-20)', () => {
     expect(result.dueDate.toString()).toBe(expDue);
     expect(result.referenceMonth.toString()).toBe(expRef);
   });
+});
+
+interface InvoiceDatesCase {
+  date: string;
+  closingDay: number;
+  dueDay: number;
+  closingDate: string;
+  dueDate: string;
+  referenceMonth: string;
+}
+
+// Fixture compartilhado com o stub do web (web/e2e/stub-api/invoice-dates.spec.ts): ADR 0002 T5.
+const sharedCases = JSON.parse(
+  readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../../../../test/fixtures/invoice-dates.cases.json'), 'utf8'),
+) as InvoiceDatesCase[];
+
+describe('calculateInvoiceDates - fixture compartilhado (paridade com o stub do web, ADR 0002 T5)', () => {
+  it('o fixture cobre ao menos a tabela CA21 (20 linhas)', () => {
+    expect(sharedCases.length).toBeGreaterThanOrEqual(20);
+  });
+
+  it.each(sharedCases.map((c) => [c.date, c.closingDay, c.dueDay, c] as const))(
+    'compra %s, fecha %i / vence %i',
+    (_date, _c, _v, c) => {
+      const result = calculateInvoiceDates(date(c.date), closing(c.closingDay), due(c.dueDay));
+      expect(result.closingDate.toString()).toBe(c.closingDate);
+      expect(result.dueDate.toString()).toBe(c.dueDate);
+      expect(result.referenceMonth.toString()).toBe(c.referenceMonth);
+    },
+  );
 });
 
 describe('calculateInvoiceDates - exemplos nomeados', () => {
@@ -117,14 +150,14 @@ describe('calculateInvoiceDates - propriedades (a), (b), (e) por varredura exaus
           const cs = serialOf(r.closingDate);
           const ds = serialOf(r.dueDate);
           // (a)
-          if (!(s <= cs && cs < ds)) throw new Error(`(a) falhou: ${purchase} c=${c.value} v=${v.value}`);
+          if (!(s <= cs && cs < ds)) throw new Error(`(a) falhou: ${purchase.toString()} c=${c.value} v=${v.value}`);
           // (b)
           const cm = monthIndex(r.closingDate);
           const dm = monthIndex(r.dueDate);
-          if (!(cm === purchaseMonth || cm === purchaseMonth + 1)) throw new Error(`(b1) falhou: ${purchase}`);
-          if (!(dm === cm || dm === cm + 1)) throw new Error(`(b2) falhou: ${purchase}`);
+          if (!(cm === purchaseMonth || cm === purchaseMonth + 1)) throw new Error(`(b1) falhou: ${purchase.toString()}`);
+          if (!(dm === cm || dm === cm + 1)) throw new Error(`(b2) falhou: ${purchase.toString()}`);
           // (e)
-          if (r.referenceMonth.toString() !== r.dueDate.toString().slice(0, 7)) throw new Error(`(e) falhou: ${purchase}`);
+          if (r.referenceMonth.toString() !== r.dueDate.toString().slice(0, 7)) throw new Error(`(e) falhou: ${purchase.toString()}`);
           checked++;
         }
       }

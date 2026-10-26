@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Money } from "@/components/ui/money";
 import { monthLongPtBR } from "@/lib/dates/format";
 import { formatBRL } from "@/lib/money/decimal";
+import { usePrefersReducedMotion } from "@/lib/hooks/reduced-motion";
 import { formatPercent, groupCategories, type DonutSlice } from "@/lib/dashboard/chart-data";
 import type { CategoryDistribution } from "@/lib/api/types";
 import { ChartCard, type ChartView } from "./chart-card";
@@ -30,6 +31,8 @@ export function DonutTooltip({ active, payload }: { active?: boolean; payload?: 
 /** Despesas por categoria (RF17, D4): ate 5 categorias + "Outras", legenda propria, centro com o total e tabela alternativa. */
 export function CategoryDonut({ distribution }: { distribution: CategoryDistribution }) {
   const [view, setView] = useState<ChartView>("chart");
+  const [active, setActive] = useState<number | null>(null);
+  const reduced = usePrefersReducedMotion();
   const slices = useMemo(() => groupCategories(distribution.items), [distribution.items]);
   const monthLabel = monthLongPtBR(distribution.month);
   const empty = distribution.items.length === 0;
@@ -85,9 +88,9 @@ export function CategoryDonut({ distribution }: { distribution: CategoryDistribu
           <div className="relative h-[220px] w-[220px] shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart accessibilityLayer>
-                <Pie data={geometry} dataKey="value" nameKey="category" innerRadius="68%" outerRadius="100%" startAngle={90} endAngle={-270} stroke="var(--surface)" strokeWidth={2} isAnimationActive={false}>
+                <Pie data={geometry} dataKey="value" nameKey="category" innerRadius="68%" outerRadius="100%" startAngle={90} endAngle={-270} stroke="var(--surface)" strokeWidth={2} isAnimationActive={!reduced} animationDuration={250} onMouseEnter={(_, index) => setActive(index)} onMouseLeave={() => setActive(null)}>
                   {geometry.map((slice, index) => (
-                    <Cell key={slice.key} fill={colorOf(index)} />
+                    <Cell key={slice.key} fill={colorOf(index)} data-active={active === index} stroke={active === index ? "var(--text)" : "var(--surface)"} strokeWidth={active === index ? 3 : 2} />
                   ))}
                 </Pie>
                 <Tooltip content={<DonutTooltip />} isAnimationActive={false} />
@@ -102,7 +105,17 @@ export function CategoryDonut({ distribution }: { distribution: CategoryDistribu
           </div>
           <ul className="flex w-full min-w-0 flex-col gap-2 text-sm">
             {slices.map((slice, index) => (
-              <li key={slice.key} className="flex items-center gap-2">
+              <li
+                key={slice.key}
+                tabIndex={0}
+                aria-label={`${slice.category}, ${formatBRL(slice.total)}, ${formatPercent(slice.percentage)}`}
+                data-active={active === index}
+                onMouseEnter={() => setActive(index)}
+                onMouseLeave={() => setActive(null)}
+                onFocus={() => setActive(index)}
+                onBlur={() => setActive(null)}
+                className={`flex items-center gap-2 rounded-md px-1 py-1 ${active === index ? "bg-surface-2 ring-2 ring-text" : ""}`}
+              >
                 <span aria-hidden="true" className="inline-block h-3 w-3 shrink-0 rounded-sm" style={{ background: colorOf(index) }} />
                 <span className="min-w-0 flex-1 truncate text-text" title={slice.members?.join(", ")}>
                   {slice.category}

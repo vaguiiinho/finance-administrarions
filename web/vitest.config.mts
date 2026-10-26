@@ -2,7 +2,8 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-// Testes unitarios e de componente (Vitest + Testing Library). Playwright fica em web/e2e (*.pw.ts).
+// Testes unitarios e de componente (Vitest + Testing Library). Playwright fica em web/e2e (*.pw.ts); e2e/**/*.spec.ts
+// (ex.: paridade do stub da API, ADR 0002 T5) roda aqui.
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -12,7 +13,7 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     include: ["**/*.spec.{ts,tsx}"],
-    exclude: ["node_modules/**", ".next/**", "e2e/**"],
+    exclude: ["node_modules/**", ".next/**", "e2e/**/*.pw.ts"],
     setupFiles: ["./vitest.setup.ts"],
     env: { TZ: "America/Sao_Paulo" },
     coverage: {

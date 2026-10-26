@@ -29,6 +29,7 @@
   --primary-border: light-dark(#4F46E5, #818CF8);
   --on-primary: light-dark(#FFFFFF, #FFFFFF);
   --accent: light-dark(#0E7490, #22D3EE);
+  --accent-active: light-dark(#0C6980, #22D3EE); /* texto accent sobre --surface-active (:active do terciario) >= 4,5:1 */
   --focus-color: light-dark(#0E7490, #22D3EE);
   --focus-ring: 2px solid var(--focus-color);
   --focus-offset: 2px;

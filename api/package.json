@@ -26,6 +26,7 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "TZ=America/Sao_Paulo vitest run --config ./vitest.config.e2e.ts",
     "test:int": "TZ=America/Sao_Paulo vitest run --config ./vitest.config.int.ts",
+    "perf:rnf06": "TZ=America/Sao_Paulo vitest run --config ./vitest.config.perf.ts",
     "test:all": "npm run test:cov && npm run test:int && npm run test:e2e"
   },
   "dependencies": {

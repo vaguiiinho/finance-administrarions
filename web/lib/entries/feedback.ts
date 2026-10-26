@@ -21,7 +21,8 @@ function baseCreatedMessage(entry: EntryDto): string {
   return entry.status === "PAID" ? "Despesa criada como paga." : "Despesa criada como pendente.";
 }
 
-function matchesFilters(entry: EntryDto, state: EntriesState): boolean {
+/** O lancamento aparece com os filtros atuais da aba ativa? (design 3.9.2: so entao ha destaque) */
+export function matchesFilters(entry: EntryDto, state: EntriesState): boolean {
   if (state.tab === "income") {
     const c = state.incomes.category;
     return !c || entry.category.toLowerCase() === c.toLowerCase();

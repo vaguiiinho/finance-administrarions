@@ -57,6 +57,7 @@ Fonte de verdade: `web/app/styles/tokens.css`. Cada token é declarado **uma ún
 | `--primary-border` | `#4F46E5` | `#818CF8` | Borda 1px de tudo que é preenchido com `--primary-strong` |
 | `--on-primary` | `#FFFFFF` | `#FFFFFF` | Texto/ícone sobre `--primary-strong` e variantes |
 | `--accent` | `#0E7490` | `#22D3EE` | Links, item de navegação ativo, indicador da aba ativa, barra de progresso |
+| `--accent-active` | `#0C6980` | `#22D3EE` | Texto do botão terciário pressionado (`:active`) sobre `--surface-active` (5,05:1 no claro) |
 | `--focus-color` | `#0E7490` | `#22D3EE` | Cor do anel de foco |
 | `--focus-ring` / `--focus-offset` | `2px solid var(--focus-color)` / `2px` | idem | Forma do anel de foco (iguais nos dois temas) |
 

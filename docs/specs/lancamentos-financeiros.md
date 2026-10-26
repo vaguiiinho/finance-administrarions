@@ -2,7 +2,7 @@
 
 **Impacto em UI: sim** (telas: Lançamentos com abas Despesas/Faturas/Receitas e drawer de criação, Cartões e Dashboard mensal; alternador de tema claro/escuro na navbar)
 
-**Revisão 3** (2026-10-24). O ADR `docs/adr/0001-lancamentos-financeiros.md` e o design `docs/design/lancamentos-financeiros.md` refletem a revisão 2 e precisam ser revistos pelo architect e pelo ui-designer (ver seção 11).
+**Revisão 3** (2026-10-24). O ADR `docs/adr/0001-lancamentos-financeiros.md` e o design `docs/design/lancamentos-financeiros.md` foram revistos para a revisão 3 e implementados (branch `feature/finance`). O fechamento da feature (Playwright, desempenho, follow-ups de UX) está em `docs/specs/lancamentos-financeiros-fechamento.md` e `docs/adr/0002-lancamentos-financeiros-fechamento.md`.
 
 ### Histórico de revisões
 
@@ -11,6 +11,7 @@
 | 1 | 2026-10-24 | Versão inicial (tudo é despesa, sem cartões, só tema escuro). |
 | 2 | 2026-10-24 | Decisões B1-B5 (categoria livre, tipo Receita/Despesa, sem edição/exclusão, cartões com mês de referência pelo fechamento, dashboard com seletor de mês); aprovação do design (D1-D4); tema claro/escuro (D5); DR1-DR4. Abertas B6 e B7. |
 | 3 | 2026-10-24 | **B6 resolvida:** só seletor de mês (sem intervalo de/até), na listagem e no dashboard. **B7 resolvida:** receita com data futura conta no saldo realizado. **Mês de referência de compra no cartão passa a ser o mês do vencimento da fatura** (antes: mês do fechamento); tabela CA21 refeita. **Formas de pagamento:** apenas PIX e CARTAO (substitui CONTA). **Alteração da regra 1** (status inicial): despesa PIX nasce PAGA por padrão, com opção "Ainda não paguei"; despesa no cartão nasce PENDENTE. **Tela de lançamentos com abas** (Despesas, Faturas, Receitas) e cabeçalho comum com seletor de mês, botão de novo lançamento e resumo do mês; o resumo do topo é sempre do mês inteiro e cada aba tem subtotal próprio (substitui "totais respeitam filtros ativos"). Filtro por tipo e por intervalo saem; "Pagar fatura" migra para a aba Faturas. **Atalho "+ Novo cartão"** no drawer de lançamento. Novos DR5-DR8; novas perguntas B8-B9. CAs renumerados. |
+| 3 (fechamento) | 2026-10-25 | Sem mudança de regra de negócio. Fechamento em `docs/specs/lancamentos-financeiros-fechamento.md` (ADR 0002). B8 e B9 decididas com a resposta padrão (seção 9). Desvio aprovado de RF27/CA84 (B1 do fechamento): ver nota em RF27. |
 
 ## 1. Contexto
 
@@ -282,6 +283,7 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 - Ao alternar: a escolha passa a ser a preferência de tema, persistida no navegador e reaplicada em novas visitas; mudanças do sistema deixam de sobrepor a escolha.
 - Sem flash de tema errado no carregamento (inclusive skeletons, páginas de erro e primeira renderização no servidor).
 - A troca de tema não recarrega a página nem perde estado (drawer aberto, atalho de novo cartão aberto, dados digitados, seleção, aba, filtros).
+- **Desvio aprovado (2026-10-25, B1 do fechamento):** com qualquer diálogo modal aberto (drawer, painel "+ Novo cartão", modal de confirmação, folha de filtros), o botão de tema fica inerte sob o scrim (fundo inerte nativo). A troca de tema nesse estado só ocorre por mudança do tema do sistema **sem preferência salva**, e preserva diálogo, dados digitados, seleção, aba, filtros e cores. Com preferência salva, o tema só muda após fechar o diálogo. O CA84 deve ser lido nesse sentido. Detalhe: design §12, item 2.
 - Botão acessível: alvo >= 44x44, `aria-label` fixo (ex.: "Tema escuro") com `aria-pressed`; ícone decorativo oculto de leitores de tela; operável por teclado com foco visível.
 - Tudo segue o tema ativo: header, abas, superfícies, tabela, cards, blocos de fatura, inputs, drawer, modais, folhas, toasts, skeletons, estados vazio/erro, scrim, anel de foco, gráficos e controles nativos.
 - Ambos os temas definidos por tokens; nenhum componente usa cor literal. Semântica de cores mantida nos dois temas (pago, pendente, recebida, receita, despesa, saldo negativo, erro).
@@ -767,6 +769,7 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 - Then texto e ícone nunca têm a mesma cor do fundo do botão nem do fundo ao redor e mantêm >= 4,5:1 (texto) / >= 3:1 (ícone, borda e estado desabilitado).
 
 **CA84 - Alternâncias repetidas não degradam cores**
+- *Leitura aprovada (B1 do fechamento): o alternador fica inerte sob o scrim; com diálogo aberto a troca só ocorre pela mudança do tema do sistema sem preferência salva.*
 - Given qualquer tela com drawer, atalho de novo cartão ou modal aberto
 - When o usuário alterna o tema várias vezes seguidas
 - Then nenhum elemento fica com cor herdada do tema anterior, e dados digitados, seleção, aba e filtros são preservados.
@@ -827,13 +830,13 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 
 ### Bloqueantes (mudam regra de negócio)
 
-**B8 - Despesa PIX com data futura nasce PAGA?**
-Pela nova regra, despesa PIX nasce PAGA por padrão. Um PIX agendado para 30/11 lançado hoje entraria como pago (com `paidAt` de hoje) e reduziria o saldo realizado de novembro antes de sair da conta.
-*Resposta padrão sugerida:* sim, sem exceção (simétrico a B7): a data só define o mês de referência; a UI não marca "Ainda não paguei" automaticamente para datas futuras, e o usuário marca manualmente se quiser.
+Nenhuma em aberto. B8 e B9 foram aprovadas com a resposta padrão (ver decididos abaixo).
 
-**B9 - Quais datas de fechamento e vencimento a fatura exibe quando suas despesas têm datas diferentes?**
-As datas são calculadas e gravadas por lançamento. Se o cartão for editado no meio do ciclo, despesas da mesma fatura (cartão + mês de referência) podem ter fechamento/vencimento diferentes.
-*Resposta padrão sugerida:* a fatura exibe a **maior** data de vencimento e a **maior** data de fechamento entre suas despesas (refletem a configuração mais recente), sem aviso adicional nesta entrega; a lista expansível não mostra datas por despesa.
+### Decididas
+
+**B8 - Despesa PIX com data futura nasce PAGA?** *Decidido (resposta padrão aprovada):* sim, sem exceção (simétrico a B7). Um PIX agendado para 30/11 lançado hoje entra como pago (com `paidAt` de hoje) e reduz o saldo realizado de novembro antes de sair da conta. A data só define o mês de referência; a UI não marca "Ainda não paguei" automaticamente para datas futuras, e o usuário marca manualmente se quiser. Risco residual: R9.
+
+**B9 - Quais datas de fechamento e vencimento a fatura exibe quando suas despesas têm datas diferentes?** *Decidido (resposta padrão aprovada):* a fatura exibe a **maior** data de vencimento e a **maior** data de fechamento entre suas despesas (refletem a configuração mais recente), sem aviso adicional; a lista expansível não mostra datas por despesa. Risco residual: R10.
 
 ### Técnicas (decisão do architect)
 

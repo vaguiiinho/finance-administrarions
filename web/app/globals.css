@@ -163,10 +163,10 @@ dialog::backdrop {
   text-decoration: none;
   cursor: pointer;
 }
-.btn:hover {
+.btn:hover:not([aria-busy="true"]) {
   background: var(--surface-2);
 }
-.btn:active {
+.btn:active:not([aria-busy="true"]) {
   background: var(--surface-active);
 }
 .btn-primary {
@@ -174,25 +174,29 @@ dialog::backdrop {
   border-color: var(--primary-border);
   color: var(--on-primary);
 }
-.btn-primary:hover {
+.btn-primary:hover:not([aria-busy="true"]) {
   background: var(--primary-strong-hover);
 }
-.btn-primary:active {
+.btn-primary:active:not([aria-busy="true"]) {
   background: var(--primary-strong-active);
 }
 .btn-tertiary {
   border-color: transparent;
   color: var(--accent);
 }
-.btn-tertiary:hover {
+.btn-tertiary:hover:not([aria-busy="true"]) {
   text-decoration: underline;
+}
+.btn-tertiary:active:not([aria-busy="true"]) {
+  color: var(--accent-active);
 }
 .btn-icon {
   padding: 0;
   border-color: transparent;
   width: 44px;
 }
-.btn[aria-disabled="true"],
+/* Carregando (aria-busy) tambem leva aria-disabled, mas MANTEM as cores da variante (CA83: texto >= 4,5:1); so o desabilitado "puro" esmaece */
+.btn[aria-disabled="true"]:not([aria-busy="true"]),
 .btn:disabled {
   background: var(--surface-2);
   border-color: var(--border-strong);
@@ -200,7 +204,7 @@ dialog::backdrop {
   cursor: not-allowed;
   text-decoration: none;
 }
-.btn-tertiary[aria-disabled="true"] {
+.btn-tertiary[aria-disabled="true"]:not([aria-busy="true"]) {
   background: transparent;
   border-color: transparent;
 }
@@ -513,6 +517,12 @@ dialog::backdrop {
 .row-selected {
   background: var(--surface-2);
   box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* Lancamento recem-criado (~2s): realce ESTATICO (sem animacao, vale com prefers-reduced-motion) = fundo + borda de 2px + selo "Novo" */
+.row-highlight {
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 
 /* Drawer / folha */

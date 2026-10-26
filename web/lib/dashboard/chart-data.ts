@@ -78,3 +78,38 @@ export function formatPercent(percentage: string): string {
   const trimmed = frac.replace(/0+$/, "");
   return trimmed ? `${int},${trimmed}%` : `${int}%`;
 }
+
+/** Passo "bonito" (1, 2, 2.5, 5, 10 x 10^n) para dividir a faixa em ~`count` intervalos. */
+function niceStep(raw: number): number {
+  const pow = 10 ** Math.floor(Math.log10(raw));
+  const base = raw / pow;
+  const mult = base <= 1 ? 1 : base <= 2 ? 2 : base <= 2.5 ? 2.5 : base <= 5 ? 5 : 10;
+  return mult * pow;
+}
+
+/**
+ * Escala do eixo Y: sempre inclui o zero e devolve dominio + ticks explicitos. Os dois graficos do modo estreito
+ * (eixo fixo + area rolavel) usam EXATAMENTE a mesma escala, entao as barras alinham com os ticks (D15).
+ */
+export function niceScale(points: readonly ChartPoint[], intervals = 4): { domain: [number, number]; ticks: number[] } {
+  let lo = 0;
+  let hi = 0;
+  for (const p of points) {
+    lo = Math.min(lo, p.realizedValue, p.projectedValue);
+    hi = Math.max(hi, p.incomeValue, p.paidValue + p.pendingValue, p.realizedValue, p.projectedValue);
+  }
+  if (hi === lo) hi = lo + 1000;
+  const step = niceStep((hi - lo) / intervals);
+  const round = (v: number) => Math.round(v * 100) / 100;
+  const min = round(Math.floor(lo / step) * step);
+  const count = Math.max(1, Math.round((Math.ceil(hi / step) * step - min) / step));
+  // ticks por min + i*step (contagem inteira) e dominio igual ao ultimo tick: sem erro acumulado de ponto flutuante
+  const ticks = Array.from({ length: count + 1 }, (_, i) => round(min + i * step));
+  return { domain: [ticks[0], ticks[ticks.length - 1]], ticks };
+}
+
+/** Rolagem inicial do modo estreito: centraliza o mes selecionado, limitada ao conteudo. */
+export function scrollLeftForMonth(index: number, monthWidth: number, viewport: number, content: number): number {
+  const target = index * monthWidth - (viewport - monthWidth) / 2;
+  return Math.max(0, Math.min(target, content - viewport));
+}

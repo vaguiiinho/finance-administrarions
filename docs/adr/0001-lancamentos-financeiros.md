@@ -1515,3 +1515,5 @@ Status do ADR permanece **Aceito**. A implementação (branch `feature/finance`)
 | 9 | 9.2 (estratégia de dados) | A porta padrão de `API_URL` no web é **3001** (`web/lib/api/http.ts`, `web/.env.example`). A API continua com `PORT` padrão 3000 (igual ao `next dev`), por isso deve ser iniciada com `PORT=3001`. | Evita colisão de portas em desenvolvimento local. |
 
 Consequência prática: ao reutilizar este ADR como referência, ler 6.5, 7.1, 7.4 e 10 junto com esta seção.
+
+Fechamento: a execução do Playwright, a medição do RNF06 (8.7) e o stub da API (11.5) foram revistos no `docs/adr/0002-lancamentos-financeiros-fechamento.md`, que prevalece sobre esses pontos.

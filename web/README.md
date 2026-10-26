@@ -25,10 +25,33 @@ API_URL=http://127.0.0.1:3001 npm run dev    # ver .env.example; a API deve roda
 |---|---|
 | `npm test` | Vitest (inclui a matriz de contraste dos tokens nos dois temas) |
 | `npm run test:cov` | Vitest com cobertura |
-| `npm run test:e2e` | Playwright + axe (Chromium) contra o stub `e2e/stub-api`; sobe o stub (4010) e o `next dev` (3100) |
+| `npm run pw:deps` | Baixa o Chromium do Playwright e as bibliotecas de sistema que faltam, sem root (uma vez) |
+| `npm run test:e2e:local` | Playwright + axe com as bibliotecas de `pw:deps` no `LD_LIBRARY_PATH` (sem root) |
+| `npm run test:e2e` | Playwright + axe (Chromium) contra o stub `e2e/stub-api`; para máquinas com as bibliotecas instaladas no sistema (ex.: CI com root) |
 | `npm run lint` | ESLint |
 
-Para o Playwright: `npx playwright install-deps` (bibliotecas do sistema) e `npx playwright install chromium`.
+### Playwright
+
+A suíte (Chromium, tema claro e escuro, axe) roda contra o stub da API (porta 4010) e contra um **build de produção** do web (`next build && next start`, porta 3100), não contra `next dev`: o dev bloqueia recursos para a origem 127.0.0.1 e injeta um overlay que atrapalha cliques e o axe. O primeiro `test:e2e*` demora por causa do build.
+
+**Não rode a suíte com um `next dev` (ou outro build) ativo neste diretório:** os dois usam o mesmo `.next` e corrompem o cache um do outro. Para iterar, é possível apontar para um `next dev` já em execução na porta 3100 (`reuseExistingServer`), desde que tenha `allowedDevOrigins` configurado.
+
+Sem root (WSL, Ubuntu 24.04):
+
+```bash
+npm run pw:deps          # uma vez: instala o Chromium e extrai as libs ausentes (libnss3, libnspr4, libasound2t64...) via apt-get download + dpkg -x
+npm run test:e2e:local   # roda a suíte com LD_LIBRARY_PATH apontando para as libs extraídas
+```
+
+As libs ficam em `${PW_DEPS_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/finance-pw-deps}`, fora do repositório; defina `PW_DEPS_DIR` para mudar o local. Nada é escrito em `~/.bashrc`. Se o `pw:deps` falhar por dependência transitiva, use a imagem oficial `mcr.microsoft.com/playwright:v<versão de @playwright/test>-noble` com o repositório montado e `--network host` (ADR 0002, T1). Com root: `npx playwright install --with-deps chromium` e `npm run test:e2e`.
+
+### Sequência local dos gates
+
+api: `test:cov`, `test:int`, `test:e2e`, `lint`, `typecheck`, `build`. web: `test:cov`, `lint`, `npx tsc --noEmit`, `build`, `pw:deps` (uma vez) e `test:e2e:local`. Não há CI configurado (ADR 0002, T3); para um CI futuro, usar runner Linux com root, Docker e `CI=1`. O RNF06 (`perf:rnf06` na api) não entra no CI.
+
+### Smoke manual com API real
+
+Postgres do compose, API com `PORT=3001 npm run start:dev`, web com `npm run dev`: (1) criar o cartão "Nubank" (fecha 25, vence 5); (2) criar despesa no cartão em 2026-10-26 e conferir "Fatura dez/26" e o toast (fechamento 25/11, vencimento 05/12); (3) pagar a fatura de dez/26 na aba Faturas; (4) conferir no dashboard de dez/26 o pago e o pendente coerentes com o resumo.
 
 ## Tema
 

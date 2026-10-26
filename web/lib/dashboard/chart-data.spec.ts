@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TotalsDto } from "@/lib/api/types";
-import { formatAxisTick, formatPercent, groupCategories, isSeriesEmpty, toChartPoints } from "./chart-data";
+import { formatAxisTick, formatPercent, groupCategories, isSeriesEmpty, niceScale, scrollLeftForMonth, toChartPoints } from "./chart-data";
 
 const totals = (income: string, paid: string, pending: string, realized: string, projected: string): TotalsDto => ({
   income,
@@ -64,5 +64,36 @@ describe("formatPercent", () => {
     ["100.00", "100%"],
   ])("%s -> %s", (input, expected) => {
     expect(formatPercent(input)).toBe(expected);
+  });
+});
+
+describe("niceScale / scrollLeftForMonth (D15: eixo Y fixo)", () => {
+  const pt = (income: number, paid: number, pending: number, realized: number, projected: number) =>
+    ({ incomeValue: income, paidValue: paid, pendingValue: pending, realizedValue: realized, projectedValue: projected }) as never;
+  it("inclui o zero, cobre negativos e gera ticks uniformes", () => {
+    const { domain, ticks } = niceScale([pt(5000, 3000, 2500, 2000, -500)]);
+    expect(domain[0]).toBeLessThanOrEqual(-500);
+    expect(domain[1]).toBeGreaterThanOrEqual(5500);
+    expect(ticks).toContain(0);
+    expect(ticks[0]).toBe(domain[0]);
+    expect(ticks[ticks.length - 1]).toBe(domain[1]);
+    const steps = new Set(ticks.slice(1).map((t, i) => t - ticks[i]));
+    expect(steps.size).toBe(1);
+  });
+  it("ticks por min + i*step, dominio igual aos extremos e sem erro de ponto flutuante", () => {
+    const { domain, ticks } = niceScale([pt(0.3, 0.1, 0.2, 0.1, -0.7)]);
+    expect(domain).toEqual([ticks[0], ticks[ticks.length - 1]]);
+    for (const t of ticks) expect(Number.isInteger(Math.round(t * 100))).toBe(true);
+    expect(ticks).toContain(0);
+  });
+  it("serie zerada ainda tem escala valida", () => {
+    const { domain, ticks } = niceScale([pt(0, 0, 0, 0, 0)]);
+    expect(domain[1]).toBeGreaterThan(domain[0]);
+    expect(ticks.length).toBeGreaterThan(2);
+  });
+  it("scrollLeftForMonth centraliza o mes e respeita os limites", () => {
+    expect(scrollLeftForMonth(11, 56, 300, 12 * 56)).toBe(12 * 56 - 300);
+    expect(scrollLeftForMonth(0, 56, 300, 12 * 56)).toBe(0);
+    expect(scrollLeftForMonth(5, 56, 300, 12 * 56)).toBe(5 * 56 - (300 - 56) / 2);
   });
 });

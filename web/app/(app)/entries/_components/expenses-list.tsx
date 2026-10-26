@@ -13,6 +13,7 @@ import { formatBRL, sumDecimals } from "@/lib/money/decimal";
 import { countLabel, paidFeedback } from "@/lib/entries/feedback";
 import type { EntryDto, PayEntriesResult } from "@/lib/api/types";
 import { payEntries, payEntry } from "../actions";
+import { EntryItem, EntryRow, RecentBadge } from "./entry-drawer-context";
 import { PayConfirmDialog } from "./pay-confirm-dialog";
 
 interface ExpensesListProps {
@@ -212,13 +213,18 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
           {items.map((entry) => {
             const isSelected = selectedIds.has(entry.id) && entry.status === "PENDING";
             return (
-              <tr key={entry.id} className={`min-h-14 border-b border-border hover:bg-surface-2 ${isSelected ? "row-selected" : "bg-surface"}`}>
+              <EntryRow key={entry.id} id={entry.id} className={`min-h-14 border-b border-border hover:bg-surface-2 ${isSelected ? "row-selected" : "bg-surface"}`}>
                 <td className="w-12 p-0">
                   <Checkbox aria-label={checkboxLabel(entry)} checked={isSelected} disabled={entry.status !== "PENDING"} onChange={(e) => toggle(entry.id, e.target.checked)} />
                 </td>
                 <td className="max-w-[22rem] px-2 py-2">
-                  <p className="truncate font-medium text-text" title={entry.description}>
-                    {entry.description}
+                  <p className="flex min-w-0 items-center gap-2 font-medium text-text">
+                    <span className="truncate" title={entry.description}>
+                      {entry.description}
+                    </span>
+                    <span className="shrink-0">
+                      <RecentBadge id={entry.id} />
+                    </span>
                   </p>
                   <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
                     <span className="xl:hidden">{entry.category}</span>
@@ -245,7 +251,7 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
                     <span className="text-muted">Pago em {formatInstantDate(entry.paidAt)}</span>
                   ) : null}
                 </td>
-              </tr>
+              </EntryRow>
             );
           })}
         </tbody>
@@ -262,13 +268,16 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
             const titleId = `${uid}-card-${entry.id}`;
             const isSelected = selectedIds.has(entry.id) && entry.status === "PENDING";
             return (
-              <li key={entry.id} aria-labelledby={titleId} className={`rounded-xl border p-4 ${isSelected ? "border-accent bg-surface-2" : "border-border bg-surface"}`}>
+              <EntryItem key={entry.id} id={entry.id} aria-labelledby={titleId} className={`rounded-xl border p-4 ${isSelected ? "border-accent bg-surface-2" : "border-border bg-surface"}`}>
                 <div className="flex items-start gap-1">
                   <Checkbox aria-label={checkboxLabel(entry)} checked={isSelected} disabled={entry.status !== "PENDING"} onChange={(e) => toggle(entry.id, e.target.checked)} className="-ml-3 -mt-2" />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p id={titleId} className="font-medium text-text">
-                        {entry.description}
+                      <p id={titleId} className="flex min-w-0 items-center gap-2 font-medium text-text">
+                        <span className="truncate">{entry.description}</span>
+                        <span className="shrink-0">
+                          <RecentBadge id={entry.id} />
+                        </span>
                       </p>
                       <StatusBadge status={entry.status} />
                     </div>
@@ -291,7 +300,7 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
                 ) : entry.paidAt ? (
                   <p className="mt-2 text-sm text-muted">Pago em {formatInstant(entry.paidAt)}</p>
                 ) : null}
-              </li>
+              </EntryItem>
             );
           })}
         </ul>

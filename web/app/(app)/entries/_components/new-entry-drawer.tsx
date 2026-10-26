@@ -4,6 +4,7 @@ import { settleAction } from "@/lib/api/safe-action";
 import { useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { CategoryCombobox } from "@/components/ui/combobox";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Drawer } from "@/components/ui/drawer";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -26,7 +27,7 @@ import {
   type EntryFormField,
   type EntryFormValues,
 } from "@/lib/entries/form";
-import { createdFeedback } from "@/lib/entries/feedback";
+import { createdFeedback, matchesFilters } from "@/lib/entries/feedback";
 import type { EntriesState } from "@/lib/filters/entries-search-params";
 import type { CardDto } from "@/lib/api/types";
 import { createEntry } from "../actions";
@@ -62,13 +63,12 @@ export function NewEntryDrawer(props: NewEntryDrawerProps) {
 function NewEntryDrawerContent({ today, state, cards: serverCards, cardsError, categories }: NewEntryDrawerProps) {
   const router = useRouter();
   const toast = useToast();
-  const { closeDrawer } = useEntryDrawer();
+  const { closeDrawer, markRecent } = useEntryDrawer();
   const uid = useId();
   const titleId = `${uid}-title`;
   const formId = `${uid}-form`;
   const panelId = `${uid}-card-panel`;
   const statusId = `${uid}-status`;
-  const datalistId = `${uid}-categories`;
 
   const [form, setForm] = useState<EntryFormValues>(() => initialEntryForm(today));
   const [touched, setTouched] = useState<Set<EntryFormField>>(new Set());
@@ -140,6 +140,8 @@ function NewEntryDrawerContent({ today, state, cards: serverCards, cardsError, c
     if (result.ok) {
       const feedback = createdFeedback(result.data, state);
       closeDrawer();
+      // F6 / design 3.9.2: so destaca o que aparece na tela (mes, tipo da aba ativa e filtros atuais).
+      if (result.data.referenceMonth === state.month && state.tab === (result.data.type === "INCOME" ? "income" : "expenses") && matchesFilters(result.data, state)) markRecent(result.data.id);
       toast.push({ kind: "success", message: feedback.message, action: feedback.action });
       return;
     }
@@ -226,23 +228,17 @@ function NewEntryDrawerContent({ today, state, cards: serverCards, cardsError, c
           }
         />
 
-        <TextField
+        <CategoryCombobox
           label="Categoria"
           required
           name="category"
-          list={datalistId}
           value={form.category}
-          onChange={(e) => update({ category: e.target.value })}
+          onValueChange={(category) => update({ category })}
           onBlur={() => touch("category")}
+          options={categories}
           error={errors.category}
           readOnly={busy}
-          autoComplete="off"
         />
-        <datalist id={datalistId}>
-          {categories.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
 
         <TextField
           label="Data"

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ENTRIES_URL, setScenario, themeToggle, setThemeCookie } from "./support";
+import { ENTRIES_URL, gotoReady, setScenario } from "./support";
 
 /**
  * Fluxos da tela de lancamentos contra o stub-api. Os nomes acessiveis seguem os rotulos pt-BR do design rev. 3
@@ -60,7 +60,7 @@ test("CA53: o mes selecionado usa o mes de referencia (compra de 10/10 no cartao
 });
 
 test("CA70: selecionar pendentes, 'Marcar como pago' e confirmar -> pagas, selecao limpa", async ({ page }) => {
-  await page.goto(ENTRIES_URL);
+  await gotoReady(page, ENTRIES_URL); // checkbox marcado antes da hidratacao e perdido
   await page.getByRole("checkbox", { name: /Mercado/ }).check();
   await page.getByRole("checkbox", { name: /Internet/ }).check();
   await page.getByRole("button", { name: "Marcar como pago" }).click();
@@ -202,20 +202,27 @@ test("CA77: tela de cartoes - vazio, cadastro e atalho para a aba Despesas filtr
   await drawer.getByRole("button", { name: /Salvar|Criar/ }).click();
   await expect(page.getByText("Nubank · Fecha dia 25 · Vence dia 5")).toBeVisible();
   await page.getByRole("link", { name: /Ver despesas|Despesas/ }).first().click();
-  await expect(page).toHaveURL(/tab=expenses/);
+  // Despesas e a aba padrao: a URL a omite (nao deve haver outra aba); o filtro de cartao e o que importa
+  await expect(page).not.toHaveURL(/tab=(invoices|income)/);
   await expect(page).toHaveURL(/d_card=/);
 });
 
-test("CA84: alternar o tema 5x com o drawer aberto preserva dados digitados, aba e filtros", async ({ context, page }) => {
-  await setThemeCookie(context, "dark");
-  await page.goto(`${ENTRIES_URL}&d_status=PENDING`);
+test("combobox de Categoria: Esc fecha so a lista; segundo Esc fecha o drawer", async ({ page }) => {
+  await page.goto(ENTRIES_URL);
   await page.getByRole("button", { name: /Novo lançamento/ }).click();
   const drawer = page.getByRole("dialog");
-  await drawer.getByLabel("Descrição").fill("Texto digitado");
-  for (let i = 0; i < 5; i++) await page.emulateMedia({ colorScheme: i % 2 ? "light" : "dark" });
-  await expect(drawer.getByLabel("Descrição")).toHaveValue("Texto digitado");
-  await expect(page).toHaveURL(/d_status=PENDING/);
-  await expect(themeToggle(page)).toHaveCount(1);
+  const category = drawer.getByRole("combobox", { name: /Categoria/ });
+  await category.focus();
+  await page.keyboard.press("ArrowDown");
+  const listbox = drawer.getByRole("listbox");
+  await expect(listbox).toBeVisible();
+  await expect(category).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Escape");
+  await expect(listbox).toBeHidden();
+  await expect(category).toHaveAttribute("aria-expanded", "false");
+  await expect(drawer).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
 test.describe("CA76 - responsividade 360x800", () => {

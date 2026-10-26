@@ -24,10 +24,15 @@ PORT=3001 npm run start:dev      # padrão do código: 3000; o web espera 3001
 | `npm run test:int` | Integração com Postgres via testcontainers (requer Docker) |
 | `npm run test:e2e` | E2E com supertest |
 | `npm run test:all` | `test:cov` + `test:int` + `test:e2e` |
+| `npm run perf:rnf06` | Medição opt-in do RNF06 (p95 < 300 ms) com 100 mil lançamentos; requer Docker (testcontainers). Não roda em `test:all` nem no CI |
 | `npm run lint` | oxlint (type-aware) |
 | `npm run typecheck` | `tsc --noEmit -p tsconfig.build.json` |
 | `npm run prisma:generate` | Gera o client em `src/shared/infrastructure/prisma/generated` |
 | `npm run prisma:migrate:deploy` | Aplica as migrations de `prisma/migrations` |
+
+## Desempenho (RNF06)
+
+`npm run perf:rnf06` sobe um Postgres 17 descartável (testcontainers), semeia 100 mil lançamentos em 24 meses e 20 cartões (`test/perf/seed-volume.ts`, determinístico) e mede por HTTP real, por cenário, 5 aquecimentos e 50 amostras sequenciais (p50/p95/máx). Cada cenário exige p95 < 300 ms. O uso de índices é obtido por `EXPLAIN (ANALYZE)` de cada cenário. Os resultados são gravados em `test/perf/results/` (ignorado pelo git). Ver ADR 0002, T4 e seção 7.
 
 ## Estrutura
 

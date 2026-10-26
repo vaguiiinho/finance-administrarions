@@ -27,6 +27,11 @@ export function useNav(): NavContextValue {
   return ctx;
 }
 
+/** Como `useNav`, mas devolve `null` fora do provider (consumidores opcionais, ex.: expirar o destaque ao navegar). */
+export function useOptionalNav(): NavContextValue | null {
+  return useContext(NavContext);
+}
+
 /**
  * Toda navegacao de estado (mes, aba, filtro, pagina) passa por uma transicao: o conteudo antigo permanece
  * com as cores normais enquanto a regiao afetada mostra "Atualizando…" (D11) - sem opacidade.

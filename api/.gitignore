@@ -60,3 +60,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Prisma generated client
 /src/shared/infrastructure/prisma/generated
+
+# Resultados da suite de desempenho (RNF06)
+/test/perf/results

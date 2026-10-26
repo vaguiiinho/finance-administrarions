@@ -78,10 +78,12 @@ API_URL=http://127.0.0.1:3001 npm run dev    # ver web/.env.example
 |---|---|
 | `npm test` | Vitest (componentes, libs, matriz de contraste de tokens) |
 | `npm run test:cov` | Vitest com cobertura |
-| `npm run test:e2e` | Playwright + axe contra um stub da API (`web/e2e/stub-api`), Chromium |
+| `npm run pw:deps` | Instala Chromium e bibliotecas ausentes sem root (uma vez) |
+| `npm run test:e2e:local` | Playwright + axe contra um stub da API (`web/e2e/stub-api`), Chromium, sem root |
+| `npm run test:e2e` | Mesma suíte, para máquinas com as bibliotecas no sistema |
 | `npm run lint` | ESLint |
 
-O Playwright precisa de bibliotecas do sistema e do navegador. Na primeira vez: `npx playwright install-deps` (pode exigir sudo) e `npx playwright install chromium`. O `test:e2e` sobe sozinho o stub (porta 4010) e o `next dev` (porta 3100); não usa a API real nem o banco.
+O Playwright sobe sozinho o stub (porta 4010) e um **build de produção** do web (`next build && next start`, porta 3100); não usa a API real nem o banco, e não deve rodar com um `next dev` ativo no mesmo diretório. Detalhes em [`web/README.md`](web/README.md). Medição de desempenho (opt-in): `cd api && npm run perf:rnf06`.
 
 ## Regras de negócio resumidas
 

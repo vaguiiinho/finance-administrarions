@@ -84,7 +84,7 @@ describe('E2 GET /api/entries/expenses', () => {
     expect(res.body.items).toHaveLength(20);
     expect(res.body.pagination).toEqual({ page: 1, pageSize: 20, totalItems: 25, totalPages: 2 });
     const dates = res.body.items.map((i: { date: string }) => i.date);
-    expect([...dates].sort().reverse()).toEqual(dates);
+    expect([...dates].sort((a, b) => a.localeCompare(b)).reverse()).toEqual(dates);
     expect(res.body.subtotal).toEqual({ total: '250.00', paid: '250.00', pending: '0.00' });
     const page2 = await get('/api/entries/expenses', { month: '2026-10', page: '2' });
     expect(page2.body.items).toHaveLength(5);
@@ -307,7 +307,7 @@ describe('I1 GET /api/invoices e I2 GET /api/cards/:cardId/invoices/:month/entri
     expect(res.body.items).toHaveLength(25);
     expect(res.body.pagination).toBeUndefined();
     const dates = res.body.items.map((i: { date: string }) => i.date);
-    expect([...dates].sort().reverse()).toEqual(dates);
+    expect([...dates].sort((a, b) => a.localeCompare(b)).reverse()).toEqual(dates);
     expect(res.body.items[0]).toMatchObject({ paymentMethod: 'CARD', card: { name: 'Nubank' }, invoice: { dueDate: '2026-11-05' } });
   });
 

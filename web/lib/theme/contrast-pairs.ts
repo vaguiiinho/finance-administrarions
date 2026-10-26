@@ -39,6 +39,7 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   p("--accent", "--surface", "text", "links, disclosure"),
   p("--accent", "--bg", "text", "links sobre o fundo"),
   p("--accent", "--surface-2", "text", "links sobre superficie 2, toast com acao"),
+  p("--accent-active", "--surface-active", "text", "botao terciario pressionado (:active)"),
   p("--accent", "--header-bg", "text", "navbar - item ativo", HEADER_UNDER),
   p("--on-primary", "--primary-strong", "text", "botao primario"),
   p("--on-primary", "--primary-strong-hover", "text", "botao primario em hover"),

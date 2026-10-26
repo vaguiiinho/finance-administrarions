@@ -1,0 +1,186 @@
+[
+  {
+    "date": "2026-10-10",
+    "closingDay": 25,
+    "dueDay": 5,
+    "closingDate": "2026-10-25",
+    "dueDate": "2026-11-05",
+    "referenceMonth": "2026-11"
+  },
+  {
+    "date": "2026-10-25",
+    "closingDay": 25,
+    "dueDay": 5,
+    "closingDate": "2026-10-25",
+    "dueDate": "2026-11-05",
+    "referenceMonth": "2026-11"
+  },
+  {
+    "date": "2026-10-26",
+    "closingDay": 25,
+    "dueDay": 5,
+    "closingDate": "2026-11-25",
+    "dueDate": "2026-12-05",
+    "referenceMonth": "2026-12"
+  },
+  {
+    "date": "2026-10-02",
+    "closingDay": 3,
+    "dueDay": 10,
+    "closingDate": "2026-10-03",
+    "dueDate": "2026-10-10",
+    "referenceMonth": "2026-10"
+  },
+  {
+    "date": "2026-10-04",
+    "closingDay": 3,
+    "dueDay": 10,
+    "closingDate": "2026-11-03",
+    "dueDate": "2026-11-10",
+    "referenceMonth": "2026-11"
+  },
+  {
+    "date": "2026-10-05",
+    "closingDay": 5,
+    "dueDay": 15,
+    "closingDate": "2026-10-05",
+    "dueDate": "2026-10-15",
+    "referenceMonth": "2026-10"
+  },
+  {
+    "date": "2026-10-05",
+    "closingDay": 10,
+    "dueDay": 10,
+    "closingDate": "2026-10-10",
+    "dueDate": "2026-11-10",
+    "referenceMonth": "2026-11"
+  },
+  {
+    "date": "2026-12-10",
+    "closingDay": 25,
+    "dueDay": 5,
+    "closingDate": "2026-12-25",
+    "dueDate": "2027-01-05",
+    "referenceMonth": "2027-01"
+  },
+  {
+    "date": "2026-12-26",
+    "closingDay": 25,
+    "dueDay": 5,
+    "closingDate": "2027-01-25",
+    "dueDate": "2027-02-05",
+    "referenceMonth": "2027-02"
+  },
+  {
+    "date": "2026-12-15",
+    "closingDay": 3,
+    "dueDay": 10,
+    "closingDate": "2027-01-03",
+    "dueDate": "2027-01-10",
+    "referenceMonth": "2027-01"
+  },
+  {
+    "date": "2026-02-15",
+    "closingDay": 31,
+    "dueDay": 10,
+    "closingDate": "2026-02-28",
+    "dueDate": "2026-03-10",
+    "referenceMonth": "2026-03"
+  },
+  {
+    "date": "2026-02-28",
+    "closingDay": 31,
+    "dueDay": 10,
+    "closingDate": "2026-02-28",
+    "dueDate": "2026-03-10",
+    "referenceMonth": "2026-03"
+  },
+  {
+    "date": "2026-01-31",
+    "closingDay": 31,
+    "dueDay": 10,
+    "closingDate": "2026-01-31",
+    "dueDate": "2026-02-10",
+    "referenceMonth": "2026-02"
+  },
+  {
+    "date": "2026-01-31",
+    "closingDay": 30,
+    "dueDay": 5,
+    "closingDate": "2026-02-28",
+    "dueDate": "2026-03-05",
+    "referenceMonth": "2026-03"
+  },
+  {
+    "date": "2028-02-29",
+    "closingDay": 30,
+    "dueDay": 7,
+    "closingDate": "2028-02-29",
+    "dueDate": "2028-03-07",
+    "referenceMonth": "2028-03"
+  },
+  {
+    "date": "2027-02-28",
+    "closingDay": 29,
+    "dueDay": 7,
+    "closingDate": "2027-02-28",
+    "dueDate": "2027-03-07",
+    "referenceMonth": "2027-03"
+  },
+  {
+    "date": "2026-02-10",
+    "closingDay": 20,
+    "dueDay": 31,
+    "closingDate": "2026-02-20",
+    "dueDate": "2026-02-28",
+    "referenceMonth": "2026-02"
+  },
+  {
+    "date": "2026-02-28",
+    "closingDay": 31,
+    "dueDay": 30,
+    "closingDate": "2026-02-28",
+    "dueDate": "2026-03-30",
+    "referenceMonth": "2026-03"
+  },
+  {
+    "date": "2026-04-30",
+    "closingDay": 31,
+    "dueDay": 31,
+    "closingDate": "2026-04-30",
+    "dueDate": "2026-05-31",
+    "referenceMonth": "2026-05"
+  },
+  {
+    "date": "2026-01-29",
+    "closingDay": 28,
+    "dueDay": 30,
+    "closingDate": "2026-02-28",
+    "dueDate": "2026-03-30",
+    "referenceMonth": "2026-03"
+  },
+  {
+    "date": "2026-10-15",
+    "closingDay": 10,
+    "dueDay": 17,
+    "closingDate": "2026-11-10",
+    "dueDate": "2026-11-17",
+    "referenceMonth": "2026-11"
+  },
+  {
+    "date": "2026-10-15",
+    "closingDay": 20,
+    "dueDay": 25,
+    "closingDate": "2026-10-20",
+    "dueDate": "2026-10-25",
+    "referenceMonth": "2026-10"
+  },
+  {
+    "date": "2026-09-10",
+    "closingDay": 25,
+    "dueDay": 5,
+    "closingDate": "2026-09-25",
+    "dueDate": "2026-10-05",
+    "referenceMonth": "2026-10"
+  }
+]

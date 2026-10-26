@@ -10,7 +10,7 @@ import { listIncomes } from "@/lib/api/endpoints";
 import { isBadRequest, listCategoriesCached, settle } from "@/lib/api/queries";
 import type { IncomesPage } from "@/lib/api/types";
 import { IncomeFilter } from "./expense-filters";
-import { NewEntryButton } from "./entry-drawer-context";
+import { EntryItem, EntryRow, NewEntryButton, RecentBadge } from "./entry-drawer-context";
 import { InvalidFilters, PANEL_TITLE_ID } from "./expenses-panel";
 import { IncomeSubtotal } from "./tab-subtotal";
 
@@ -67,8 +67,15 @@ export async function IncomePanel({ state }: { state: EntriesState }) {
           </thead>
           <tbody>
             {items.map((entry) => (
-              <tr key={entry.id} className="min-h-14 border-b border-border bg-surface hover:bg-surface-2">
-                <td className="px-3 py-3 font-medium text-text">{entry.description}</td>
+              <EntryRow key={entry.id} id={entry.id} className="min-h-14 border-b border-border bg-surface hover:bg-surface-2">
+                <td className="px-3 py-3 font-medium text-text">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate">{entry.description}</span>
+                    <span className="shrink-0">
+                      <RecentBadge id={entry.id} />
+                    </span>
+                  </span>
+                </td>
                 <td className="px-3 py-3 text-muted">{entry.category}</td>
                 <td className="px-3 py-3 text-text">{formatCivilDate(entry.date)}</td>
                 <td className="px-3 py-3 text-right text-text">
@@ -77,15 +84,20 @@ export async function IncomePanel({ state }: { state: EntriesState }) {
                 <td className="px-3 py-3">
                   <StatusBadge status={entry.status} />
                 </td>
-              </tr>
+              </EntryRow>
             ))}
           </tbody>
         </table>
         <ul className="flex flex-col gap-3 md:hidden">
           {items.map((entry) => (
-            <li key={entry.id} className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4">
+            <EntryItem key={entry.id} id={entry.id} className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4">
               <div className="flex items-start justify-between gap-2">
-                <p className="font-medium text-text">{entry.description}</p>
+                <p className="flex min-w-0 items-center gap-2 font-medium text-text">
+                  <span className="truncate">{entry.description}</span>
+                  <span className="shrink-0">
+                    <RecentBadge id={entry.id} />
+                  </span>
+                </p>
                 <StatusBadge status={entry.status} />
               </div>
               <p className="text-sm text-muted">
@@ -94,7 +106,7 @@ export async function IncomePanel({ state }: { state: EntriesState }) {
               <p className="text-right text-base font-semibold text-text">
                 <Money value={entry.amount} />
               </p>
-            </li>
+            </EntryItem>
           ))}
         </ul>
         <Pagination

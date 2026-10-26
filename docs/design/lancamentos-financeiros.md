@@ -1,11 +1,11 @@
 # Design: Lançamentos financeiros (receitas e despesas), cartões, faturas, pagamento em lote e dashboard mensal
 
-- **Spec:** `docs/specs/lancamentos-financeiros.md` (revisão 3; RF19-RF27, RNF08-RNF11, CA43-CA87; seção 11)
+- **Spec:** `docs/specs/lancamentos-financeiros.md` (revisão 3; RF19-RF27, RNF08-RNF11, CA43-CA87; seção 11). Fechamento: `docs/specs/lancamentos-financeiros-fechamento.md` (seção 13 deste documento).
 - **ADR:** `docs/adr/0001-lancamentos-financeiros.md` (em revisão em paralelo para a rev. 3). Este documento não nomeia endpoints: as fontes de dados são citadas pelo requisito da spec (ex.: "resumo do mês, RF10"). Nomes de campos citados (`referenceMonth`) são os usados na resposta da criação; códigos de erro seguem a sugestão T2 da spec e devem ser confirmados pelo ADR.
 - **Design system:** `docs/design/design-system.md` (breakpoints sm 640 / md 768 / lg 1024 / xl 1280)
 - **Tokens:** `web/app/styles/tokens.css`, cada token declarado uma única vez com `light-dark(<claro>, <escuro>)`. O caminho no `design-system.md` foi corrigido e a tabela de tokens da seção 1.2 foi copiada para lá.
 - **Autor:** ui-designer
-- **Status:** Proposto (revisão 3, aguardando aprovação dos itens da seção 11)
+- **Status:** Implementado (rev. 3) + revisão 4 de fechamento; desvio 2 da seção 12 aprovado (B1 da spec de fechamento, 2026-10-25)
 
 ### Histórico
 
@@ -14,6 +14,7 @@
 | 1 | Versão inicial: tudo é despesa, sem cartões, só tema escuro. Aprovados D1-D4, a pasta `web/components/` e o fechamento do drawer sem confirmação. |
 | 2 | Tipo Receita/Despesa, meio conta/cartão, mês de referência, tela `/cards`, filtros e totais com saldos, "Pagar fatura" em barra acima da lista, dashboard revisto (DR3), tratamento de 404/409/422, navbar com três destinos, tema claro e escuro com valores de tokens e tabela de contraste. |
 | 3 | Spec rev. 3. `/entries` reestruturada em **cabeçalho comum** (seletor de mês, "+ Novo lançamento", resumo do mês inteiro) + **abas Despesas / Faturas / Receitas** (D16-D21). Removidos: filtro de período (intervalo de/até e "Todos"), filtro de tipo, status "Recebida" no filtro, barra de fatura (D14) e regra de filtros incompatíveis (D13). Formas de pagamento **PIX e Cartão** (sai "Conta"); "Ainda não paguei" (D23); atalho **"+ Novo cartão" embutido** no drawer (D22). Mês da fatura = **mês do vencimento**; datas de fechamento/vencimento em `dd/MM/yyyy` na aba Faturas. Atalho de `/cards` para a aba Despesas filtrada (DR8). Dashboard só com seletor de mês. Tokens, contraste, D1-D5 mantidos; novos pares de contraste para abas, subtotal, blocos de fatura e painel de novo cartão (sem tokens novos). CAs renumerados conforme a spec rev. 3. |
+| 4 | Fechamento (sem tela nova). Ajustados ao código conferido: combobox de categoria (3.9.1, sem chevron), destaque estático de recém-criado (3.9.2), gráfico estreito e movimento reduzido (5.5), destaque do donut pela legenda (5.6). Desvio 2 (tema com diálogo aberto) em 12, aprovado. Seção 13: divergências para o frontend-dev e matriz de verificação CA82/CA83/CA86. |
 
 Este documento define estrutura visual, hierarquia, componentes, estados e interação. Não contém código. Nomes de componentes são sugestões para o frontend-dev.
 
@@ -93,6 +94,7 @@ Sem mudanças de valor na rev. 3 e **sem tokens novos**: abas, subtotal, blocos 
 | `--primary-border` | `#4F46E5` | `#818CF8` | Borda 1px de tudo que é preenchido com `--primary-strong` (no escuro o preenchimento sozinho tem 2,81:1) |
 | `--on-primary` | `#FFFFFF` | `#FFFFFF` | Texto/ícone sobre `--primary-strong` e variantes |
 | `--accent` | `#0E7490` | `#22D3EE` | Links, terciário, item de navegação ativo, **indicador da aba ativa**, barra de linha selecionada, barra de progresso |
+| `--accent-active` (rev. 4) | `#0C6980` | `#22D3EE` | Texto do botão terciário pressionado (`:active`), sobre `--surface-active`. `--accent` ficava abaixo de 4,5:1 sobre `--surface-active` no claro |
 | `--focus-color` | `#0E7490` | `#22D3EE` | Cor do anel de foco |
 | `--focus-ring` | contorno 2px `--focus-color`, afastamento 2px | idem | Anel de foco; forma em sombra dupla só para elementos com `overflow: hidden` |
 
@@ -204,7 +206,7 @@ Valores nunca são truncados. Se não couberem, quebram só entre "R$" (com sina
 |---|---|---|---|---|---|---|
 | Botão primário | fundo `--primary-strong`, texto `--on-primary`, borda `--primary-border` | `--primary-strong-hover` | `--primary-strong-active` | + `--focus-ring` | spinner + texto `--on-primary` ("Salvando…"), `aria-disabled` | fundo `--surface-2`, texto/ícone `--text-disabled`, borda `--border-strong` |
 | Botão secundário | transparente, texto `--text`, borda `--border-strong` | `--surface-2` | `--surface-active` | + `--focus-ring` | spinner `--text` | igual ao primário desabilitado |
-| Terciário / link | texto `--accent` | `--surface-2` + sublinhado | idem | + `--focus-ring` | spinner `--accent` | `--text-disabled`, sem sublinhado |
+| Terciário / link | texto `--accent` | `--surface-2` + sublinhado | `--surface-active` + texto `--accent-active` (rev. 4) | + `--focus-ring` | spinner `--accent` | `--text-disabled`, sem sublinhado |
 | Botão ícone (inclui sol/lua) | ícone `--text` | `--surface-2` | `--surface-active` | + `--focus-ring` | - | ícone `--text-disabled` |
 | Input / select / combobox | `--input-bg`, `--text`, borda `--border-strong` | borda `--text-muted` | - | + `--focus-ring` | - | `--surface-2`, `--text-disabled`, borda tracejada + cadeado + ajuda |
 | Input com erro | borda `--danger` 2px, mensagem `--danger-text` | idem | - | + `--focus-ring` | - | - |
@@ -219,10 +221,14 @@ Valores nunca são truncados. Se não couberem, quebram só entre "R$" (com sina
 | Item de navegação | inativo `--text-muted`; ativo `--text` + sublinhado 2px `--accent` | `--text` | - | + `--focus-ring` | - | - |
 | Linha da tabela | `--surface` | `--surface-2` | - | - | - | - |
 | Linha selecionada | `--surface-2` + barra 2px `--accent` à esquerda | idem | - | - | - | - |
+| Linha/card recém-criado (rev. 4) | `--surface-2` + contorno interno 2px `--accent` + selo "Novo" | idem | - | - | - | - |
+| Opção do combobox (rev. 4) | `--surface`, texto `--text`, 44px | `--surface-2` | - | ativa (`aria-activedescendant`) `--surface-active` | - | - |
 
 O indicador da aba (3px) é mais espesso que o da navbar (2px) e fica sobre a linha `--border` da faixa, para que navbar e abas não se confundam. A aba ativa nunca depende só do indicador: muda também peso e cor do texto, e `aria-selected="true"`.
 
 **Atualizando (D11)** - em resumo, conteúdo das abas, blocos de fatura, cartões e blocos do dashboard: cores normais; barra de progresso 2px `--accent` no topo da região (estática com movimento reduzido); "Atualizando…" `--text-muted` no cabeçalho da região; `aria-busy="true"`; ações da região ignoram novos acionamentos sem mudar de cor; filtros e abas continuam utilizáveis.
+
+**Carregando em qualquer botão (rev. 4, implementado):** `aria-busy="true"` mantém as cores da variante (fundo, texto e borda do estado padrão; só o desabilitado "puro" esmaece), sem efeito de hover (sublinhado do terciário e fundo de hover do primário são suprimidos) e com `cursor: progress`. Isso garante texto >= 4,5:1 em CA83.
 
 ### 1.9 Tabela de contraste por tema
 
@@ -248,6 +254,7 @@ Razões WCAG 2.x, arredondadas para baixo. **T** = texto normal 4,5:1; **C** = c
 | `--accent` | `--bg` | T | 4,99 | 10,58 |
 | `--accent` | `--surface-2` | T | 4,73 | 8,89 |
 | `--accent` | `--header-bg` composto | T | 4,84 | 8,71 |
+| `--accent-active` (rev. 4) | `--surface-active` | T | 5,05 | 7,68 |
 | `--on-primary` | `--primary-strong` / `-hover` / `-active` | T | 6,28 / 7,90 / 9,93 | 6,28 / 7,90 / 9,93 |
 | `--success-text` | `--surface` / `--surface-2` | T | 5,48 / 4,84 | 9,19 / 8,36 |
 | `--warning-text` | `--surface` / `--surface-2` | T | 7,08 / 6,26 | 10,58 / 9,62 |
@@ -327,6 +334,7 @@ Observações:
 - Séries adjacentes (pago x pendente; fatias do donut) não têm 3:1 entre si; a distinção vem de separação 2px `--surface`, hachura, legenda, tooltip e tabela. Linhas de saldo têm halo 4px `--surface`.
 - No escuro, `--primary-strong` sozinho tem 2,81:1 contra `--surface`; a borda `--primary-border` é obrigatória em tudo que usa esse preenchimento (inclui a aba ativa no mobile).
 - O bloco de fatura é contornado por `--border-strong` (e não `--border`) porque é um bloco de ação com botão próprio; os cards do resumo continuam com `--border` decorativa.
+- Rev. 4, sem tokens novos: destaque de recém-criado (`--accent` sobre `--surface-2` 4,73 / 8,89; selo `--text-muted` sobre `--surface-2` 6,69 / 5,35); opção ativa do combobox (`--text` sobre `--surface-active` 14,38 / 11,53); lista do combobox (`--border-strong` sobre `--surface` 4,13 / 4,00); item ativo da legenda do donut (`--text` sobre `--surface-2`, anel `--text` sobre `--surface` 17,85 / 14,68).
 
 ---
 
@@ -359,7 +367,7 @@ Observações:
 - `IconButton` 44x44. Ícone **sol** com tema escuro ativo; **lua** com claro (P29). Ambos no DOM, visibilidade por CSS (ícone certo no primeiro quadro, CA81).
 - `aria-label` fixo "Tema escuro"; `aria-pressed` true/false; ícones `aria-hidden`. Tooltip visual "Tema escuro: ativado/desativado".
 - Clique, `Enter`, `Espaço` alternam; foco permanece no botão (CA78). Sem toast.
-- Com drawer/modal aberto o botão fica inerte sob o scrim; a troca só ocorre por mudança do sistema, sem perder estado (CA84).
+- Com drawer/modal aberto o botão fica inerte sob o scrim; a troca só ocorre por mudança do sistema (sem preferência salva), sem perder estado (CA84). Com preferência salva, o tema não muda enquanto houver diálogo aberto. Isso diverge da letra de RF27/CA84: ver seção 12, desvio 2 (**aprovado**, B1 da spec de fechamento).
 
 ### 2.3 Região de toasts
 
@@ -686,7 +694,7 @@ Foco após sucesso: `h3` do bloco (`tabindex="-1"`).
 | [_______________________________]   |
 |                              0/120  |
 | Categoria *                         |
-| [Moradia_____________________ v]    |
+| [Moradia________________________]   |  combobox sem chevron (rev. 4)
 | Data *                              |
 | [24/10/2026____________________]    |
 | Valor *                             |
@@ -715,12 +723,20 @@ Foco após sucesso: `h3` do bloco (`tabindex="-1"`).
 |---|---|---|---|
 | Tipo | Segmented "Despesa / Receita" | Padrão Despesa (P26). | "Escolha o tipo." |
 | Descrição | input texto | 1-120 após trim; contador "n/120", `--danger-text` acima de 120. | "Informe a descrição." / "A descrição deve ter no máximo 120 caracteres." |
-| Categoria | combobox editável | Texto livre (B1); sugestões = categorias existentes (RF14, P23); "Usar "<texto>"" no fim; 1-50 após trim. | "Informe a categoria." / "A categoria deve ter no máximo 50 caracteres." |
+| Categoria | combobox editável (ARIA 1.2, detalhes abaixo) | Texto livre (B1); sugestões = categorias existentes (RF14, P23); "Usar "<texto>"" no fim; 1-50 após trim. | "Informe a categoria." / "A categoria deve ter no máximo 50 caracteres." |
 | Data | `type="date"` | Padrão: hoje em SP. Ajuda: "Data da compra (despesa) ou do recebimento (receita)." | "Informe uma data válida." |
 | Valor | texto `inputmode="decimal"`, máscara da direita para a esquerda | String decimal, nunca `Number`; máx. R$ 9.999.999.999,99. | "Informe um valor maior que zero." / "O valor máximo é R$ 9.999.999.999,99." |
 | Forma de pagamento | Segmented "PIX / Cartão" | Padrão PIX (P26). Com Receita: fixa em PIX e o segmento "Cartão" desabilitado (`--text-disabled`), ajuda "Receitas são sempre via PIX." | "Escolha a forma de pagamento." |
 | Ainda não paguei | Checkbox | **Só aparece** com Despesa + PIX (D23); desmarcado por padrão. Marcar não pede confirmação. | - |
 | Cartão | Select de cartões (RF02): "Nubank · fecha 25 · vence 5" | **Só aparece** com Despesa + Cartão (D12); obrigatório. Botão terciário "+ Novo cartão" alinhado à direita do rótulo (alvo 44px). O formulário **não** calcula nem mostra fatura, vencimento ou mês de referência (P24, R5). | "Escolha o cartão." / 404: "Este cartão não existe mais. Escolha outro." |
+
+**Combobox de categoria** (rev. 4, conferido com `CategoryCombobox`)
+- Input `role="combobox"` + `listbox` "Sugestões"; `aria-expanded`, `aria-controls`, `aria-autocomplete="list"`, `aria-activedescendant` na opção ativa. Sem botão de seta: a lista abre ao digitar e com `↓`/`↑` (ver item F1 da 13.2 sobre abrir ao focar).
+- Filtro por "contém", sem diferenciar maiúsculas (B1): "alim" sugere "Alimentação". A última opção é `Usar "<texto aparado>"`, separada por divisória `--border` e peso 500; só aparece com texto não vazio que não coincida (sem diferenciar maiúsculas) com uma categoria existente.
+- Teclado: `↓`/`↑` circulam (e abrem a lista), `Home`/`End` vão às pontas com a lista aberta, `Enter` escolhe a opção ativa (sem opção ativa, não faz nada e o texto digitado vale), `Esc` fecha só a lista (com a lista fechada, `Esc` fecha o drawer), `Tab` fecha a lista e segue. Ponteiro: clique escolhe sem tirar o foco do input.
+- Visual: lista `--surface`, borda `--border-strong`, sombra, raio 8, altura máx. 224px com rolagem (a opção ativa é rolada para a vista), opções 44px `--text`; ativa `--surface-active`, hover `--surface-2`.
+- Sem categorias (erro de RF14): só a opção `Usar "<texto>"`. Enviando: somente leitura, lista não abre.
+- A grafia gravada é decidida pela API (CA20: "  alimentação " vira "Alimentação"); o cliente não reescreve o texto.
 
 **Linha "Status inicial"** (D23), sempre visível abaixo da forma (ou do checkbox/cartão), 14px `--text-muted`, referenciada por `aria-describedby` do controle que a altera:
 
@@ -765,7 +781,7 @@ Foco após sucesso: `h3` do bloco (`tabindex="-1"`).
   - mesmo mês, aba ativa de outro tipo (ex.: criou receita na aba Despesas): ação "Ver receitas" / "Ver despesas".
   - mesmo mês e aba, mas excluído pelos filtros: "Ela não aparece nos filtros atuais." + "Limpar filtros".
   - Despesa no cartão com a aba Faturas ativa e mesmo mês: sem ação (o bloco é atualizado).
-- Se o item aparece na página atual, a linha recebe destaque `--surface-2` por 2s (sem transição com movimento reduzido).
+- **Destaque de recém-criado** (rev. 4, CAF02): se o item aparece na página atual das abas Despesas ou Receitas (mesmo mês, aba e filtros), a linha (tabela, >= `md`) ou o card (< `md`) recebe por cerca de 2s um realce **estático**: fundo `--surface-2`, contorno interno 2px `--accent` e selo "Novo" ao lado da descrição (chip, texto oculto "lançamento recém-criado"). Sem transição de entrada nem de saída em nenhum caso, com ou sem movimento reduzido. O realce não depende só de cor (selo textual). Não se aplica a pagamentos (PF05) nem aos blocos da aba Faturas; o foco não vai para a linha (continua no gatilho). Os ~2s contam a partir do momento em que a linha aparece (item F2 da 13.2).
 - Fechar (X, Cancelar, `Esc`, scrim) sem confirmação de descarte (aprovado); reabre limpo.
 
 #### 3.9.3 Atalho "+ Novo cartão" (D22, RF23, CA75)
@@ -999,18 +1015,20 @@ Barras 8 colunas, donut 4; mesma altura.
 - `figure` "Evolução mensal" + subtítulo "nov/25 a out/26"; alternador "Gráfico | Tabela".
 - Séries (`ComposedChart`): barra "Receitas" (`--chart-income`); barra "Despesas" empilhada com "Pagas" (`--chart-paid`) na base e "Pendentes" (`--chart-pending`, hachura diagonal 2px `--surface` a cada 6px) em cima, separação 2px `--surface`, raio 4 no topo; linha "Saldo realizado" contínua 2,5px com círculo cheio; linha "Saldo previsto" tracejada (6-4) com losango vazado; halo 4px `--surface`.
 - Eixo Y de `min(0, menor valor)` a `max`, 4-6 ticks compactos pt-BR com negativos; linha de zero `--chart-zero-line` 1,5px; grade tracejada `--chart-grid`.
-- Eixo X `out/26`, 12px `--chart-axis`; mês selecionado em `--text` 600 com faixa `--chart-cursor`.
+- Eixo X `out/26`, 12px `--chart-axis`; mês selecionado em `--text` 700 com faixa `--chart-cursor` (faixa ainda não implementada: item F4 da 13.2).
 - Todas as despesas no cartão entram pelo mês de referência (mês do vencimento, CA63).
 - Legenda própria acima do gráfico; tooltip próprio (`--tooltip-bg`, `--tooltip-border`) com "outubro de 2026" e seis linhas (Receitas, Despesas pagas, Despesas pendentes, Total de despesas, Saldo realizado + indicador, Saldo previsto + indicador).
-- Teclado: gráfico focável, setas entre meses. Animação 250ms, desligada com movimento reduzido. Sem clique em barras.
-- **Contêiner estreito (D15)**: abaixo de 12 x 44px + eixo (~560px), modo rolável com eixo Y fixo, área de 12 x 56px com scroll-snap, posição inicial no fim, 12 rótulos, botões 44x44 "Meses anteriores"/"Meses recentes", texto "Deslize para ver os 12 meses", scrollbar tematizada, sem fade nas bordas; região focável `role="group"`. Alturas 260 / 280 / 320.
+- Teclado: gráfico focável, setas entre meses. Sem clique em barras.
+- **Movimento (CA87)**: barras e linhas entram em 250ms só com `prefers-reduced-motion: no-preference`, lido ao vivo; com `reduce`, e na renderização do servidor, sem animação. Tooltip e coluna do eixo fixo nunca animam. Rolagem dos botões suave só sem movimento reduzido.
+- **Contêiner estreito (D15)**: quando a largura útil do contêiner (medida ao vivo) fica abaixo de 560px, modo rolável: coluna do eixo Y fixa de 76px (mesma escala e ticks do gráfico, `aria-hidden`) + área rolável de 12 x 56px, focável, `role="group"` "Gráfico de evolução mensal, role para ver os 12 meses". Abre com o **mês selecionado centralizado** (coincide com o fim quando ele é o último da série). Scroll-snap por mês (item F3 da 13.2). Abaixo da área: botões 44x44 "Meses anteriores" / "Meses recentes", que rolam 3 meses e ficam desabilitados (`aria-disabled`) na ponta correspondente, e o texto "Deslize para ver os 12 meses". Scrollbar tematizada, sem fade nas bordas. Alturas 260 / 280 / 320.
 
 ### 5.6 Donut: despesas por categoria
 
 - "Despesas por categoria" + "outubro de 2026"; só despesas (CA64).
 - Raio interno 68%, 2px `--surface` entre fatias, ordem decrescente; `--chart-1..5` + "Outras" (`--chart-6`) a partir da 6a (D4).
 - Centro: "Total de despesas" + total.
-- Legenda própria; hover/foco destaca a fatia com contorno 2px `--text` (sem opacidade nas demais). Tooltip com nome, valor, percentual; "Outras" lista as agrupadas.
+- Legenda própria com itens focáveis (`Tab`), cada um com rótulo "Moradia, R$ 1.500,00, 75%". Hover ou foco num item da legenda, ou hover numa fatia, destaca o par: fatia com contorno 3px `--text`; item da legenda com fundo `--surface-2` + anel 2px `--text`. As demais fatias não mudam (sem opacidade), então o destaque não depende só de cor. Tooltip com nome, valor e percentual (só no ponteiro sobre a fatia); "Outras" lista as agrupadas (tooltip e `title` do item).
+- Entrada em 250ms só sem movimento reduzido (mesma regra de 5.5).
 
 ### 5.7 Alternativa acessível
 
@@ -1032,6 +1050,8 @@ Barras 8 colunas, donut 4; mesma altura.
 ## 6. Componentes
 
 O `web/` ainda é o scaffold do `create-next-app` (só `app/page.tsx`, `app/layout.tsx`, `app/globals.css`): **nenhum componente existe em código**. A coluna "Origem" indica se o componente já estava especificado nas revisões anteriores (mantido ou alterado) ou se é novo na rev. 3. Primitivos em `web/components/ui/` (aprovado); tema em `web/components/theme/`; compartilhados em `web/components/`; específicos em `_components/` das rotas.
+
+(Rev. 4: a nota acima descreve o estado antes da implementação. Hoje todos os componentes existem; o fechamento não cria componente novo. Peças da rev. 4 já no código: `CategoryCombobox` em `components/ui/combobox.tsx`; `EntryRow`, `EntryItem`, `RecentBadge` em `entries/_components/entry-drawer-context.tsx`; hook `usePrefersReducedMotion` em `web/lib/hooks/reduced-motion.ts`.)
 
 ### 6.1 Primitivos (`web/components/ui/`)
 
@@ -1130,10 +1150,10 @@ O `web/` ainda é o scaffold do `create-next-app` (só `app/page.tsx`, `app/layo
 
 ### 7.3 Criar lançamento
 1. "+ Novo lançamento" abre o drawer; foco em Tipo (Despesa).
-2. Preenche; Forma PIX mostra "Ainda não paguei" e a linha de status inicial; Cartão mostra o campo Cartão e "pendente, na fatura do cartão"; Receita fixa PIX.
+2. Preenche; Categoria pelo combobox (sugestão existente ou `Usar "<texto>"`); Forma PIX mostra "Ainda não paguei" e a linha de status inicial; Cartão mostra o campo Cartão e "pendente, na fatura do cartão"; Receita fixa PIX.
 3. Opcional: "+ Novo cartão" -> painel embutido -> "Criar cartão" -> cartão selecionado, foco no campo, dados intactos; 409 inline; `Esc`/Cancelar volta ao campo Cartão (3.9.3).
 4. Salvar: validação -> envio -> erros inline / banner.
-5. Sucesso: drawer fecha, foco no gatilho, toast com fatura e vencimento da resposta (cartão) e ação para o mês/aba certos quando não aparece na tela (D25).
+5. Sucesso: drawer fecha, foco no gatilho, toast com fatura e vencimento da resposta (cartão) e ação para o mês/aba certos quando não aparece na tela (D25); se aparece na página atual, destaque estático de ~2s com selo "Novo" (3.9.2).
 
 ### 7.4 Pagar despesas (individual ou lote)
 1. Aba Despesas: marca pendentes (pagas indisponíveis); toolbar "n selecionados · soma".
@@ -1154,13 +1174,14 @@ O `web/` ainda é o scaffold do `create-next-app` (só `app/page.tsx`, `app/layo
 ### 7.7 Dashboard
 1. `/dashboard` -> mês atual; três blocos em paralelo com skeleton.
 2. Troca de mês -> blocos "Atualizando"; barras terminam no novo mês.
-3. Tooltip (hover/teclado), rolagem do gráfico no mobile, alternador de tabela.
+3. Tooltip (hover/teclado), rolagem do gráfico no mobile (eixo Y fixo), alternador de tabela, destaque de categoria pela legenda (foco ou ponteiro).
 4. Bloco com erro -> só ele mostra "Tentar novamente".
 
 ### 7.8 Tema
 1. Primeira visita sem preferência: tema do sistema, ao vivo.
 2. Sol/lua: troca imediata, ícone e `aria-pressed` atualizam, foco fica; preferência persiste.
 3. Nenhum estado se perde (drawer, painel de novo cartão, digitação, seleção, aba, filtros, blocos expandidos, tooltip).
+4. Com diálogo aberto, o botão fica sob o scrim; a troca só vem do sistema e só sem preferência salva (2.2; desvio 2, pendente).
 
 ---
 
@@ -1179,12 +1200,12 @@ O `web/` ainda é o scaffold do `create-next-app` (só `app/page.tsx`, `app/layo
   - Disclosure: "Ver 2 despesas da fatura Nubank" com `aria-expanded`.
   - "+ Novo cartão": `aria-expanded` + `aria-controls`.
   - Tema: `aria-label="Tema escuro"` + `aria-pressed`.
-- Diálogos: `aria-labelledby`, foco preso, `Esc` (exceto durante envio; no painel de novo cartão, `Esc` fecha só o painel e devolve o foco ao campo Cartão, RNF09), fundo inerte, foco devolvido ao gatilho.
+- Diálogos: `aria-labelledby`, foco preso, `Esc` (exceto durante envio; no painel de novo cartão, `Esc` fecha só o painel e devolve o foco ao campo Cartão, RNF09; no combobox aberto, `Esc` fecha só a lista), fundo inerte, foco devolvido ao gatilho.
 - Live regions: mês/aba/filtros (polite), seleção (debounce 500ms), cartão criado no drawer (status), erros (alert). Sem anúncios duplicados.
 - Gráficos: resumo textual + tabela; nenhuma informação só por cor.
-- `prefers-reduced-motion`: sem deslizar, sem shimmer, sem animação de gráfico, sem rolagem suave, expandir fatura e abrir painel instantâneos, barra de progresso estática; troca de tema sempre instantânea (CA87).
+- `prefers-reduced-motion`: sem deslizar, sem shimmer, sem animação de gráfico, sem rolagem suave, expandir fatura e abrir painel instantâneos, barra de progresso estática; troca de tema sempre instantânea (CA87). O destaque de recém-criado é estático com e sem movimento reduzido.
 - Zoom 200% e 320px sem rolagem horizontal da página (só a faixa de abas, quando não couber, e regiões internas roláveis e focáveis).
-- **Verificação por tema** (tester, RNF11): para cada tela/estado do CA82 em claro e escuro: resumo (com dados, zerado, erro); abas Despesas (com dados, vazia, filtrada vazia, com seleção, banner 404/422, atualizando), Faturas (bloco recolhido, expandido, lista carregando/erro, fatura paga com botão desabilitado, vazia), Receitas (com dados, vazia); faixa de abas grudada com conteúdo rolando por baixo; drawer de lançamento (com erros, com painel de novo cartão aberto e com 409) e de cartão; modais; folha de filtros; toasts; `/cards`; dashboard (com dados, vazio, erro, tooltip, tabela). Conferir também: tooltip do Recharts sem fundo branco no escuro; `select` aberto e date picker no tema; autofill; placeholder; barras de rolagem (inclusive da faixa de abas); nada sob a navbar ou a faixa de abas abaixo de AA; nenhum elemento fixo cobrindo texto ou botões (última linha visível acima da barra de seleção; rodapé do drawer acima do teclado).
+- **Verificação por tema** (tester, RNF11): para cada tela/estado do CA82 em claro e escuro: resumo (com dados, zerado, erro); abas Despesas (com dados, vazia, filtrada vazia, com seleção, banner 404/422, atualizando), Faturas (bloco recolhido, expandido, lista carregando/erro, fatura paga com botão desabilitado, vazia), Receitas (com dados, vazia); faixa de abas grudada com conteúdo rolando por baixo; drawer de lançamento (com erros, com painel de novo cartão aberto e com 409) e de cartão; modais; folha de filtros; toasts; `/cards`; dashboard (com dados, vazio, erro, tooltip, tabela). Conferir também: tooltip do Recharts sem fundo branco no escuro; `select` aberto e date picker no tema; autofill; placeholder; barras de rolagem (inclusive da faixa de abas); nada sob a navbar ou a faixa de abas abaixo de AA; nenhum elemento fixo cobrindo texto ou botões (última linha visível acima da barra de seleção; rodapé do drawer acima do teclado). Matriz detalhada do fechamento em 13.3.
 
 ---
 
@@ -1214,6 +1235,8 @@ O `web/` ainda é o scaffold do `create-next-app` (só `app/page.tsx`, `app/layo
 | Sucesso criação (cartão) | Lançamento criado na fatura de nov/26 do Nubank, vence 05/11/2026. |
 | Sucesso criação (PIX) | Despesa criada como paga. / Despesa criada como pendente. / Receita criada. |
 | Fora da tela atual | Ela está em novembro de 2026. · Ver novembro / Ver receitas / Ver despesas / Ela não aparece nos filtros atuais. · Limpar filtros |
+| Selo de recém-criado | Novo (leitor de tela: "Novo lançamento recém-criado") |
+| Combobox de categoria | Sugestões · Usar "Lazer" |
 | Painel de cartão | Novo cartão · Criar cartão · Cancelar · Conclua ou cancele o novo cartão · Cartão "Inter" criado e selecionado. |
 | 409 cartão | Já existe um cartão com esse nome. |
 | Vencimento (ajuda) | Define o mês em que a fatura aparece. |
@@ -1225,7 +1248,7 @@ O `web/` ainda é o scaffold do `create-next-app` (só `app/page.tsx`, `app/layo
 | 422 lote | Nenhuma despesa foi alterada. Receitas não podem ser marcadas como pagas: |
 | Erros de região | Não foi possível carregar o resumo do mês. / as despesas. / as faturas. / as receitas. / as despesas desta fatura. |
 | Atualizando | Atualizando… |
-| Gráfico estreito | Deslize para ver os 12 meses |
+| Gráfico estreito | Deslize para ver os 12 meses · Meses anteriores · Meses recentes |
 | Tema (tooltip visual) | Tema escuro: ativado / Tema escuro: desativado |
 | Retry | Tentar novamente |
 
@@ -1266,16 +1289,84 @@ O `web/` ainda é o scaffold do `create-next-app` (só `app/page.tsx`, `app/layo
 13. Navbar em duas linhas abaixo de `sm` (D9); estado "atualizando" sem opacidade (D11); campo Cartão só com Despesa + Cartão (D12); gráfico rolável em telas estreitas (D15).
 14. Correção no design system (doc-writer): caminho `web/app/styles/tokens.css` e tabela de tokens dos dois temas. **Atendida:** `docs/design/design-system.md` foi corrigido e agora contém a tabela de tokens.
 
+**Novo na rev. 4**
+
+15. **Desvio 2 da seção 12** (tema com diálogo aberto, B1 da spec de fechamento): aprovar a manutenção de 2.2 ou pedir mudança de comportamento.
+
 ---
 
 ## 12. Desvios aceitos na implementação
 
-A feature foi implementada e aprovada no code review (branch `feature/finance`). Os pontos abaixo divergem deste design e foram aceitos; onde houver conflito com as seções anteriores, vale o que está aqui e no código.
+A feature foi implementada e aprovada no code review (branch `feature/finance`). Os pontos abaixo divergem deste design ou da spec; onde houver conflito com as seções anteriores, vale o que está aqui e no código.
 
-| # | Seção | Previsto no design | Implementado |
+| # | Seção | Previsto | Implementado | Situação |
+|---|---|---|---|---|
+| 1 | 3.3 (cabeçalho de `/entries`) | Ordem visual do cabeçalho comum | O cabeçalho de `/entries` foi implementado na **ordem do DOM** (ordem de leitura = ordem do código), sem depender de reordenação visual; a disposição pode diferir em detalhes do desenho. | Aceito |
+| 2 | 2.2 / spec RF27, CA84 (G7, B1 do fechamento) | Spec: alternar o tema "com drawer, atalho de novo cartão ou modal aberto". | Mantido o 2.2: com qualquer `<dialog>` modal aberto (drawer de lançamento ou de cartão, painel "+ Novo cartão", modal de confirmação, folha de filtros), o botão de tema fica inerte sob o scrim (fundo inerte nativo, D7). A troca nesse estado só ocorre por mudança do tema do sistema **sem preferência salva**, e preserva diálogo, dados digitados, seleção, aba e cores. Com preferência salva, o tema não muda até o diálogo fechar. CA84 passa a ser lido como "a troca de tema, quando ocorre com um diálogo aberto, preserva estado e cores"; `theme.pw.ts` já testa assim. | **Aprovado** pelo usuário em 2026-10-25 (B1). |
+
+---
+
+## 13. Fechamento (rev. 4): conferência, divergências e matriz de verificação
+
+Base: `docs/specs/lancamentos-financeiros-fechamento.md` (RFF01, RFF03, CAF02-CAF04, CAF06-CAF09). Sem tela nem componente novo.
+
+### 13.1 Follow-ups de UX conferidos no working tree
+
+| Follow-up | Código | Situação |
+|---|---|---|
+| Eixo Y fixo no gráfico estreito (CAF04, D15) | `monthly-chart.tsx`, `lib/dashboard/chart-data.ts` | Conforme 5.5 (coluna fixa de 76px com a mesma escala, abertura no mês selecionado centralizado, botões de 3 meses). Pendentes: F3, F4, F5. |
+| Destaque ~2s do recém-criado (CAF02) | `entry-drawer-context.tsx`, `expenses-list.tsx`, `income-panel.tsx`, `globals.css` (`.row-highlight`) | Conforme 3.9.2 (estático, fundo + contorno 2px + selo "Novo" com texto oculto, tabela e cards, Despesas e Receitas). Pendentes: F2, F6. |
+| Combobox ARIA de categoria (CAF03, B1) | `components/ui/combobox.tsx` | Conforme 3.9.1 (design ajustado: sem chevron). Pendente: F1. |
+| Gráficos sob `prefers-reduced-motion` (CAF04, CA87) | `lib/hooks/reduced-motion.ts`, `monthly-chart.tsx`, `category-donut.tsx` | Conforme 5.5/5.6 (ao vivo; servidor assume `reduce`; tooltip e eixo fixo nunca animam). |
+| Destaque do donut pela legenda (CAF04) | `category-donut.tsx` | Conforme 5.6 (design ajustado: contorno 3px na fatia; destaque nos dois sentidos, fatia e legenda). |
+
+### 13.2 Divergências para o frontend-dev
+
+| # | Onde | Divergência | Ação esperada |
 |---|---|---|---|
-| 1 | 3.9 (campo Categoria) | Combobox com opção "Usar <texto digitado>" para categoria nova | Campo de texto com `<datalist>` nativo alimentado por `GET /api/categories`; qualquer texto digitado é aceito, sem a opção "Usar <texto>". |
-| 2 | 5.5 e D15 (gráfico de barras no mobile) | Rolagem horizontal com **eixo Y fixo** | O eixo Y rola junto com o gráfico em contêineres estreitos. |
-| 3 | 5.5 / 5.6 (motion) | Animações de entrada dos gráficos | Animações de gráfico desligadas (para todos os usuários). |
-| 4 | 3.9 / D25 (feedback pós-criação) | Destaque temporário da linha recém-criada na lista | **Não implementado** (follow-up). O toast com ação para o mês/aba continua. |
-| 5 | 3.3 (cabeçalho de `/entries`) | Ordem visual do cabeçalho comum | O cabeçalho de `/entries` foi implementado na **ordem do DOM** (ordem de leitura = ordem do código), sem depender de reordenação visual; a disposição pode diferir em detalhes do desenho. |
+| F1 | `combobox.tsx` | A lista abre em **qualquer** foco, inclusive no foco programático do envio inválido (3.9.2, "foco no primeiro inválido"). Com o campo vazio, a lista mostra todas as categorias e, por ser sobreposta abaixo do input, **cobre a mensagem "Informe a categoria."** e a ajuda. | Não abrir a lista ao receber foco; abrir só ao digitar, com `↓`/`↑` ou com clique no input. |
+| F2 | `entry-drawer-context.tsx` (`markRecent`) | Os 2s começam a contar no sucesso, antes de a revalidação trazer a linha. Com resposta lenta, o destaque aparece por menos tempo ou nem aparece. | Contar os ~2s a partir da primeira renderização da linha destacada (ou do fim da revalidação). |
+| F3 | `monthly-chart.tsx` | Área rolável sem scroll-snap (5.5). | `scroll-snap-type: x proximity` com alinhamento por mês, sem atrapalhar a abertura centralizada nem os botões de 3 meses. |
+| F4 | `monthly-chart.tsx` | Mês selecionado sem a faixa `--chart-cursor` (5.5): só o rótulo muda (700, `--text`). A faixa aparece apenas no hover/foco. | Desenhar a faixa fixa do mês selecionado em `--chart-cursor`, atrás das séries, nos dois modos. |
+| F5 | `monthly-chart.tsx` | Verificar: (a) dupla parada de `Tab` (o contêiner `tabIndex=0` e a superfície do Recharts com `accessibilityLayer`); (b) no modo estreito, a navegação por setas não rola a área para manter o mês ativo visível. | Uma única parada de foco por gráfico; o mês ativo pelo teclado deve ficar sempre visível na área rolável. |
+| F6 | `new-entry-drawer.tsx` (`markRecent` sempre chamado) | O id é marcado mesmo quando o lançamento é de outro mês. Se o usuário aciona "Ver novembro" em menos de 2s, a linha recebe destaque no outro mês, o que contraria o CAF02 ("lançamento de outro mês não gera destaque"). | Marcar só quando `referenceMonth` = mês selecionado e o tipo corresponde à aba ativa. |
+
+Fora do escopo do frontend-dev, mas a registrar: o CAF07 cita botão "perigo", que **não existe** no design nem no código (`Button` tem primário, secundário e terciário; as confirmações irreversíveis usam o primário com aviso `--warning-text`). O tester deve cobrir as variantes existentes, e o planner deve corrigir o CAF07.
+
+### 13.3 Matriz de verificação (CA82, CA83, CA86)
+
+Tudo em **claro e escuro**, por tema salvo (cookie) e, onde indicado, pelo sistema. Critério geral: axe sem violações nem `incomplete` de color-contrast fora da allowlist (PF04); texto >= 4,5:1 e componentes/bordas/foco/desabilitado >= 3:1 contra o **fundo efetivo** (pares da 1.9).
+
+**Botões (CA83).** Variantes: primário, secundário, terciário/link, ícone (inclui o tema e "Meses anteriores/recentes"), aba (>= `md` e segmented < `md`), paginação (página atual e setas), segmented (Tipo/Forma/Status). Pseudo-estados forçados via CDP `CSS.forcePseudoState` (T2).
+
+| Estado | Como produzir | O que verificar |
+|---|---|---|
+| default | tela real | Tokens da 1.8; texto/ícone contra o fundo do botão e borda (`--border-strong` ou `--primary-border`) contra o fundo ao redor (`--surface`, `--bg`, `--surface-2`). |
+| hover | `:hover` forçado | Fundo muda (`--surface-2` ou `--primary-strong-hover`) sem perder AA. Terciário: sublinhado presente. |
+| focus-visible | `Tab` real (preferível) ou `:focus-visible` forçado | Anel `--focus-color` 2px + afastamento visível e >= 3:1 contra o fundo ao redor; não cortado por `overflow` (abas, faixa sticky, células). |
+| active | `:active` forçado | `--surface-active` / `--primary-strong-active`; texto >= 4,5:1 (`--text-muted` sobre `--surface-active` no escuro é 4,62: margem pequena). |
+| carregando | stub lento ("Salvar lançamento", "Criar cartão", "Pagar fatura", confirmação de lote) | Spinner + texto mantêm cor e contraste do default; `aria-busy`; novo clique ignorado. Com `reduce`, spinner parado. |
+| disabled | "Pagar fatura" com fatura paga, "Salvar" com painel de cartão aberto, "Marcar como pago" sem seleção, seta de gráfico na ponta, segmento "Cartão" com Receita | `--surface-2` + `--text-disabled` (>= 3:1; 3,65 / 3,64) e borda `--border-strong`; continua focável (`aria-disabled`) e tem o anel de foco. |
+
+**Estados de tela (CA82, CAF06).**
+
+| Estado | Como produzir | O que verificar em cada tema |
+|---|---|---|
+| Atualizando (resumo, painel da aba, bloco de fatura, blocos do dashboard) | stub com atraso na troca de mês/filtro | Sem opacidade nem scrim; barra de progresso `--accent`; "Atualizando…" `--text-muted` >= 4,5:1; `aria-busy`. Inclui CA85 no escuro. |
+| Banners 404 e 422 do lote | stub responde 404/422 ao lote | `InlineAlert` `--surface`, borda `--danger`, ícone `--danger-text`, texto `--text`; fechar 44x44 com foco visível. |
+| Painel "+ Novo cartão" (aberto, com erro 409, com erro de rede) | drawer de lançamento, Cartão, "+ Novo cartão" | Painel `--surface-2` com contorno `--border-strong` contra `--surface`; inputs e erro conforme 1.9; "Salvar lançamento" desabilitado + texto do rodapé. |
+| Drawer de cartão (criar, editar com aviso, 409, 404 na edição) | `/cards` | Aviso `--accent`, erro inline, banner; scrim e borda do drawer conforme 1.9; rodapé opaco. |
+| Modal de confirmação (lote, individual, "Pagar fatura", erro inline) | aba Despesas / Faturas | `--surface` opaco sobre scrim; aviso `--warning-text`; erro inline `--danger-text`; foco em "Cancelar". |
+| Folha de filtros mobile | 360px, "Filtros (n)" | Selects/segmented no tema; rodapé "Limpar/Aplicar" opaco; `select` aberto e lista nativa no tema (`color-scheme`). |
+| Toasts (sucesso, erro, com ação) | criar/pagar/erro | `--surface-2`, borda esquerda semântica, ícone `*-text`, ação `--accent` >= 4,5:1; posição não cobre a barra de seleção nem a faixa de abas. |
+| Tooltip dos gráficos (barras e donut) | hover ou setas no gráfico | `--tooltip-bg` opaco (nunca branco no escuro); textos e marcadores conforme 1.9; borda `--tooltip-border`. |
+| Tabela alternativa (barras e donut) | alternador "Tabela" | Cabeçalho `--text-muted`, células `--text`; coluna Mês fixa opaca ao rolar; região rolável focável com anel visível. |
+| Rev. 4: destaque de recém-criado, combobox aberto (opção ativa e `Usar "..."`), legenda do donut com item ativo | criar lançamento; digitar na Categoria; focar a legenda | Pares da nota rev. 4 em 1.9; selo "Novo" legível; nada sobreposto ao erro do campo (F1). |
+
+**Gráficos e controles nativos após alternar (CA86, CAF09).**
+
+| Cenário | Como alternar | O que verificar no tema de chegada |
+|---|---|---|
+| Dashboard aberto, com tooltip visível e, à parte, em 360px (eixo fixo) | botão de tema | Eixos (`--chart-axis`), grade, linha do zero, legenda, tooltip, cursor e as 5 séries + fatias do donut assumem os valores do novo tema sem recarregar; contraste das séries conforme 1.9; nenhum `fill`/`stroke` com cor literal ou antiga. |
+| Drawer de lançamento aberto (com texto digitado e painel de cartão aberto) | sistema, sem preferência salva (desvio 2) | Dados preservados; `color-scheme` efetivo de `input[type=date]`, `select`, combobox e scrollbar igual ao tema ativo; autofill e placeholder no tema. |
+| `/entries` e `/dashboard` sem diálogo | botão de tema | `color-scheme` computado do `<html>` e dos controles nativos (data, mês, select) acompanha o tema; scrollbars (`--scrollbar-*`) da página, da faixa de abas e da área do gráfico. |

@@ -50,4 +50,6 @@
 - Rodar os 63 testes Playwright num ambiente com as bibliotecas de sistema do Chromium instaladas.
 - CA83 (botões em todos os estados), CA85 e parte do CA86 só têm cobertura indireta (pares de contraste e ausência de cor literal).
 - O CA84 emula a mídia em vez de clicar no botão de tema; o tester recomenda reescrever.
-- Follow-ups de UX: eixo Y fixo no gráfico estreito, destaque de linha nova, combobox de categoria com "Usar <texto>".
+- Follow-ups de UX concluídos: eixo Y fixo no gráfico estreito, destaque de ~2s da linha/card novo, combobox ARIA de categoria com `Usar "<texto>"` e animações dos gráficos condicionadas a `prefers-reduced-motion` com destaque do donut pela legenda.
+
+> Atualização 2026-10-25: as pendências acima foram tratadas no fechamento, ver [lancamentos-financeiros-fechamento.md](lancamentos-financeiros-fechamento.md).

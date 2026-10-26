@@ -1,17 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
+import { Bar, CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { IconButton } from "@/components/ui/button";
 import { Money } from "@/components/ui/money";
 import { SignIndicator } from "@/components/ui/status";
 import { monthLabelPtBR, monthLongPtBR } from "@/lib/dates/format";
 import { formatBRL } from "@/lib/money/decimal";
-import { formatAxisTick, isSeriesEmpty, toChartPoints, type ChartPoint } from "@/lib/dashboard/chart-data";
+import { usePrefersReducedMotion } from "@/lib/hooks/reduced-motion";
+import { formatAxisTick, isSeriesEmpty, niceScale, scrollLeftForMonth, toChartPoints, type ChartPoint } from "@/lib/dashboard/chart-data";
 import type { MonthlySeries } from "@/lib/api/types";
 import { ChartCard, type ChartView } from "./chart-card";
 
-const MONTH_WIDTH = 56;
+const MONTH_WIDTH = 56; // >= 44px por mes (alvo minimo) no modo estreito
 const AXIS_WIDTH = 76;
+const NARROW_BELOW = 560; // largura util abaixo da qual o eixo Y fica fixo e as barras rolam (D15)
+const MARGIN = { top: 8, right: 8, bottom: 4, left: 0 };
+const X_AXIS_HEIGHT = 30; // igual nos dois graficos do modo estreito: o Recharts nao reserva altura para XAxis oculto
 
 function Legend() {
   const items = [
@@ -126,24 +131,179 @@ function MonthlyTable({ data }: { data: ChartPoint[] }) {
   );
 }
 
-/** Evolucao mensal (RF16, D3): despesas empilhadas (pago na base, pendente com hachura) + receitas + duas linhas de saldo. */
+interface PlotProps {
+  data: ChartPoint[];
+  selectedLabel: string;
+  scale: ReturnType<typeof niceScale>;
+  animate: boolean;
+  /** Mes ativo pelo teclado (tooltip controlado); `null` = tooltip so por ponteiro */
+  activeIndex?: number | null;
+  /** Eixo Y: visivel, oculto (area rolavel) ou so o eixo (coluna fixa) */
+  part: "full" | "axis" | "bars";
+}
+
+/** Desenha o grafico inteiro, so o eixo Y (coluna fixa) ou so as barras (area rolavel) com a MESMA escala. */
+function Plot({ data, selectedLabel, scale, animate, part, activeIndex = null }: PlotProps) {
+  const showBars = part !== "axis";
+  const patternId = `hatch-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={data} margin={part === "axis" ? { ...MARGIN, right: 0 } : MARGIN} barGap={2} accessibilityLayer={false}>
+        {showBars ? (
+          <defs>
+            <pattern id={patternId} patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+              <rect width="6" height="6" style={{ fill: "var(--chart-pending)" }} />
+              <line x1="0" y1="0" x2="0" y2="6" strokeWidth="2" style={{ stroke: "var(--surface)" }} />
+            </pattern>
+          </defs>
+        ) : null}
+        {showBars ? <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--chart-grid)" /> : null}
+        <XAxis
+          dataKey="label"
+          height={X_AXIS_HEIGHT}
+          tickLine={false}
+          axisLine={part === "axis" ? false : { stroke: "var(--chart-grid)" }}
+          tick={part === "axis" ? false : (props) => <MonthTick {...props} selected={selectedLabel} />}
+          interval={0}
+        />
+        <YAxis
+          hide={part === "bars"}
+          width={part === "bars" ? 0 : AXIS_WIDTH}
+          domain={scale.domain}
+          ticks={scale.ticks}
+          tickLine={false}
+          axisLine={false}
+          tickFormatter={formatAxisTick}
+          tick={{ fontSize: 12, fill: "var(--chart-axis)" }}
+        />
+        {/* F4: faixa fixa do mes selecionado, atras das series (declarada antes das barras) */}
+        {showBars ? <ReferenceArea x1={selectedLabel} x2={selectedLabel} fill="var(--chart-cursor)" fillOpacity={1} stroke="none" ifOverflow="visible" /> : null}
+        {showBars ? <ReferenceLine y={0} stroke="var(--chart-zero-line)" strokeWidth={1.5} /> : null}
+        {showBars ? (
+          <Tooltip
+            content={<MonthlyTooltip />}
+            cursor={{ fill: "var(--chart-cursor)", stroke: "none" }}
+            isAnimationActive={false}
+            active={activeIndex !== null ? true : undefined}
+            defaultIndex={activeIndex ?? undefined}
+          />
+        ) : null}
+        <Bar dataKey="incomeValue" name="Receitas" fill="var(--chart-income)" radius={[4, 4, 0, 0]} isAnimationActive={animate} animationDuration={250} />
+        <Bar dataKey="paidValue" name="Despesas pagas" stackId="expenses" fill="var(--chart-paid)" stroke="var(--surface)" strokeWidth={2} isAnimationActive={animate} animationDuration={250} />
+        <Bar dataKey="pendingValue" name="Despesas pendentes" stackId="expenses" fill={`url(#${patternId})`} stroke="var(--surface)" strokeWidth={2} radius={[4, 4, 0, 0]} isAnimationActive={animate} animationDuration={250} />
+        <Line dataKey="realizedValue" name="Saldo realizado" stroke="var(--chart-balance-realized)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--chart-balance-realized)", stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: "var(--chart-balance-realized)", stroke: "var(--surface)", strokeWidth: 2 }} isAnimationActive={animate} animationDuration={250} />
+        <Line dataKey="projectedValue" name="Saldo previsto" stroke="var(--chart-balance-projected)" strokeWidth={2.5} strokeDasharray="6 4" dot={{ r: 4, fill: "var(--surface)", stroke: "var(--chart-balance-projected)", strokeWidth: 2 }} activeDot={{ r: 5, fill: "var(--surface)", stroke: "var(--chart-balance-projected)", strokeWidth: 2 }} isAnimationActive={animate} animationDuration={250} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
+/** Evolucao mensal (RF16, D3, D15): barras empilhadas + saldos; em contêiner estreito o eixo Y fica fixo e so as barras rolam. */
 export function MonthlyChart({ series, selectedMonth }: { series: MonthlySeries; selectedMonth: string }) {
   const [view, setView] = useState<ChartView>("chart");
+  const [narrow, setNarrow] = useState(false);
   const data = useMemo(() => toChartPoints(series.points), [series.points]);
+  const scale = useMemo(() => niceScale(data), [data]);
+  const reduced = usePrefersReducedMotion();
+  const hostRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const empty = isSeriesEmpty(series.points);
   const selectedLabel = monthLabelPtBR(selectedMonth);
   const subtitle = `${monthLabelPtBR(series.from)} a ${monthLabelPtBR(series.to)}`;
   const current = data.find((p) => p.month === selectedMonth) ?? data[data.length - 1];
+  const foundIndex = data.findIndex((p) => p.month === selectedMonth);
+  const selectedIndex = foundIndex >= 0 ? foundIndex : Math.max(0, data.length - 1); // fora da serie: ultimo mes (coerente com o resumo)
+  const contentWidth = MONTH_WIDTH * data.length;
 
-  // modo estreito (D15): abre rolado no fim (mes selecionado)
-  useEffect(() => {
-    if (view === "chart" && scrollRef.current) scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+  // largura util do contêiner decide o modo (abaixo de 560px: eixo fixo + rolagem)
+  useLayoutEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const measure = () => setNarrow(host.clientWidth > 0 && host.clientWidth < NARROW_BELOW);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(host);
+    return () => observer.disconnect();
   }, [view]);
+
+  const [edges, setEdges] = useState({ start: true, end: false });
+  const updateEdges = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) setEdges({ start: el.scrollLeft <= 0, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 1 });
+  }, []);
+
+  // abre rolado no mes selecionado
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (narrow && el) {
+      el.scrollLeft = scrollLeftForMonth(selectedIndex, MONTH_WIDTH, el.clientWidth, contentWidth);
+      updateEdges();
+    }
+  }, [narrow, view, selectedIndex, contentWidth, updateEdges]);
+
+  // Teclado (F5): UMA parada de Tab por grafico (o contêiner). Setas/Home/End movem o mes ativo, que mostra o tooltip e,
+  // no modo estreito, rola a area para mante-lo visivel. Esc dispensa o tooltip (WCAG 1.4.13). Comeca no mes selecionado.
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const lastIndex = data.length - 1;
+  const onChartFocus = (event: FocusEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget) return;
+    let keyboard = true;
+    try {
+      keyboard = event.currentTarget.matches(":focus-visible");
+    } catch {
+      // seletor nao suportado: trata como teclado
+    }
+    if (keyboard && lastIndex >= 0) setActiveIndex(selectedIndex);
+  };
+  const onChartKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget || lastIndex < 0) return;
+    const from = activeIndex ?? selectedIndex;
+    let next: number;
+    switch (event.key) {
+      case "ArrowRight":
+        next = Math.min(from + 1, lastIndex);
+        break;
+      case "ArrowLeft":
+        next = Math.max(from - 1, 0);
+        break;
+      case "Home":
+        next = 0;
+        break;
+      case "End":
+        next = lastIndex;
+        break;
+      case "Escape":
+        if (activeIndex !== null) {
+          event.preventDefault();
+          setActiveIndex(null);
+        }
+        return;
+      default:
+        return;
+    }
+    event.preventDefault();
+    setActiveIndex(next);
+  };
+  const keyboardProps = { tabIndex: 0, onFocus: onChartFocus, onBlur: () => setActiveIndex(null), onKeyDown: onChartKeyDown } as const;
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (activeIndex === null || !narrow || !el) return;
+    const left = activeIndex * MONTH_WIDTH;
+    if (left < el.scrollLeft || left + MONTH_WIDTH > el.scrollLeft + el.clientWidth) {
+      el.scrollLeft = scrollLeftForMonth(activeIndex, MONTH_WIDTH, el.clientWidth, contentWidth); // alvo = ponto de snap (centralizado)
+      updateEdges();
+    }
+  }, [activeIndex, narrow, contentWidth, updateEdges]);
+  const activePoint = activeIndex !== null ? data[activeIndex] : undefined;
+
+  const scrollByMonths = useCallback((months: number) => scrollRef.current?.scrollBy({ left: months * MONTH_WIDTH, behavior: reduced ? "auto" : "smooth" }), [reduced]);
 
   const description = current
     ? `Evolução mensal de ${subtitle}. Em ${monthLongPtBR(current.month)}: receitas ${formatBRL(current.totals.income)}, despesas ${formatBRL(current.totals.expenses.total)}, saldo realizado ${formatBRL(current.totals.balance.realized)}, saldo previsto ${formatBRL(current.totals.balance.projected)}.`
     : "Sem dados.";
+  const height = "h-[260px] md:h-[280px] lg:h-[320px]";
 
   return (
     <ChartCard title="Evolução mensal" subtitle={subtitle} view={view} onViewChange={setView} description={description}>
@@ -152,38 +312,58 @@ export function MonthlyChart({ series, selectedMonth }: { series: MonthlySeries;
       ) : (
         <>
           <Legend />
-          <div className="relative">
-            <div ref={scrollRef} tabIndex={0} role="group" aria-label="Gráfico de evolução mensal" className="overflow-x-auto">
-              <div style={{ minWidth: MONTH_WIDTH * 12 + AXIS_WIDTH }} className="h-[260px] md:h-[280px] lg:h-[320px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 4, left: 0 }} barGap={2} accessibilityLayer>
-                    <defs>
-                      <pattern id="pending-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
-                        <rect width="6" height="6" style={{ fill: "var(--chart-pending)" }} />
-                        <line x1="0" y1="0" x2="0" y2="6" strokeWidth="2" style={{ stroke: "var(--surface)" }} />
-                      </pattern>
-                    </defs>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--chart-grid)" />
-                    <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: "var(--chart-grid)" }} tick={(props) => <MonthTick {...props} selected={selectedLabel} />} interval={0} />
-                    <YAxis width={AXIS_WIDTH} tickLine={false} axisLine={false} tickFormatter={formatAxisTick} tick={{ fontSize: 12, fill: "var(--chart-axis)" }} />
-                    <ReferenceLine y={0} stroke="var(--chart-zero-line)" strokeWidth={1.5} />
-                    <Tooltip content={<MonthlyTooltip />} cursor={{ fill: "var(--chart-cursor)" }} isAnimationActive={false} />
-                    <Bar dataKey="incomeValue" name="Receitas" fill="var(--chart-income)" radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                    <Bar dataKey="paidValue" name="Despesas pagas" stackId="expenses" fill="var(--chart-paid)" stroke="var(--surface)" strokeWidth={2} isAnimationActive={false} />
-                    <Bar dataKey="pendingValue" name="Despesas pendentes" stackId="expenses" fill="url(#pending-hatch)" stroke="var(--surface)" strokeWidth={2} radius={[4, 4, 0, 0]} isAnimationActive={false} />
-                    <Line dataKey="realizedValue" name="Saldo realizado" stroke="var(--chart-balance-realized)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--chart-balance-realized)", stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5 }} isAnimationActive={false} />
-                    <Line dataKey="projectedValue" name="Saldo previsto" stroke="var(--chart-balance-projected)" strokeWidth={2.5} strokeDasharray="6 4" dot={{ r: 4, fill: "var(--surface)", stroke: "var(--chart-balance-projected)", strokeWidth: 2 }} activeDot={{ r: 5 }} isAnimationActive={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
+          <div ref={hostRef} className="relative" data-narrow={narrow}>
+            {narrow ? (
+              <div className={`flex ${height}`}>
+                <div style={{ width: AXIS_WIDTH }} className="shrink-0" aria-hidden="true" data-testid="fixed-axis">
+                  <Plot data={data} selectedLabel={selectedLabel} scale={scale} animate={false} part="axis" />
+                </div>
+                <div
+                  ref={scrollRef}
+                  {...keyboardProps}
+                  role="group"
+                  aria-label="Gráfico de evolução mensal, role para ver os 12 meses"
+                  className="min-w-0 flex-1 overflow-x-auto"
+                  style={{ scrollSnapType: "x proximity" }}
+                  onScroll={updateEdges}
+                  data-testid="scroll-area"
+                >
+                  <div style={{ width: contentWidth }} className="relative h-full">
+                    {/* F3: um alvo de snap por mes, centralizado (mesmo alinhamento da abertura no mes selecionado) */}
+                    {data.map((point, index) => (
+                      <span key={point.month} aria-hidden="true" className="pointer-events-none absolute top-0 h-px" style={{ left: index * MONTH_WIDTH, width: MONTH_WIDTH, scrollSnapAlign: "center" }} />
+                    ))}
+                    <Plot data={data} selectedLabel={selectedLabel} scale={scale} animate={!reduced} part="bars" activeIndex={activeIndex} />
+                  </div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className={height} role="group" aria-label="Gráfico de evolução mensal" {...keyboardProps}>
+                <Plot data={data} selectedLabel={selectedLabel} scale={scale} animate={!reduced} part="full" activeIndex={activeIndex} />
+              </div>
+            )}
+            <p className="sr-only" aria-live="polite">
+              {activePoint
+                ? `${monthLongPtBR(activePoint.month)}: receitas ${formatBRL(activePoint.totals.income)}, despesas ${formatBRL(activePoint.totals.expenses.total)}, saldo realizado ${formatBRL(activePoint.totals.balance.realized)}, saldo previsto ${formatBRL(activePoint.totals.balance.projected)}.`
+                : ""}
+            </p>
             {empty ? (
               <p className="pointer-events-none absolute inset-x-0 top-1/2 mx-auto w-fit -translate-y-1/2 rounded-full border border-border-strong bg-surface px-4 py-1.5 text-sm text-muted">
                 Sem lançamentos de {subtitle}
               </p>
             ) : null}
           </div>
-          <p className="text-sm text-muted lg:hidden">Deslize para ver os 12 meses</p>
+          {narrow ? (
+            <div className="flex items-center justify-between gap-2">
+              <IconButton aria-label="Meses anteriores" disabled={edges.start} onClick={() => scrollByMonths(-3)}>
+                <span aria-hidden="true">‹</span>
+              </IconButton>
+              <p className="text-sm text-muted">Deslize para ver os 12 meses</p>
+              <IconButton aria-label="Meses recentes" disabled={edges.end} onClick={() => scrollByMonths(3)}>
+                <span aria-hidden="true">›</span>
+              </IconButton>
+            </div>
+          ) : null}
         </>
       )}
     </ChartCard>
