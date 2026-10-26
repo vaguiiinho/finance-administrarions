@@ -4,14 +4,17 @@
 Futurista, limpo, tecnológico. Tema claro e escuro, com valores próprios por tema.
 Referências: interfaces de dashboards modernos, glassmorphism sutil (não exagerado).
 
+Paleta suavizada (rev. 5 do design da feature, aprovada pelo usuário em 2026-10-25): o escuro deixou de usar quase-preto (fundo azul-ardósia `#151B26`, cartões `#1C2330`) e o claro ganhou um fundo cinza-azulado suave (`#EEF1F5`) com cartões brancos, para separar melhor fundo e cartões. A separação é reforçada por `--border` e pela sombra sutil `--shadow-card`.
+
 ## Tokens e temas
 
-Fonte de verdade: `web/app/styles/tokens.css`. Cada token é declarado **uma única vez** com `light-dark(<claro>, <escuro>)`. Os valores e usos de cada token estão no design da feature (`docs/design/lancamentos-financeiros.md`, seção 1.2); a tabela abaixo reproduz o que está no código. Este é o único arquivo que pode conter cores literais: componentes usam apenas `var(--token)`, inclusive em SVG (Recharts).
+Fonte de verdade: `web/app/styles/tokens.css`. Cada token de cor é declarado **uma única vez** com `light-dark(<claro>, <escuro>)`. Os valores e usos de cada token estão no design da feature (`docs/design/lancamentos-financeiros.md`, seção 1.2, contrastes na 1.9); a tabela abaixo reproduz esses valores. Este é o único arquivo que pode conter cores literais: componentes usam apenas `var(--token)`, inclusive em SVG (Recharts).
 
 ### Mecanismo de tema
 
 - `:root { color-scheme: light dark; }`: sem preferência salva, o tema segue o sistema operacional (`prefers-color-scheme`), ao vivo e sem JavaScript.
 - `:root[data-theme="light"]` e `:root[data-theme="dark"]` fixam `color-scheme` e, com isso, o resultado de todos os `light-dark()` (e dos controles nativos: date/month picker, select, barras de rolagem).
+- `light-dark()` só aceita valores de cor. Tokens compostos (como `--shadow-card` e `--focus-ring`) são declarados uma vez, sem `light-dark()`, e referenciam um token de cor que varia por tema (`--shadow-color`, `--focus-color`).
 - **Cookie `theme`** (`light` | `dark`; `Path=/; Max-Age=31536000; SameSite=Lax`, `Secure` em HTTPS; valor inválido equivale a ausente). `web/app/layout.tsx` lê o cookie no servidor e renderiza `<html data-theme="...">`, então o primeiro quadro (inclusive loading e erro) já nasce no tema certo. Por ler `cookies()` no layout raiz, as rotas são dinâmicas.
 - **Alternador sol/lua** (`web/components/theme/theme-toggle.tsx`, na navbar): botão com `aria-label` fixo "Tema escuro" e `aria-pressed`. Ao clicar grava `document.documentElement.dataset.theme` e o cookie, sem recarregar e sem tocar o estado de outras árvores React (drawer, formulários, filtros). Os dois ícones ficam no DOM e a visibilidade é por CSS. A troca é instantânea (`data-theme-switching` desliga transições por dois frames).
 - `web/app/global-error.tsx` usa um script inline mínimo que lê o cookie antes da pintura.
@@ -19,32 +22,34 @@ Fonte de verdade: `web/app/styles/tokens.css`. Cada token é declarado **uma ún
 
 ### Regras de uso das cores
 
-1. Texto só com tokens de texto: `--text`, `--text-muted`, `--text-disabled`, `--accent`, `--on-primary`, `--success-text`, `--warning-text`, `--danger-text`, `--income`, `--expense`. `--success`, `--warning` e `--danger` são para preenchimento e borda, nunca texto.
+1. Texto só com tokens de texto: `--text`, `--text-muted`, `--text-disabled`, `--accent`, `--accent-active`, `--on-primary`, `--success-text`, `--warning-text`, `--danger-text`, `--income`, `--expense`. `--success`, `--warning` e `--danger` são para preenchimento e borda, nunca texto.
 2. Sem opacidade em texto ou controles; desabilitado usa `--surface-2` + `--text-disabled`.
-3. Transparência só em `--scrim`, `--header-bg` (alfa 0.95) e sombras.
+3. Transparência só em `--scrim`, `--header-bg` (alfa 0.95) e sombras (`--shadow-color`).
 4. Todo elemento preenchido com `--primary-strong*` declara borda `--primary-border`.
 5. Recharts: `fill`/`stroke` sempre de `var(--token)`; tooltip e legenda próprios.
-6. Contraste mínimo WCAG AA (4,5:1 texto; 3:1 não textual) nos dois temas, verificado por teste unitário de tokens e por Playwright + axe.
+6. Contraste mínimo WCAG AA (4,5:1 texto; 3:1 não textual) nos dois temas, verificado por teste unitário de tokens e por Playwright + axe. Pares e razões em `docs/design/lancamentos-financeiros.md`, 1.9.
 
 ### Tabela de tokens (claro / escuro)
 
-**Superfícies e texto**
+**Superfícies, texto e profundidade**
 
 | Token | Claro | Escuro | Uso |
 |---|---|---|---|
-| `--bg` | `#F5F7FB` | `#0B0F1A` | Fundo da página; fundo opaco da faixa de abas fixa |
-| `--surface` | `#FFFFFF` | `#121829` | Cards, resumo, tabela, blocos de fatura, drawer, modal, folha, menus |
-| `--surface-2` | `#EEF1F7` | `#18203A` | Hover, linha selecionada, toast, tooltip (escuro), desabilitados, faixa de subtotal, painel de novo cartão |
-| `--surface-active` | `#E2E7F0` | `#222B4A` | Pressionado de botões secundários/ícone, itens de menu e abas |
-| `--input-bg` | `#FFFFFF` | `#0B0F1A` | Fundo de inputs, selects, combobox, date picker |
-| `--header-bg` | `rgb(255 255 255 / 0.95)` | `rgb(18 24 41 / 0.95)` | Navbar fixa (blur 12px) |
-| `--border` | `#DDE2EC` | `#1F2940` | Bordas decorativas |
-| `--border-strong` | `#737D92` | `#6E7891` | Borda de controles, blocos de fatura, painel de novo cartão, drawer/modal (>= 3:1) |
-| `--text` | `#0F172A` | `#E6EAF5` | Texto principal, valores monetários, aba ativa |
-| `--text-muted` | `#475569` | `#8B95AD` | Texto secundário, rótulos, placeholders, ticks, aba inativa |
-| `--text-disabled` | `#737D92` | `#6E7891` | Texto e ícone de controles desabilitados |
-| `--skeleton` | `#E2E7F0` | `#222B4A` | Blocos de skeleton |
-| `--scrim` | `rgb(15 23 42 / 0.45)` | `rgb(11 15 26 / 0.72)` | Fundo atrás de drawer/modal/folha |
+| `--bg` | `#EEF1F5` | `#151B26` | Fundo da página; fundo opaco da faixa de abas fixa |
+| `--surface` | `#FFFFFF` | `#1C2330` | Cards, resumo, tabela, blocos de fatura, drawer, modal, folha, menus |
+| `--surface-2` | `#F4F6F9` | `#252D3C` | Hover, linha selecionada, toast, tooltip (escuro), desabilitados, faixa de subtotal, painel de novo cartão |
+| `--surface-active` | `#E4E8EE` | `#303A4C` | Pressionado de botões secundários/ícone, itens de menu e abas, opção ativa do combobox, `::selection` |
+| `--input-bg` | `#FFFFFF` | `#151B26` | Fundo de inputs, selects, combobox, date picker |
+| `--header-bg` | `rgb(255 255 255 / 0.95)` | `rgb(28 35 48 / 0.95)` | Navbar fixa (blur 12px) |
+| `--border` | `#D9DEE6` | `#2E3747` | Bordas decorativas (cards, divisórias, base da faixa de abas) |
+| `--border-strong` | `#6F798C` | `#7A8497` | Borda de controles, blocos de fatura, painel de novo cartão, drawer/modal (>= 3:1) |
+| `--text` | `#1E293B` | `#E3E7EE` | Texto principal, valores monetários, aba ativa |
+| `--text-muted` | `#4B5567` | `#9BA5B7` | Texto secundário, rótulos, placeholders, ticks, aba inativa |
+| `--text-disabled` | `#6F798C` | `#7A8497` | Texto e ícone de controles desabilitados |
+| `--skeleton` | `#E4E8EE` | `#303A4C` | Blocos de skeleton |
+| `--scrim` | `rgb(15 23 42 / 0.45)` | `rgb(8 11 17 / 0.72)` | Fundo atrás de drawer/modal/folha |
+| `--shadow-color` | `rgb(15 23 42 / 0.06)` | `rgb(0 0 0 / 0.3)` | Cor da sombra dos cartões (token de cor; é o que varia por tema) |
+| `--shadow-card` | `0 1px 2px var(--shadow-color)` | idem | Sombra sutil de tudo que é `--surface` sobre `--bg` (declarado sem `light-dark()`) |
 
 **Ação, foco e links**
 
@@ -56,12 +61,12 @@ Fonte de verdade: `web/app/styles/tokens.css`. Cada token é declarado **uma ún
 | `--primary-strong-active` | `#3730A3` | `#3730A3` | Pressionado do primário |
 | `--primary-border` | `#4F46E5` | `#818CF8` | Borda 1px de tudo que é preenchido com `--primary-strong` |
 | `--on-primary` | `#FFFFFF` | `#FFFFFF` | Texto/ícone sobre `--primary-strong` e variantes |
-| `--accent` | `#0E7490` | `#22D3EE` | Links, item de navegação ativo, indicador da aba ativa, barra de progresso |
-| `--accent-active` | `#0C6980` | `#22D3EE` | Texto do botão terciário pressionado (`:active`) sobre `--surface-active` (5,05:1 no claro) |
-| `--focus-color` | `#0E7490` | `#22D3EE` | Cor do anel de foco |
+| `--accent` | `#0E7490` | `#5CC8DB` | Links, item de navegação ativo, indicador da aba ativa, barra de progresso |
+| `--accent-active` | `#0C6980` | `#5CC8DB` | Texto do botão terciário pressionado (`:active`) sobre `--surface-active` (5,10 claro / 5,85 escuro) |
+| `--focus-color` | `#0E7490` | `#5CC8DB` | Cor do anel de foco |
 | `--focus-ring` / `--focus-offset` | `2px solid var(--focus-color)` / `2px` | idem | Forma do anel de foco (iguais nos dois temas) |
 
-**Semântica de status e tipo**
+**Semântica de status e tipo** (sem mudança de valor na rev. 5; conferidos contra os novos fundos)
 
 | Token | Claro | Escuro | Uso |
 |---|---|---|---|
@@ -83,22 +88,22 @@ Fonte de verdade: `web/app/styles/tokens.css`. Cada token é declarado **uma ún
 | `--chart-pending` | `#B45309` | `#FBBF24` | Despesas pendentes (com hachura) |
 | `--chart-balance-realized` | `#6D28D9` | `#A78BFA` | Linha "Saldo realizado" |
 | `--chart-balance-projected` | `#BE185D` | `#F472B6` | Linha tracejada "Saldo previsto" |
-| `--chart-axis` | `#475569` | `#8B95AD` | Ticks dos eixos |
-| `--chart-grid` | `#DDE2EC` | `#2A3552` | Grade |
-| `--chart-zero-line` | `#475569` | `#8B95AD` | Linha do zero |
-| `--chart-cursor` | `#EEF1F7` | `#18203A` | Faixa de hover/foco e do mês selecionado |
-| `--chart-1` | `#0E7490` | `#22D3EE` | Donut, 1a categoria |
+| `--chart-axis` | `#4B5567` | `#9BA5B7` | Ticks dos eixos (= `--text-muted`) |
+| `--chart-grid` | `#D9DEE6` | `#343E51` | Grade |
+| `--chart-zero-line` | `#4B5567` | `#9BA5B7` | Linha do zero |
+| `--chart-cursor` | `#EEF1F5` | `#252D3C` | Faixa de hover/foco e do mês selecionado |
+| `--chart-1` | `#0E7490` | `#5CC8DB` | Donut, 1a categoria (= `--accent`) |
 | `--chart-2` | `#4F46E5` | `#818CF8` | Donut, 2a categoria |
 | `--chart-3` | `#BE185D` | `#F472B6` | Donut, 3a categoria |
 | `--chart-4` | `#4D7C0F` | `#A3E635` | Donut, 4a categoria |
 | `--chart-5` | `#C2410C` | `#FB923C` | Donut, 5a categoria |
-| `--chart-6` | `#64748B` | `#8B95AD` | Donut, "Outras" |
-| `--tooltip-bg` | `#FFFFFF` | `#18203A` | Fundo dos tooltips (opaco) |
-| `--tooltip-border` | `#737D92` | `#6E7891` | Borda dos tooltips |
-| `--scrollbar-thumb` | `#737D92` | `#6E7891` | Polegar da barra de rolagem |
-| `--scrollbar-track` | `#EEF1F7` | `#18203A` | Trilho |
+| `--chart-6` | `#64748B` | `#9BA5B7` | Donut, "Outras" |
+| `--tooltip-bg` | `#FFFFFF` | `#252D3C` | Fundo dos tooltips (opaco) |
+| `--tooltip-border` | `#6F798C` | `#7A8497` | Borda dos tooltips |
+| `--scrollbar-thumb` | `#6F798C` | `#7A8497` | Polegar da barra de rolagem |
+| `--scrollbar-track` | `#F4F6F9` | `#252D3C` | Trilho |
 
-Tokens introduzidos em relação à primeira versão deste documento (que só tinha tema escuro e `--bg/--surface/--border/--primary/--accent/--success/--warning/--danger/--text/--text-muted`): `--surface-2`, `--surface-active`, `--input-bg`, `--header-bg`, `--border-strong`, `--text-disabled`, `--skeleton`, `--scrim`, `--primary-strong` (+ `-hover`, `-active`), `--primary-border`, `--on-primary`, `--focus-color`, `--focus-ring`, `--focus-offset`, variantes `*-text`, `--income`, `--expense`, todos os `--chart-*`, `--tooltip-*` e `--scrollbar-*`. Os valores do tema escuro originais foram mantidos; `--primary` virou apenas glow decorativo e fundos de botão usam `--primary-strong`.
+Histórico dos tokens: a primeira versão deste documento só tinha tema escuro e `--bg/--surface/--border/--primary/--accent/--success/--warning/--danger/--text/--text-muted`. A rev. 2 do design da feature introduziu `--surface-2`, `--surface-active`, `--input-bg`, `--header-bg`, `--border-strong`, `--text-disabled`, `--skeleton`, `--scrim`, `--primary-strong` (+ `-hover`, `-active`), `--primary-border`, `--on-primary`, `--focus-color`, `--focus-ring`, `--focus-offset`, variantes `*-text`, `--income`, `--expense`, todos os `--chart-*`, `--tooltip-*` e `--scrollbar-*`; `--primary` virou apenas glow decorativo e fundos de botão usam `--primary-strong`. A rev. 4 introduziu `--accent-active`. A rev. 5 suavizou superfícies, bordas, texto e `--accent` do escuro, e introduziu `--shadow-color` e `--shadow-card`; tokens semânticos e séries de gráfico mantiveram os valores (exceto `--chart-1`, `--chart-6`, eixo, grade, linha do zero e cursor, que acompanham os tokens de base).
 
 ## Tipografia
 - Títulos: Space Grotesk (600/700) | Corpo: Inter (400/500) | Mono: JetBrains Mono (carregadas com `next/font/google` em `web/app/layout.tsx`)
@@ -106,7 +111,9 @@ Tokens introduzidos em relação à primeira versão deste documento (que só ti
 
 ## Forma e profundidade
 - Raio: 8px (inputs), 12px (cards), 999px (badges)
-- Sombras suaves com glow sutil na cor primary em elementos de foco
+- Cartões (`--surface` sobre `--bg`: cards do resumo e do dashboard, cards de lista, tabela, blocos de fatura, cards de `/cards`): borda 1px (`--border`, ou `--border-strong` nos blocos de ação) + `--shadow-card`. A sombra é reforço visual; a separação não depende só dela.
+- Menus, listas de combobox e tooltips: sombra mais marcada (definida por componente, sempre com `--shadow-color` ou cor de sombra transparente, nunca cor literal fora de `tokens.css`).
+- Glow sutil na cor `--primary` apenas em elementos de foco.
 - Blur (backdrop-filter) apenas em modais e headers fixos
 
 ## Motion

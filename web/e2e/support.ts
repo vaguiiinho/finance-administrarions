@@ -7,7 +7,7 @@ export const MONTH = "2026-11";
 export const ENTRIES_URL = `/entries?month=${MONTH}`;
 
 /** Valores computados esperados (design 1.2) em rgb(). */
-export const BG = { light: "rgb(245, 247, 251)", dark: "rgb(11, 15, 26)" } as const;
+export const BG = { light: "rgb(238, 241, 245)", dark: "rgb(21, 27, 38)" } as const;
 
 /**
  * Opcoes do stub (ADR 0002 T5): `delayMs` atrasa os GETs /api/*; `holdQueries` segura os GETs ate `releaseMutations()`

@@ -179,7 +179,7 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
       </div>
 
       {/* Tabela (>= md) */}
-      <table className="hidden w-full border-collapse text-sm md:table">
+      <table className="hidden w-full border-collapse rounded-xl border border-border text-sm shadow-card md:table">
         <caption className="sr-only">Despesas do mês, mais recentes primeiro</caption>
         <thead className="sticky top-[calc(var(--navbar-h)+var(--tabsbar-h))] z-10 bg-surface text-left text-muted">
           <tr className="border-b border-border-strong">
@@ -268,7 +268,7 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
             const titleId = `${uid}-card-${entry.id}`;
             const isSelected = selectedIds.has(entry.id) && entry.status === "PENDING";
             return (
-              <EntryItem key={entry.id} id={entry.id} aria-labelledby={titleId} className={`rounded-xl border p-4 ${isSelected ? "border-accent bg-surface-2" : "border-border bg-surface"}`}>
+              <EntryItem key={entry.id} id={entry.id} aria-labelledby={titleId} className={`rounded-xl border p-4 ${isSelected ? "border-accent bg-surface-2" : "border-border bg-surface"} shadow-card`}>
                 <div className="flex items-start gap-1">
                   <Checkbox aria-label={checkboxLabel(entry)} checked={isSelected} disabled={entry.status !== "PENDING"} onChange={(e) => toggle(entry.id, e.target.checked)} className="-ml-3 -mt-2" />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">

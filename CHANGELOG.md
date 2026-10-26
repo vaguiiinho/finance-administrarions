@@ -5,6 +5,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Paleta suavizada (design rev. 5): fundo escuro `#151B26` em vez do quase preto `#0B0F1A`, texto e ciano menos contrastantes no escuro, fundo claro `#EEF1F5` com cartões brancos destacados; nova sombra `--shadow-card` (`--shadow-color` por tema) em cartões, blocos e tabelas apoiados no fundo. Todos os pares seguem >= 4,5:1 (texto) e >= 3:1 (não-texto).
+
 ### Fechamento de lançamentos financeiros (ADR 0002)
 
 #### Added

@@ -7,19 +7,21 @@
   color-scheme: light dark;
 
   /* superficies e texto */
-  --bg: light-dark(#F5F7FB, #0B0F1A);
-  --surface: light-dark(#FFFFFF, #121829);
-  --surface-2: light-dark(#EEF1F7, #18203A);
-  --surface-active: light-dark(#E2E7F0, #222B4A);
-  --input-bg: light-dark(#FFFFFF, #0B0F1A);
-  --header-bg: light-dark(rgb(255 255 255 / 0.95), rgb(18 24 41 / 0.95));
-  --border: light-dark(#DDE2EC, #1F2940);
-  --border-strong: light-dark(#737D92, #6E7891);
-  --text: light-dark(#0F172A, #E6EAF5);
-  --text-muted: light-dark(#475569, #8B95AD);
-  --text-disabled: light-dark(#737D92, #6E7891);
-  --skeleton: light-dark(#E2E7F0, #222B4A);
-  --scrim: light-dark(rgb(15 23 42 / 0.45), rgb(11 15 26 / 0.72));
+  --bg: light-dark(#EEF1F5, #151B26);
+  --surface: light-dark(#FFFFFF, #1C2330);
+  --surface-2: light-dark(#F4F6F9, #252D3C);
+  --surface-active: light-dark(#E4E8EE, #303A4C);
+  --input-bg: light-dark(#FFFFFF, #151B26);
+  --header-bg: light-dark(rgb(255 255 255 / 0.95), rgb(28 35 48 / 0.95));
+  --border: light-dark(#D9DEE6, #2E3747);
+  --border-strong: light-dark(#6F798C, #7A8497);
+  --text: light-dark(#1E293B, #E3E7EE);
+  --text-muted: light-dark(#4B5567, #9BA5B7);
+  --text-disabled: light-dark(#6F798C, #7A8497);
+  --skeleton: light-dark(#E4E8EE, #303A4C);
+  --scrim: light-dark(rgb(15 23 42 / 0.45), rgb(8 11 17 / 0.72));
+  --shadow-color: light-dark(rgb(15 23 42 / 0.06), rgb(0 0 0 / 0.3));
+  --shadow-card: 0 1px 2px var(--shadow-color); /* sombra sutil de todo --surface apoiado em --bg (design 1.3, regra 7) */
 
   /* acao, foco e links */
   --primary: light-dark(#6366F1, #6366F1);
@@ -28,9 +30,9 @@
   --primary-strong-active: light-dark(#3730A3, #3730A3);
   --primary-border: light-dark(#4F46E5, #818CF8);
   --on-primary: light-dark(#FFFFFF, #FFFFFF);
-  --accent: light-dark(#0E7490, #22D3EE);
-  --accent-active: light-dark(#0C6980, #22D3EE); /* texto accent sobre --surface-active (:active do terciario) >= 4,5:1 */
-  --focus-color: light-dark(#0E7490, #22D3EE);
+  --accent: light-dark(#0E7490, #5CC8DB);
+  --accent-active: light-dark(#0C6980, #5CC8DB); /* texto accent sobre --surface-active (:active do terciario) >= 4,5:1 (claro: 5,10; escuro: 5,85) */
+  --focus-color: light-dark(#0E7490, #5CC8DB);
   --focus-ring: 2px solid var(--focus-color);
   --focus-offset: 2px;
 
@@ -50,20 +52,20 @@
   --chart-pending: light-dark(#B45309, #FBBF24);
   --chart-balance-realized: light-dark(#6D28D9, #A78BFA);
   --chart-balance-projected: light-dark(#BE185D, #F472B6);
-  --chart-axis: light-dark(#475569, #8B95AD);
-  --chart-grid: light-dark(#DDE2EC, #2A3552);
-  --chart-zero-line: light-dark(#475569, #8B95AD);
-  --chart-cursor: light-dark(#EEF1F7, #18203A);
-  --chart-1: light-dark(#0E7490, #22D3EE);
+  --chart-axis: light-dark(#4B5567, #9BA5B7);
+  --chart-grid: light-dark(#D9DEE6, #343E51);
+  --chart-zero-line: light-dark(#4B5567, #9BA5B7);
+  --chart-cursor: light-dark(#EEF1F5, #252D3C);
+  --chart-1: light-dark(#0E7490, #5CC8DB);
   --chart-2: light-dark(#4F46E5, #818CF8);
   --chart-3: light-dark(#BE185D, #F472B6);
   --chart-4: light-dark(#4D7C0F, #A3E635);
   --chart-5: light-dark(#C2410C, #FB923C);
-  --chart-6: light-dark(#64748B, #8B95AD);
-  --tooltip-bg: light-dark(#FFFFFF, #18203A);
-  --tooltip-border: light-dark(#737D92, #6E7891);
-  --scrollbar-thumb: light-dark(#737D92, #6E7891);
-  --scrollbar-track: light-dark(#EEF1F7, #18203A);
+  --chart-6: light-dark(#64748B, #9BA5B7);
+  --tooltip-bg: light-dark(#FFFFFF, #252D3C);
+  --tooltip-border: light-dark(#6F798C, #7A8497);
+  --scrollbar-thumb: light-dark(#6F798C, #7A8497);
+  --scrollbar-track: light-dark(#F4F6F9, #252D3C);
 }
 
 :root[data-theme="light"] {

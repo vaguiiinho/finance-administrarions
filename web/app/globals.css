@@ -449,10 +449,16 @@ dialog::backdrop {
 }
 
 /* ---------- superficies ---------- */
+/* Sombra sutil de todo --surface apoiado em --bg (design 1.3, regra 7). */
+@utility shadow-card {
+  box-shadow: var(--shadow-card);
+}
+
 .card {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
 
 .chip {
