@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# web
 
-## Getting Started
+Interface Next.js 16 (App Router) da aplicação de finanças. Visão geral e como rodar o projeto: [`../README.md`](../README.md).
 
-First, run the development server:
+## Rodar
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+API_URL=http://127.0.0.1:3001 npm run dev    # ver .env.example; a API deve rodar com PORT=3001
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`API_URL` é lida apenas no servidor (o navegador nunca chama a API). Padrão do código: `http://127.0.0.1:3001`. A raiz `/` redireciona para `/entries`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Rotas
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Rota | Conteúdo |
+|---|---|
+| `/entries` | Resumo do mês e abas Despesas, Faturas e Receitas; drawer "Novo lançamento" |
+| `/cards` | Cartões (criar e editar) |
+| `/dashboard` | Série de 12 meses e distribuição por categoria (Recharts) |
 
-## Learn More
+## Testes
 
-To learn more about Next.js, take a look at the following resources:
+| Comando | Descrição |
+|---|---|
+| `npm test` | Vitest (inclui a matriz de contraste dos tokens nos dois temas) |
+| `npm run test:cov` | Vitest com cobertura |
+| `npm run pw:deps` | Baixa o Chromium do Playwright e as bibliotecas de sistema que faltam, sem root (uma vez) |
+| `npm run test:e2e:local` | Playwright + axe com as bibliotecas de `pw:deps` no `LD_LIBRARY_PATH` (sem root) |
+| `npm run test:e2e` | Playwright + axe (Chromium) contra o stub `e2e/stub-api`; para máquinas com as bibliotecas instaladas no sistema (ex.: CI com root) |
+| `npm run lint` | ESLint |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Playwright
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+A suíte (Chromium, tema claro e escuro, axe) roda contra o stub da API (porta 4010) e contra um **build de produção** do web (`next build && next start`, porta 3100), não contra `next dev`: o dev bloqueia recursos para a origem 127.0.0.1 e injeta um overlay que atrapalha cliques e o axe. O primeiro `test:e2e*` demora por causa do build.
 
-## Deploy on Vercel
+**Não rode a suíte com um `next dev` (ou outro build) ativo neste diretório:** os dois usam o mesmo `.next` e corrompem o cache um do outro. Para iterar, é possível apontar para um `next dev` já em execução na porta 3100 (`reuseExistingServer`), desde que tenha `allowedDevOrigins` configurado.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Sem root (WSL, Ubuntu 24.04):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run pw:deps          # uma vez: instala o Chromium e extrai as libs ausentes (libnss3, libnspr4, libasound2t64...) via apt-get download + dpkg -x
+npm run test:e2e:local   # roda a suíte com LD_LIBRARY_PATH apontando para as libs extraídas
+```
+
+As libs ficam em `${PW_DEPS_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/finance-pw-deps}`, fora do repositório; defina `PW_DEPS_DIR` para mudar o local. Nada é escrito em `~/.bashrc`. Se o `pw:deps` falhar por dependência transitiva, use a imagem oficial `mcr.microsoft.com/playwright:v<versão de @playwright/test>-noble` com o repositório montado e `--network host` (ADR 0002, T1). Com root: `npx playwright install --with-deps chromium` e `npm run test:e2e`.
+
+### Sequência local dos gates
+
+api: `test:cov`, `test:int`, `test:e2e`, `lint`, `typecheck`, `build`. web: `test:cov`, `lint`, `npx tsc --noEmit`, `build`, `pw:deps` (uma vez) e `test:e2e:local`. Não há CI configurado (ADR 0002, T3); para um CI futuro, usar runner Linux com root, Docker e `CI=1`. O RNF06 (`perf:rnf06` na api) não entra no CI.
+
+### Smoke manual com API real
+
+Postgres do compose, API com `PORT=3001 npm run start:dev`, web com `npm run dev`: (1) criar o cartão "Nubank" (fecha 25, vence 5); (2) criar despesa no cartão em 2026-10-26 e conferir "Fatura dez/26" e o toast (fechamento 25/11, vencimento 05/12); (3) pagar a fatura de dez/26 na aba Faturas; (4) conferir no dashboard de dez/26 o pago e o pendente coerentes com o resumo.
+
+## Tema
+
+Tokens em `app/styles/tokens.css` (`light-dark()`); preferência no cookie `theme`, lida no servidor pelo `app/layout.tsx`. Ver `../docs/design/design-system.md`.

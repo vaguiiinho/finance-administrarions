@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/shared/infrastructure/prisma/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EntryType {
+  INCOME
+  EXPENSE
+
+  @@map("entry_type")
+}
+
+enum PaymentMethod {
+  PIX
+  CARD
+
+  @@map("payment_method")
+}
+
+enum EntryStatus {
+  PENDING
+  PAID
+  RECEIVED
+
+  @@map("entry_status")
+}
+
+model Card {
+  id         String   @id @db.Uuid
+  name       String   @db.VarChar(50)
+  nameKey    String   @unique(map: "cards_name_key_uq") @map("name_key") @db.VarChar(100)
+  closingDay Int      @map("closing_day") @db.SmallInt
+  dueDay     Int      @map("due_day") @db.SmallInt
+  createdAt  DateTime @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @map("updated_at") @db.Timestamptz(3)
+  entries    Entry[]
+
+  @@map("cards")
+}
+
+model Entry {
+  id             String        @id @db.Uuid
+  type           EntryType
+  description    String        @db.VarChar(120)
+  category       String        @db.VarChar(50)
+  categoryKey    String        @map("category_key") @db.VarChar(100)
+  date           DateTime      @db.Date
+  amount         Decimal       @db.Decimal(12, 2)
+  paymentMethod  PaymentMethod @map("payment_method")
+  cardId         String?       @map("card_id") @db.Uuid
+  card           Card?         @relation(fields: [cardId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  closingDate    DateTime?     @map("closing_date") @db.Date
+  dueDate        DateTime?     @map("due_date") @db.Date
+  referenceMonth DateTime      @map("reference_month") @db.Date
+  status         EntryStatus
+  paidAt         DateTime?     @map("paid_at") @db.Timestamptz(3)
+  createdAt      DateTime      @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime      @map("updated_at") @db.Timestamptz(3)
+
+  @@index([referenceMonth, type, date, createdAt, id], map: "entries_month_type_date_idx")
+  @@index([referenceMonth, type, status], map: "entries_month_type_status_idx")
+  @@index([cardId, referenceMonth, status], map: "entries_card_month_status_idx")
+  @@index([categoryKey, createdAt, id], map: "entries_category_key_created_idx")
+  @@map("entries")
+}
