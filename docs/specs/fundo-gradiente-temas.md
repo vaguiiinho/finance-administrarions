@@ -4,6 +4,7 @@
 
 - Data: 2026-10-26
 - Branch: `feat/ui`
+- Nota (2026-10-27): a decisão **B1** desta spec (superfícies e navbar sem vidro) foi revogada por `docs/specs/superficies-vidro-fosco.md` e `docs/adr/0004-superficies-vidro-fosco.md`.
 - Status: Concluída (presets escolhidos: dark-5 e light-2; pré-visualização removida). Decisão em `docs/adr/0003-fundo-gradiente-temas.md`.
 - Escopo: só `[web]`. Sem mudanças em `api/` nem no banco.
 - Referências: `docs/design/design-system.md` (rev. 5, paleta suavizada), `docs/adr/0001-lancamentos-financeiros.md` §9.5 (tokens de tema), `web/app/styles/tokens.css`, `web/app/globals.css`, `web/lib/theme/contrast-pairs.ts`, `web/lib/theme/tokens.spec.ts`, `web/test/no-literal-colors.spec.ts`, `web/e2e/dark-theme.pw.ts`.

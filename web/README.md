@@ -55,4 +55,4 @@ Postgres do compose, API com `PORT=3001 npm run start:dev`, web com `npm run dev
 
 ## Tema
 
-Tokens em `app/styles/tokens.css` (`light-dark()`); preferência no cookie `theme`, lida no servidor pelo `app/layout.tsx`. Ver `../docs/design/design-system.md`.
+Tokens em `app/styles/tokens.css` (`light-dark()`); preferência no cookie `theme`, lida no servidor pelo `app/layout.tsx`. Superfícies em vidro fosco (rev. 7): tokens `--glass-*` em `tokens.css` e papéis de superfície (`--card-bg`, `--bar-bg`, `--card-shadow` etc., com fallback opaco) em `app/styles/glass.css`; componentes usam as classes `.glass`, `.glass-flat`, `.glass-bar` ou os papéis, nunca `--glass-*` direto (`--header-bg` foi removido). Ver `../docs/design/design-system.md` e `../docs/adr/0004-superficies-vidro-fosco.md`.

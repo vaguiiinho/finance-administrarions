@@ -4,6 +4,8 @@
 Futurista, limpo, tecnológico. Tema claro e escuro, com valores próprios por tema.
 Referências: interfaces de dashboards modernos, glassmorphism sutil (não exagerado).
 
+**Rev. 7 (2026-10-27): superfícies em vidro fosco.** Cards, campos sobre a página e barras passaram a ser translúcidos, com `backdrop-filter: blur(12px)` e borda clara de 1px, para o gradiente da rev. 6 aparecer atrás. Substitui a premissa "superfícies opacas" da rev. 6. O resumo do mês deixou de ter card externo. Decisão em `docs/adr/0004-superficies-vidro-fosco.md`; valores e cálculos em `docs/design/superficies-vidro-fosco.md`. Seção "Vidro fosco (rev. 7)" abaixo.
+
 Paleta suavizada (rev. 5 do design da feature, aprovada pelo usuário em 2026-10-25): o escuro deixou de usar quase-preto (fundo azul-ardósia `#151B26`, cartões `#1C2330`) e o claro ganhou um fundo cinza-azulado suave (`#EEF1F5`) com cartões brancos, para separar melhor fundo e cartões. A separação é reforçada por `--border` e pela sombra sutil `--shadow-card`.
 
 Fundo em gradiente (rev. 6, aprovada pelo usuário em 2026-10-26): o fundo da página deixou de ser uma cor sólida e passou a ser um gradiente fixo na viewport, estático, nos dois temas. Escuro: Grafite com brilho ciano. Claro: Lavanda → azul-gelo. Detalhes em "Fundo da página (rev. 6)" abaixo; decisão em `docs/adr/0003-fundo-gradiente-temas.md`.
@@ -26,7 +28,7 @@ Fonte de verdade: `web/app/styles/tokens.css`. Cada token de cor é declarado **
 
 1. Texto só com tokens de texto: `--text`, `--text-muted`, `--text-disabled`, `--accent`, `--accent-active`, `--on-primary`, `--success-text`, `--warning-text`, `--danger-text`, `--income`, `--expense`. `--success`, `--warning` e `--danger` são para preenchimento e borda, nunca texto.
 2. Sem opacidade em texto ou controles; desabilitado usa `--surface-2` + `--text-disabled`.
-3. Transparência só em `--scrim`, `--header-bg` (alfa 0.95) e sombras (`--shadow-color`).
+3. Transparência só em `--scrim`, `--shadow-color` e nos tokens de vidro (`--glass-bg`, `--glass-bg-2`, `--glass-input-bg`, `--glass-bar-bg`, `--glass-border`), aplicados pelos papéis de `glass.css`. Nenhum componente usa `--glass-*` direto. (Rev. 7: revoga "Transparência só em `--scrim`, `--header-bg` e sombras"; `--header-bg` não existe mais.)
 4. Todo elemento preenchido com `--primary-strong*` declara borda `--primary-border`.
 5. Recharts: `fill`/`stroke` sempre de `var(--token)`; tooltip e legenda próprios.
 6. Contraste mínimo WCAG AA (4,5:1 texto; 3:1 não textual) nos dois temas, verificado por teste unitário de tokens e por Playwright + axe. Pares e razões em `docs/design/lancamentos-financeiros.md`, 1.9.
@@ -48,7 +50,6 @@ Fonte de verdade: `web/app/styles/tokens.css`. Cada token de cor é declarado **
 | `--surface-2` | `#F4F6F9` | `#252D3C` | Hover, linha selecionada, toast, tooltip (escuro), desabilitados, faixa de subtotal, painel de novo cartão |
 | `--surface-active` | `#E4E8EE` | `#303A4C` | Pressionado de botões secundários/ícone, itens de menu e abas, opção ativa do combobox, `::selection` |
 | `--input-bg` | `#FFFFFF` | `#151B26` | Fundo de inputs, selects, combobox, date picker |
-| `--header-bg` | `rgb(255 255 255 / 0.95)` | `rgb(28 35 48 / 0.95)` | Navbar fixa (blur 12px) |
 | `--border` | `#D9DEE6` | `#2E3747` | Bordas decorativas (cards, divisórias, base da faixa de abas) |
 | `--border-strong` | `#6F798C` | `#7A8497` | Borda de controles, blocos de fatura, painel de novo cartão, drawer/modal (>= 3:1) |
 | `--text` | `#1E293B` | `#E3E7EE` | Texto principal, valores monetários, aba ativa |
@@ -106,6 +107,7 @@ Fonte de verdade: `web/app/styles/tokens.css`. Cada token de cor é declarado **
 | `--chart-4` | `#4D7C0F` | `#A3E635` | Donut, 4a categoria |
 | `--chart-5` | `#C2410C` | `#FB923C` | Donut, 5a categoria |
 | `--chart-6` | `#64748B` | `#9BA5B7` | Donut, "Outras" |
+| `--chart-separator` | `#F9FAFE` | `#1B222E` | Contorno opaco entre barras, fatias e pontos (= vidro de card composto sobre `--bg`); papel `--chart-sep` |
 | `--tooltip-bg` | `#FFFFFF` | `#252D3C` | Fundo dos tooltips (opaco) |
 | `--tooltip-border` | `#6F798C` | `#7A8497` | Borda dos tooltips |
 | `--scrollbar-thumb` | `#6F798C` | `#7A8497` | Polegar da barra de rolagem |
@@ -135,7 +137,7 @@ A geometria (ângulo, centros, alcances) é única para os dois temas; só as co
 - `.segmented` e `.tablist` têm `background: transparent` (contorno `--border-strong`). Sobre o gradiente mostram o fundo; no drawer mostram `--surface`.
 - Nenhum `bg-bg` resta em `app/` e `components/`; `--bg` não é mais usado como fundo de componente.
 
-**Superfícies.** Cards, drawer, modal, tooltip e inputs continuam opacos e com os valores da rev. 5; a navbar mantém `--header-bg` (alfa 0,95). A separação card/fundo continua sendo `--border` + `--shadow-card`. No escuro os brilhos são mais claros que `--surface`, então um card sobre o brilho fica levemente mais escuro que o fundo ao redor; é intencional. `--chart-cursor` (claro, `#EEF1F5`) e `--input-bg` (escuro, `#151B26`) mantêm os valores da rev. 5 e deixaram de ser "iguais ao fundo".
+**Superfícies (rev. 6, superada pela rev. 7 para cards, campos e navbar; ver "Vidro fosco (rev. 7)").** Drawer, modal, tooltip e as superfícies opacas continuam com os valores da rev. 5. A separação card/fundo na rev. 6 era `--border` + `--shadow-card`. No escuro os brilhos são mais claros que `--surface`, então um card sobre o brilho fica levemente mais escuro que o fundo ao redor; é intencional. `--chart-cursor` (claro, `#EEF1F5`) e `--input-bg` (escuro, `#151B26`) mantêm os valores da rev. 5 e deixaram de ser "iguais ao fundo".
 
 **Contraste.** Todo par cujo fundo é `--bg` vale no **pior caso** contra `--bg`, as paradas, as interpolações e os brilhos compostos (`PAGE_BACKGROUND_TOKENS`, `sampleGradient`). Nenhum mínimo foi afrouxado e nenhum token de texto mudou. Pior caso calculado no design para o par escolhido (razões arredondadas para baixo; a fonte de verdade é `tokens.spec.ts`):
 
@@ -154,7 +156,83 @@ Limites de luminância: escuro não preto (todas as cores em `[0,005; 0,25)`; o 
 
 **Observação para os testes.** O axe não enxerga o `body::before` e mede o texto contra `--bg`; o pior caso real é coberto por `tokens.spec.ts` e por `auditPageGradient` (`web/e2e/support.ts`). Ver ADR 0003 §5.5 e §13.
 
-Histórico dos tokens: a primeira versão deste documento só tinha tema escuro e `--bg/--surface/--border/--primary/--accent/--success/--warning/--danger/--text/--text-muted`. A rev. 2 do design da feature introduziu `--surface-2`, `--surface-active`, `--input-bg`, `--header-bg`, `--border-strong`, `--text-disabled`, `--skeleton`, `--scrim`, `--primary-strong` (+ `-hover`, `-active`), `--primary-border`, `--on-primary`, `--focus-color`, `--focus-ring`, `--focus-offset`, variantes `*-text`, `--income`, `--expense`, todos os `--chart-*`, `--tooltip-*` e `--scrollbar-*`; `--primary` virou apenas glow decorativo e fundos de botão usam `--primary-strong`. A rev. 4 introduziu `--accent-active`. A rev. 5 suavizou superfícies, bordas, texto e `--accent` do escuro, e introduziu `--shadow-color` e `--shadow-card`; tokens semânticos e séries de gráfico mantiveram os valores (exceto `--chart-1`, `--chart-6`, eixo, grade, linha do zero e cursor, que acompanham os tokens de base). A rev. 6 trocou `--bg` por uma cor base nova (`#ECEEFC` / `#181E2A`) e introduziu `--bg-stop-1..3`, `--bg-glow-1..2` e `--bg-gradient`; superfícies, textos e semântica não mudaram de valor.
+Histórico dos tokens: a primeira versão deste documento só tinha tema escuro e `--bg/--surface/--border/--primary/--accent/--success/--warning/--danger/--text/--text-muted`. A rev. 2 do design da feature introduziu `--surface-2`, `--surface-active`, `--input-bg`, `--header-bg`, `--border-strong`, `--text-disabled`, `--skeleton`, `--scrim`, `--primary-strong` (+ `-hover`, `-active`), `--primary-border`, `--on-primary`, `--focus-color`, `--focus-ring`, `--focus-offset`, variantes `*-text`, `--income`, `--expense`, todos os `--chart-*`, `--tooltip-*` e `--scrollbar-*`; `--primary` virou apenas glow decorativo e fundos de botão usam `--primary-strong`. A rev. 4 introduziu `--accent-active`. A rev. 5 suavizou superfícies, bordas, texto e `--accent` do escuro, e introduziu `--shadow-color` e `--shadow-card`; tokens semânticos e séries de gráfico mantiveram os valores (exceto `--chart-1`, `--chart-6`, eixo, grade, linha do zero e cursor, que acompanham os tokens de base). A rev. 6 trocou `--bg` por uma cor base nova (`#ECEEFC` / `#181E2A`) e introduziu `--bg-stop-1..3`, `--bg-glow-1..2` e `--bg-gradient`; superfícies, textos e semântica não mudaram de valor. A rev. 7 removeu `--header-bg` e introduziu `--glass-bg`, `--glass-bg-2`, `--glass-input-bg`, `--glass-bar-bg`, `--glass-border`, `--glass-blur`, `--glass-shadow` e `--chart-separator`, os papéis de `glass.css` e as classes `.glass`, `.glass-flat` e `.glass-bar`; cores de texto e semântica não mudaram.
+
+### Vidro fosco (rev. 7)
+
+Fonte: ADR 0004 (e adendo), `docs/design/superficies-vidro-fosco.md` (cálculos completos de contraste). Só `web/`; nenhuma mudança de API.
+
+**Materiais.**
+
+| Material | Classe / papel | Fundo | Borda | Sombra | Desfoque |
+|---|---|---|---|---|---|
+| Vidro | `.glass`, `.card`, `.field` (na página) | `--card-bg` · campo: `--field-bg` | `--card-border` 1px (campo: `--border-strong`) | `--card-shadow` (campo: nenhuma) | `--glass-filter` = `blur(12px)` |
+| Vidro plano | `.glass-flat` (itens de lista mobile, contêiner da tabela) | `--card-bg` | `--card-border` | `--card-shadow` | nenhum (`--item-filter: none`; evita ~50 desfoques por quadro) |
+| Vidro de barra | `.glass-bar`, `bg-bar` | `--bar-bg` | conforme a barra | nenhuma | `blur(12px)` (a coluna sticky do gráfico, sem) |
+| Opaco | `--surface`, `--surface-2`, `--input-bg`, `--tooltip-bg` | os da rev. 5/6 | atuais | atuais | nenhum |
+
+São opacos: drawer, folha, modal, scrim, lista do combobox, grade do seletor de mês, toast, tooltip, pílula "Sem lançamentos de…", `.checkbox`, `.field:disabled`/`[readonly]`, `.btn` (hover/pressionado), `.segmented`/`.tablist` (transparentes), `.page-bg-window`.
+
+**Tokens de vidro** (`tokens.css`, mesma tinta das superfícies opacas; só o alfa difere):
+
+| Token | Claro | Escuro | Tinta | Uso |
+|---|---|---|---|---|
+| `--glass-bg` | `rgb(255 255 255 / 0.70)` | `rgb(28 35 48 / 0.70)` | `--surface` | Cards, itens de lista, contêiner da tabela, bloco de fatura, alertas, toolbar |
+| `--glass-bg-2` | `rgb(244 246 249 / 0.70)` | `rgb(37 45 60 / 0.70)` | `--surface-2` | Hover, seleção, `.row-highlight`, subtotal |
+| `--glass-input-bg` | `rgb(255 255 255 / 0.70)` | `rgb(21 27 38 / 0.70)` | `--input-bg` | `.field` sobre a página |
+| `--glass-bar-bg` | `rgb(255 255 255 / 0.91)` | `rgb(28 35 48 / 0.90)` | `--surface` | Navbar, `thead` sticky, barra de lote mobile, coluna sticky do gráfico |
+| `--glass-border` | `rgb(255 255 255 / 0.80)` | `rgb(255 255 255 / 0.10)` | branco | Borda de 1px e highlight do topo (decorativa) |
+| `--glass-blur` | `12px` | `12px` | - | Raio único; fora de `light-dark()` |
+| `--glass-shadow` | `0 1px 2px var(--shadow-color), 0 8px 24px -12px var(--shadow-color), inset 0 1px 0 var(--glass-border)` | idem | - | Sombra do vidro; composto, fora de `light-dark()` |
+| `--chart-separator` | `#F9FAFE` | `#1B222E` | vidro sobre `--bg` | Separador opaco dos gráficos |
+
+O alfa da barra é o menor que passa AA no pior caso: 0,91 no claro (`--accent` sobre a barra composta sobre `--text`: 4,52) e 0,90 no escuro (`--border-strong` do `thead`: 3,08; a 0,89 ficaria em 2,98). `--header-bg` e o utilitário `bg-header` foram removidos. Alfa só é permitido em `--scrim`, `--shadow-color` e nos cinco tokens de vidro com alfa; `--glass-border` e `--chart-separator` são decorativos (fora da obrigação de par de contraste).
+
+**Papéis de `web/app/styles/glass.css`.** Só `var()`, nenhuma cor literal. Os componentes consomem **somente** os papéis; o contexto decide o material por herança de custom property.
+
+| Papel | Vidro (padrão em `:root`) | Opaco / fallback |
+|---|---|---|
+| `--card-bg` | `var(--glass-bg)` | `var(--surface)` |
+| `--card-bg-2` | `var(--glass-bg-2)` | `var(--surface-2)` |
+| `--field-bg` | `var(--glass-input-bg)` | `var(--input-bg)` |
+| `--bar-bg` | `var(--glass-bar-bg)` | `var(--surface)` (alfa 1) |
+| `--card-border` | `var(--glass-border)` | `var(--border)` |
+| `--card-shadow` | `var(--glass-shadow)` | `var(--shadow-card)` |
+| `--glass-filter` | `blur(var(--glass-blur))` | `none` |
+| `--item-filter` | `none` | `none` |
+| `--chart-sep` | `var(--chart-separator)` | `var(--surface)` |
+
+O mesmo conjunto opaco é repetido em três blocos idênticos (travado por `lib/theme/glass-css.spec.ts`): `@supports not` (sem `backdrop-filter`, com e sem `-webkit-`), `@media` de preferências e o contexto opaco (`dialog`, `.drawer`, `.modal`, `[data-surface="opaque"]`). Não se usa `var(--bg)` no fallback.
+
+**Fallbacks.** Todos levam ao mesmo conjunto opaco, sem animação na troca:
+
+| Gatilho | Resultado |
+|---|---|
+| Sem `backdrop-filter` | Aparência da rev. 6; a navbar fica opaca (não existe translucidez sem desfoque) |
+| `prefers-reduced-transparency: reduce` | Idem (onde o navegador não suporta a query, ela é ignorada) |
+| `prefers-contrast: more` | Idem; borda volta a `--border` |
+| `forced-colors: active` | Idem, e o navegador aplica as cores do sistema; as bordas de 1px mantêm a separação |
+| Overlay (`dialog`, `.drawer`, `.modal`) | Opaco só na subárvore (`InlineAlert`, `EmptyState`, `.field` dentro de drawer/modal) |
+
+**Contraste.** Todo par sobre vidro vale no pior caso: o vidro composto sobre cada amostra do gradiente (barra: também sobre `BAR_UNDER`, o conteúdo que rola por baixo, incluindo `--text` e `--on-primary`); o desfoque não entra no cálculo. Nenhum mínimo foi afrouxado nem texto trocado. Margens mais justas: `--success` 3,60 (claro, card), `--text-disabled`/`--border-strong` 4,04 (escuro, card), `--accent` 4,52 (claro, barra), `--text-muted` 4,67 (escuro, barra). A fonte de verdade é `tokens.spec.ts`; pares opacos da rev. 6 continuam valendo para overlays e fallback.
+
+**Separação card/fundo.** Claro: luminância ≥ 1,08 (medido ~1,10) mais sombra. Escuro: a luminância não separa (o card cruza o fundo); o critério é a borda de vidro ≥ 1,25 (medido ~1,35). Nos dois temas `.glass`/`.card` declaram borda **e** sombra.
+
+**Empilhamento.** `backdrop-filter` só em superfícies folha (que não contêm popover nem `position: fixed`); nenhum ancestral de vidro tem `filter`, `opacity < 1`, `mask`, `clip-path` ou `backdrop-filter` (senão o desfoque não enxerga o gradiente). Escala de z-index em uso:
+
+| z-index | Elemento |
+|---|---|
+| 10 | `thead` sticky das tabelas |
+| 20 | Lista do combobox (só dentro de drawer) |
+| 30 | Faixa de abas sticky de `/entries`, barra de lote mobile |
+| 35 | Grade do `MonthPicker` (acima das abas e da barra de lote) |
+| 40 | Navbar |
+| 50 | Toast |
+| top layer | `dialog` (drawer, folha, modal) |
+
+**Cascata.** Classes de componente ficam em `@layer components` e regras de elemento e `:focus-visible` em `@layer base`, para os utilitários do Tailwind sobrescreverem. Ficam fora de layer só `html`, `body`, `body::before`, `.page-bg-window`, `::selection`, `data-theme-switching` e o ícone sol/lua.
+
+**Resumo do mês.** Sem card externo: título "Resumo de <mês>" visível, 3 cards de vidro independentes (empilhados no mobile, 3 colunas a partir de `md`) e aviso de mês vazio abaixo, em texto simples. No mobile as linhas do Saldo reservam 44px.
 
 ## Tipografia
 - Títulos: Space Grotesk (600/700) | Corpo: Inter (400/500) | Mono: JetBrains Mono (carregadas com `next/font/google` em `web/app/layout.tsx`)
@@ -162,10 +240,10 @@ Histórico dos tokens: a primeira versão deste documento só tinha tema escuro 
 
 ## Forma e profundidade
 - Raio: 8px (inputs), 12px (cards), 999px (badges)
-- Cartões (`--surface` sobre o fundo em gradiente: cards do resumo e do dashboard, cards de lista, tabela, blocos de fatura, cards de `/cards`): borda 1px (`--border`, ou `--border-strong` nos blocos de ação) + `--shadow-card`. A sombra é reforço visual; a separação não depende só dela.
+- Cartões (vidro sobre o fundo em gradiente: cards do resumo e do dashboard, itens de lista, tabela, blocos de fatura, cards de `/cards`): borda 1px (`--card-border`, ou `--border-strong` nos blocos de ação) + `--card-shadow`. No fallback opaco, `--border` + `--shadow-card`. A sombra é reforço visual; a separação não depende só dela.
 - Menus, listas de combobox e tooltips: sombra mais marcada (definida por componente, sempre com `--shadow-color` ou cor de sombra transparente, nunca cor literal fora de `tokens.css`).
 - Glow sutil na cor `--primary` apenas em elementos de foco.
-- Blur (backdrop-filter) apenas em modais e headers fixos
+- Blur (12px, `--glass-blur`) em superfícies de vidro e barras. Nunca em overlays, popovers, toast ou tooltip, e sem transição ou animação de `backdrop-filter`, fundo ou alfa. (Rev. 7: revoga "Blur apenas em modais e headers fixos".)
 
 ## Motion
 - 150–250ms, easing ease-out. Respeitar `prefers-reduced-motion`.
