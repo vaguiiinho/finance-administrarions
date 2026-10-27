@@ -9,7 +9,7 @@ import type { ExpenseTotalsDto } from "@/lib/api/types";
  */
 export function ExpensesSubtotal({ count, totals, filtered }: { count: number; totals: ExpenseTotalsDto; filtered: boolean }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-surface-2 px-4 py-3 text-sm" data-testid="subtotal">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 glass rounded-lg bg-card-2 px-4 py-3 text-sm" data-testid="subtotal">
       <p className="font-medium text-muted">Subtotal · {filtered ? "com os filtros aplicados" : "todas as despesas do mês"}</p>
       <p className="text-muted">
         <span className="text-text">{countLabel(count, "despesa", "despesas")}</span>
@@ -29,7 +29,7 @@ export function ExpensesSubtotal({ count, totals, filtered }: { count: number; t
 
 export function IncomeSubtotal({ count, total, filtered }: { count: number; total: string; filtered: boolean }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-surface-2 px-4 py-3 text-sm" data-testid="subtotal">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 glass rounded-lg bg-card-2 px-4 py-3 text-sm" data-testid="subtotal">
       <p className="font-medium text-muted">Subtotal · {filtered ? "com o filtro aplicado" : "todas as receitas do mês"}</p>
       <p className="text-text">{countLabel(count, "receita", "receitas")}</p>
       <p className="text-muted">

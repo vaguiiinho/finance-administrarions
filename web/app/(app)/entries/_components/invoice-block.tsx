@@ -95,7 +95,7 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
   ) : null;
 
   return (
-    <div role="group" aria-labelledby={headingId} className="flex flex-col gap-4 rounded-xl border border-border-strong bg-surface p-4 shadow-card md:p-5">
+    <div role="group" aria-labelledby={headingId} className="glass flex flex-col gap-4 rounded-xl border-border-strong p-4 md:p-5">
       <div className="flex flex-col gap-1 md:flex-row md:items-start md:justify-between md:gap-4">
         <div className="flex flex-col gap-1">
           <h3 id={headingId} ref={headingRef} tabIndex={-1} className="font-display text-lg font-semibold text-text">
@@ -123,7 +123,7 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
         </div>
       </div>
 
-      <dl className="flex flex-col gap-1.5 rounded-lg bg-surface-2 p-3 text-sm md:flex-row md:flex-wrap md:items-center md:gap-x-6 md:bg-transparent md:p-0">
+      <dl className="flex flex-col gap-1.5 border-t border-border pt-3 text-sm md:flex-row md:flex-wrap md:items-center md:gap-x-6 md:border-t-0 md:pt-0">
         <div className="flex items-baseline justify-between gap-3 md:justify-start">
           <dt className="text-muted">Total</dt>
           <dd className="font-semibold text-text">
@@ -206,7 +206,7 @@ function InvoiceEntries({ list, cardName, onRetry, expensesHref }: { list: ListS
   }
   if (list.status === "error") {
     return (
-      <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-danger bg-surface p-3 text-sm text-text">
+      <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-danger p-3 text-sm text-text">
         <p className="flex-1">Não foi possível carregar as despesas desta fatura.</p>
         <Button onClick={onRetry}>Tentar novamente</Button>
       </div>

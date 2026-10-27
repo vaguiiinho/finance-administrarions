@@ -14,8 +14,8 @@ type ScreenDef = {
 
 /**
  * CA82 (camada 2, ADR 9.5): axe com wcag2a/wcag2aa + color-contrast em cada tela x {claro, escuro}.
- * Falha com qualquer violacao e com `incomplete` de color-contrast fora da allowlist (navbar com --header-bg,
- * coberta pela camada 1 - lib/theme/tokens.spec.ts).
+ * Falha com qualquer violacao e com `incomplete` de color-contrast fora da allowlist (navbar com --glass-bar-bg,
+ * coberta pela camada 1 - lib/theme/tokens.spec.ts - e por `auditPageGradient`).
  */
 const THEMES = ["light", "dark"] as const;
 /**

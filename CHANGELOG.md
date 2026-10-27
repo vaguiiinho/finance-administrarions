@@ -5,6 +5,34 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+### Superfícies em vidro fosco e resumo do mês sem card externo (ADR 0004, design rev. 7)
+
+#### Added
+
+- Vidro fosco (translúcido, `backdrop-filter: blur(12px)`, borda clara de 1px) na navbar, cards, itens de lista, tabelas, bloco de fatura, subtotal, alertas e campos sobre a página, nos dois temas. Vidro de barra mais opaco (alfa 0,91 claro / 0,90 escuro) na navbar, `thead` sticky, barra de lote mobile e coluna sticky do gráfico. Itens de lista e contêiner da tabela usam vidro plano, sem desfoque.
+- Tokens `--glass-bg`, `--glass-bg-2`, `--glass-input-bg`, `--glass-bar-bg`, `--glass-border`, `--glass-blur`, `--glass-shadow` e `--chart-separator` em `web/app/styles/tokens.css`.
+- `web/app/styles/glass.css`: papéis de superfície (`--card-bg`, `--card-bg-2`, `--field-bg`, `--bar-bg`, `--card-border`, `--card-shadow`, `--glass-filter`, `--item-filter`, `--chart-sep`) e fallback opaco único (sem `backdrop-filter`, `prefers-reduced-transparency`, `prefers-contrast: more`, `forced-colors`, e contexto opaco em `dialog`, `.drawer`, `.modal` e `[data-surface="opaque"]`).
+- Classes `.glass`, `.glass-flat` e `.glass-bar`.
+- `web/lib/theme/glass.ts` (`classifyChain`, `expandUnders`, `compositeChain`, `worstOverLayers`, `separationRatio`) e testes: `glass.spec.ts`, `glass-css.spec.ts`, `web/e2e/glass.pw.ts`, `web/e2e/month-summary.pw.ts`. Cenário `short` no stub da API.
+
+#### Changed
+
+- Resumo do mês sem card externo: título "Resumo de <mês>" visível também no mobile, 3 cards de vidro independentes (empilhados no mobile, 3 colunas a partir de `md`), aviso de mês vazio abaixo dos cards. Mesmo layout em `/entries` e `/dashboard`. `<dl>` agora é válida (um nível de `div`). No mobile as linhas do Saldo reservam 44px (`min-h-11`, também no skeleton) para o CLS da troca skeleton → dados ficar <= 0,01.
+- Contraste verificado no pior caso sobre o vidro composto sobre o gradiente (barra: também sobre o conteúdo que rola por baixo); nenhum mínimo afrouxado e nenhuma cor de texto trocada. `pageGradientFailures` (`web/e2e/support.ts`) passou a auditar textos sobre vidro e barra; `INCOMPLETE_ALLOWLIST` reduzida a `[data-navbar]`.
+- Classes de componente de `globals.css` em `@layer components` e regras de elemento e `:focus-visible` em `@layer base`: os utilitários do Tailwind agora sobrescrevem as classes (corrige o "card dentro de card", o `pr-11` do combobox e o `-ml-3 -mt-2` do checkbox mobile). O `outline-none` do `<main tabIndex={-1}>` passou a valer.
+- Grade do `MonthPicker` com `z-[35]` (acima das abas sticky e da barra de lote, abaixo da navbar e do toast); corrige defeito preexistente.
+- Separadores de `monthly-chart.tsx` e `category-donut.tsx` usam `--chart-sep`.
+- `docs/design/design-system.md` rev. 7: revoga "Transparência só em `--scrim`, `--header-bg` e sombras" e "Blur apenas em modais e headers fixos".
+
+#### Removed
+
+- Token `--header-bg` e o utilitário `bg-header` (substituídos por `--glass-bar-bg` e pelo papel `--bar-bg`).
+
+#### Notes
+
+- Pendente: medição manual de desempenho (CA14 / RNF05: Lighthouse mobile e trace de rolagem, registrar em `docs/runs/`). Se reprovar, o ajuste é `--item-filter` e depois `--glass-blur: 8px`.
+- Desvios em relação ao texto original do ADR 0004 (`--glass-shadow` e papel `--card-shadow`, G10 por tema, `:focus-visible` em `@layer base`, `z-[35]`): "Adendo – implementação" do ADR. `prefers-reduced-transparency` não é suportado por todos os navegadores (ignorado onde faltar). Sem mudança em `api/`, contratos HTTP, schema ou migrations.
+
 ### Fundo em gradiente nos temas claro e escuro (ADR 0003, design rev. 6)
 
 #### Added

@@ -1,5 +1,6 @@
 # ADR 0003 - Fundo em gradiente nos temas claro e escuro
 
+- **Nota (2026-10-27):** a premissa B1 deste ADR ("superfícies e navbar sem vidro") foi **revogada** pelo `docs/adr/0004-superficies-vidro-fosco.md`. O restante continua valendo.
 - **Status:** **Aceito** em 2026-10-26. Presets escolhidos pelo usuário: **dark-5** (Grafite com brilho ciano) no tema escuro e **light-2** (Lavanda → azul-gelo) no tema claro. B1-B5 seguiram a resposta padrão da spec (§3). TQ1-TQ7 decididas pelo architect (§5); os desvios da implementação estão no §13.
 - **Data:** 2026-10-26
 - **Spec:** `docs/specs/fundo-gradiente-temas.md` (RF01-RF18, RNF01-RNF11, CA01-CA22, B1-B5, TQ1-TQ7, PA1-PA8)

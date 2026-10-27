@@ -54,9 +54,10 @@ export async function IncomePanel({ state }: { state: EntriesState }) {
   } else {
     body = (
       <>
-        <table className="hidden w-full border-collapse rounded-xl border border-border text-sm shadow-card md:table">
+        <div className="glass-flat hidden overflow-clip rounded-xl md:block">
+        <table className="w-full border-collapse text-sm">
           <caption className="sr-only">Receitas do mês, mais recentes primeiro</caption>
-          <thead className="sticky top-[calc(var(--navbar-h)+var(--tabsbar-h))] z-10 bg-surface text-left text-muted">
+          <thead className="sticky top-[calc(var(--navbar-h)+var(--tabsbar-h))] z-10 glass-bar text-left text-muted">
             <tr className="border-b border-border-strong">
               <th scope="col" className="px-3 py-3 font-medium">Descrição</th>
               <th scope="col" className="px-3 py-3 font-medium">Categoria</th>
@@ -67,7 +68,7 @@ export async function IncomePanel({ state }: { state: EntriesState }) {
           </thead>
           <tbody>
             {items.map((entry) => (
-              <EntryRow key={entry.id} id={entry.id} className="min-h-14 border-b border-border bg-surface hover:bg-surface-2">
+              <EntryRow key={entry.id} id={entry.id} className="min-h-14 border-b border-border hover:bg-card-2">
                 <td className="px-3 py-3 font-medium text-text">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate">{entry.description}</span>
@@ -88,9 +89,10 @@ export async function IncomePanel({ state }: { state: EntriesState }) {
             ))}
           </tbody>
         </table>
+        </div>
         <ul className="flex flex-col gap-3 md:hidden">
           {items.map((entry) => (
-            <EntryItem key={entry.id} id={entry.id} className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 shadow-card">
+            <EntryItem key={entry.id} id={entry.id} className="glass-flat flex flex-col gap-1 rounded-xl p-4">
               <div className="flex items-start justify-between gap-2">
                 <p className="flex min-w-0 items-center gap-2 font-medium text-text">
                   <span className="truncate">{entry.description}</span>

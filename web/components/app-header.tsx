@@ -15,7 +15,7 @@ export async function AppHeader() {
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[60] focus:rounded-lg focus:border focus:border-border-strong focus:bg-surface focus:px-4 focus:py-2 focus:text-text">
         Pular para o conteúdo
       </a>
-      <header data-navbar className="sticky top-0 z-40 border-b border-border bg-header backdrop-blur-md">
+      <header data-navbar className="sticky top-0 z-40 glass-bar border-b border-card-border">
         <div className="mx-auto flex h-[var(--navbar-h)] max-w-[1280px] items-center justify-between gap-4 px-4 md:px-6 lg:px-8">
           <div className="flex items-center gap-4">
             <Link href="/entries" className="font-display text-lg font-bold text-text no-underline">

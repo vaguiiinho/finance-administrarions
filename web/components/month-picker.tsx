@@ -87,8 +87,9 @@ export function MonthPicker({ month, currentMonth, onSelect, variant = "full" }:
           Mês atual
         </Button>
       ) : null}
+      {/* z-[35]: acima da faixa de abas e da barra de lote (z-30), abaixo da navbar (z-40) e do toast (z-50) */}
       {open ? (
-        <div id={gridId} role="group" aria-label="Escolher mês" className="absolute left-0 top-full z-30 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-border-strong bg-surface p-3 shadow-lg">
+        <div id={gridId} role="group" aria-label="Escolher mês" className="absolute left-0 top-full z-[35] mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-border-strong bg-surface p-3 shadow-lg">
           <div className="mb-2 flex items-center justify-between">
             <IconButton aria-label="Ano anterior" onClick={() => setYear((y) => y - 1)}>
               <Chevron dir="left" />

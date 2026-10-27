@@ -48,6 +48,7 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
   return (
     <div
       role={toast.kind === "error" ? "alert" : undefined}
+      data-testid="toast"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}

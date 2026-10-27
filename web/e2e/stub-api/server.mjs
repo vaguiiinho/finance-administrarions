@@ -21,6 +21,8 @@ const SCENARIOS = {
   empty: { failMode: null, empty: true },
   // 25 despesas extras em novembro (> 20 por pagina): habilita a paginacao
   many: { failMode: null, many: true },
+  // valores curtos ("R$ 10,00"): o indicador do Saldo cabe na mesma linha (CLS do skeleton do resumo, CA20)
+  short: { failMode: null, short: true },
   error500: { failMode: "all" },
   "invoice-entries-error": { failMode: "invoice-entries" },
   batch404: { failMode: "batch404" },
@@ -32,6 +34,16 @@ function seed(name, options = {}) {
   const config = SCENARIOS[name] ?? SCENARIOS.default;
   const extra = { failMode: config.failMode, delayMs: Number(options.delayMs ?? 0), holdMutations: Boolean(options.holdMutations), holdQueries: Boolean(options.holdQueries) };
   if (config.empty) return { cards: [], entries: [], ...extra };
+  if (config.short) {
+    return {
+      cards: [],
+      entries: [
+        entry(1, { type: "INCOME", description: "Salário", category: "Salário", amount: "10.00", date: "2026-11-05", status: "RECEIVED" }),
+        entry(2, { description: "Internet", amount: "2.00", date: "2026-11-10" }),
+      ],
+      ...extra,
+    };
+  }
   const cards = [
     { id: CARD.nubank, name: "Nubank", closingDay: 25, dueDay: 5, createdAt: "2026-10-01T12:00:00.000Z", updatedAt: "2026-10-01T12:00:00.000Z" },
     { id: CARD.itau, name: "Itaú", closingDay: 3, dueDay: 10, createdAt: "2026-10-01T12:00:00.000Z", updatedAt: "2026-10-01T12:00:00.000Z" },

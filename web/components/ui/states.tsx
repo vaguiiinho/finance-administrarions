@@ -18,7 +18,7 @@ export function InlineAlert({ children, tone = "danger", role = "alert", actions
   const border = tone === "danger" ? "border-danger border-l-danger" : "border-border-strong border-l-accent";
   const icon = tone === "danger" ? "text-danger-text" : "text-accent";
   return (
-    <div role={role} className={`flex items-start gap-3 rounded-lg border border-l-[3px] bg-surface p-3 text-text shadow-card ${border}`}>
+    <div role={role} className={`flex items-start gap-3 glass rounded-lg border border-l-[3px] p-3 text-text ${border}`}>
       <span className={icon}>
         <AlertIcon />
       </span>

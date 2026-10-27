@@ -74,7 +74,8 @@ for (const theme of THEMES) {
 
         const card = page.locator(".card").first();
         if ((await card.count()) > 0) {
-          const { border } = await resolveTokens(page, ["--border"]).then((r) => ({ border: r["--border"] }));
+          // rev. 7 (ADR 0004): o card e de vidro e a borda e a borda de vidro (papel --card-border); a sombra (--shadow-card ou a do vidro) continua
+          const { border } = await resolveTokens(page, ["--card-border"]).then((r) => ({ border: r["--card-border"] }));
           const style = await card.evaluate((el) => ({ border: getComputedStyle(el).borderTopColor, shadow: getComputedStyle(el).boxShadow }));
           expect(style.border).toBe(border);
           expect(style.shadow).not.toBe("none");
