@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ENTRIES_URL, MONTH, audit, gotoReady, releaseMutations, setScenario, setThemeCookie, showChartTooltip } from "./support";
+import { BG, ENTRIES_URL, MONTH, PAGE_BG_REGION, PAGE_BG_TOKENS, audit, gotoReady, releaseMutations, setScenario, setThemeCookie, showChartTooltip } from "./support";
 import { luminanceOf, resolveTokens } from "./tokens";
 
 /**
@@ -56,13 +56,35 @@ test.describe("estado 'atualizando' no escuro", () => {
         );
         expect(scrimmed, "sobreposicao translucida sobre a regiao").toBe(0);
         await expect(page.locator('[aria-busy="true"]').first()).toBeVisible();
-        await audit(page, `${name} atualizando [dark]`);
+        await audit(page, `${name} atualizando [dark]`, { gradients: [PAGE_BG_REGION] });
         await expect(page.getByText("Atualizando…").first(), "o estado atualizando deve durar ate o fim do audit").toBeVisible();
       } finally {
         await releaseMutations().catch(() => undefined);
       }
     });
   }
+});
+
+test.describe("fundo em gradiente no escuro (CA10, CA15, RNF04)", () => {
+  test("body: cor base escura (design rev. 6) e luminancia < 0.25; camada ::before pinta um gradiente", async ({ page }) => {
+    await gotoReady(page, ENTRIES_URL);
+    const body = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(body).toBe(BG.dark);
+    expect(luminanceOf(body)).toBeLessThan(0.25);
+    const image = await page.evaluate(() => getComputedStyle(document.body, "::before").backgroundImage);
+    expect(image).toContain("gradient");
+  });
+
+  test("toda cor do conjunto do fundo tem luminancia em [0,005; 0,25): escuro, mas nao preto", async ({ page }) => {
+    await gotoReady(page, ENTRIES_URL);
+    const colors = await resolveTokens(page, [...PAGE_BG_TOKENS]);
+    expect(Object.keys(colors)).toHaveLength(PAGE_BG_TOKENS.length);
+    for (const [token, rgb] of Object.entries(colors)) {
+      const l = luminanceOf(rgb);
+      expect(l, `${token} (${rgb}) preto`).toBeGreaterThanOrEqual(0.005);
+      expect(l, `${token} (${rgb}) claro demais`).toBeLessThan(0.25);
+    }
+  });
 });
 
 test.describe("superficies do escuro usam tokens do escuro", () => {

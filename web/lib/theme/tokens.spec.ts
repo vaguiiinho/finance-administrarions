@@ -2,8 +2,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { composite, contrastRatio, parseColor } from "./contrast";
-import { CONTRAST_PAIRS, DECORATIVE_PAIRS } from "./contrast-pairs";
+import { composite, contrastRatio, parseColor, relativeLuminance, type Rgba } from "./contrast";
+import { CONTRAST_PAIRS, DECORATIVE_PAIRS, PAGE_BACKGROUND_TOKENS } from "./contrast-pairs";
 
 /**
  * Verificacao de contraste em duas camadas (ADR 9.5, T16) - camada 1 (tokens).
@@ -51,10 +51,15 @@ const color = (name: string, theme: Theme) => {
 };
 
 // ---------------------------------------------------------------------------
-// Valores do design rev. 5 (secao 1.2): [token, claro, escuro]
+// Valores do design: rev. 5 (secao 1.2) + fundo em gradiente da rev. 6 (design rev. 6, docs/design/fundo-gradiente-temas.md): [token, claro, escuro]
 // ---------------------------------------------------------------------------
 const EXPECTED_VALUES: [string, string, string][] = [
-  ["--bg", "#EEF1F5", "#151B26"],
+  ["--bg", "#ECEEFC", "#181E2A"],
+  ["--bg-stop-1", "#EEEEFE", "#141A24"],
+  ["--bg-stop-2", "#E8F0FC", "#181E2A"],
+  ["--bg-stop-3", "#F0ECFC", "#12182A"],
+  ["--bg-glow-1", "#E4F0FE", "#0C3044"],
+  ["--bg-glow-2", "#F4ECFE", "#20244D"],
   ["--surface", "#FFFFFF", "#1C2330"],
   ["--surface-2", "#F4F6F9", "#252D3C"],
   ["--surface-active", "#E4E8EE", "#303A4C"],
@@ -117,23 +122,24 @@ interface Required {
   over?: string[];
 }
 
+// Navbar translucida: o fundo efetivo e QUALQUER amostra do fundo da pagina (ratioOf expande "--bg"), --surface, --surface-2 ou --text.
 const HEADER_UNDER = ["--bg", "--surface", "--surface-2", "--text"];
 const P = (fg: string, bg: string, kind: Required["kind"], expected?: [number, number], over?: string[]): Required => ({ fg, bg, kind, expected, over });
 
 // Pares obrigatorios: ADR 9.5 (tokens novos) + design 1.9 (texto, desabilitado, componentes, graficos).
 const REQUIRED: Required[] = [
-  P("--text", "--bg", "text", [12.91, 13.91]),
+  P("--text", "--bg", "text", [12.61, 11.12]),
   P("--text", "--surface", "text", [14.62, 12.7]),
   P("--text", "--surface-2", "text", [13.51, 11.14]),
   P("--text", "--surface-active", "text", [11.89, 9.22]),
   P("--text", "--input-bg", "text", [14.62, 13.91]),
-  P("--text-muted", "--bg", "text", [6.63, 6.95]),
+  P("--text-muted", "--bg", "text", [6.48, 5.55]),
   P("--text-muted", "--surface", "text", [7.51, 6.34]),
   P("--text-muted", "--surface-2", "text", [6.94, 5.56]),
   P("--text-muted", "--surface-active", "text", [6.11, 4.6]),
   P("--text-muted", "--input-bg", "text", [7.51, 6.95]),
   P("--accent", "--surface", "text", [5.35, 8.05]),
-  P("--accent", "--bg", "text", [4.72, 8.82]),
+  P("--accent", "--bg", "text", [4.62, 7.05]),
   P("--accent", "--surface-2", "text", [4.94, 7.06]),
   P("--accent-active", "--surface-active", "text", [5.1, 5.85]),
   P("--on-primary", "--primary-strong", "text", [6.28, 6.28]),
@@ -145,7 +151,7 @@ const REQUIRED: Required[] = [
   P("--warning-text", "--surface-2", "text", [6.54, 8.28]),
   P("--danger-text", "--surface", "text", [6.47, 5.69]),
   P("--danger-text", "--surface-2", "text", [5.97, 4.99]),
-  P("--danger-text", "--bg", "text", [5.71, 6.23]),
+  P("--danger-text", "--bg", "text", [5.57, 4.98]),
   P("--income", "--surface", "text", [6.7, 6.19]),
   P("--income", "--surface-2", "text", [6.19, 5.43]),
   P("--expense", "--surface", "text", [6.28, 5.85]),
@@ -161,18 +167,18 @@ const REQUIRED: Required[] = [
   // desabilitado
   P("--text-disabled", "--surface-2", "disabled", [4.04, 3.66]),
   P("--text-disabled", "--surface", "disabled", [4.38, 4.18]),
-  P("--text-disabled", "--bg", "disabled", [3.87, 4.58]),
+  P("--text-disabled", "--bg", "disabled", [3.78, 3.66]),
   // bordas de controles, foco, estado
   P("--border-strong", "--surface", "non-text", [4.38, 4.18]),
-  P("--border-strong", "--bg", "non-text", [3.87, 4.58]),
+  P("--border-strong", "--bg", "non-text", [3.78, 3.66]),
   P("--border-strong", "--surface-2", "non-text", [4.04, 3.66]),
   P("--border-strong", "--surface-active", "non-text", [3.56, 3.03]),
   P("--border-strong", "--input-bg", "non-text"),
   P("--primary-border", "--surface", "non-text", [6.28, 5.28]),
-  P("--primary-border", "--bg", "non-text", [5.54, 5.78]),
+  P("--primary-border", "--bg", "non-text", [5.42, 4.62]),
   P("--primary-border", "--surface-2", "non-text", [5.8, 4.63]),
   P("--focus-color", "--surface", "non-text", [5.35, 8.05]),
-  P("--focus-color", "--bg", "non-text", [4.72, 8.82]),
+  P("--focus-color", "--bg", "non-text", [4.62, 7.05]),
   P("--focus-color", "--surface-2", "non-text", [4.94, 7.06]),
   P("--focus-color", "--input-bg", "non-text"),
   P("--danger", "--input-bg", "non-text", [4.82, 6.23]),
@@ -201,15 +207,56 @@ const REQUIRED: Required[] = [
   P("--chart-balance-projected", "--tooltip-bg", "non-text", [6.03, 5.21]),
 ];
 
-/** Calcula a razao de um par no tema; fundos translucidos (com `over`) usam o PIOR caso composto. */
+// ---------------------------------------------------------------------------
+// Fundo em gradiente (ADR 0003 5.5): amostrador PROPRIO do teste (independente de lib/theme/gradient.ts).
+// ---------------------------------------------------------------------------
+const STEPS = 16;
+const stopNames = Object.keys(tokens).filter((t) => /^--bg-stop-\d+$/.test(t)).sort();
+const glowNames = Object.keys(tokens).filter((t) => /^--bg-glow-\d+$/.test(t)).sort();
+const PAGE_SET = new Set(["--bg", ...stopNames, ...glowNames]);
+
+/** Paradas, interpolacoes sRGB (17 pontos por segmento) e cada brilho composto em 17 opacidades sobre cada amostra linear; mais a cor base. */
+function pageSamples(theme: Theme): Rgba[] {
+  const stops = stopNames.map((n) => color(n, theme));
+  const glows = glowNames.map((n) => color(n, theme));
+  const linear: Rgba[] = [];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const [a, b] = [stops[i], stops[i + 1]];
+    for (let k = i === 0 ? 0 : 1; k <= STEPS; k++) {
+      const t = k / STEPS;
+      linear.push({ r: a.r + (b.r - a.r) * t, g: a.g + (b.g - a.g) * t, b: a.b + (b.b - a.b) * t, a: 1 });
+    }
+  }
+  const out: Rgba[] = [color("--bg", theme), ...linear];
+  for (const glow of glows) for (const base of linear) for (let k = 0; k <= STEPS; k++) out.push(composite({ ...glow, a: k / STEPS }, base));
+  // os brilhos se sobrepoem na viewport: cada par (o de indice maior por cima) composto sobre a mesma amostra
+  for (let x = 0; x < glows.length; x++) {
+    for (let y = x + 1; y < glows.length; y++) {
+      for (const base of linear) {
+        for (let i = 0; i <= STEPS; i++) {
+          const under = composite({ ...glows[x], a: i / STEPS }, base);
+          for (let j = 0; j <= STEPS; j++) out.push(composite({ ...glows[y], a: j / STEPS }, under));
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/** Fundos possiveis para um token de fundo: os do conjunto do fundo da pagina viram TODAS as amostras do gradiente. */
+const backgroundsOf = (name: string, theme: Theme): Rgba[] => (PAGE_SET.has(name) ? pageSamples(theme) : [color(name, theme)]);
+
+/**
+ * Calcula a razao de um par no tema. `bg: "--bg"` (e `over` com tokens do fundo) vale como PIOR caso sobre as amostras do
+ * gradiente; fundos translucidos (com `over`) usam o pior caso composto.
+ */
 function ratioOf(fg: string, bg: string, theme: Theme, over?: readonly string[]): number {
   const fgColor = color(fg, theme);
   const bgColor = color(bg, theme);
-  if (bgColor.a >= 1 && fgColor.a >= 1) return contrastRatio(fgColor, bgColor);
-  const unders = over && over.length ? over : ["--bg"];
+  if (bgColor.a >= 1 && fgColor.a >= 1) return Math.min(...backgroundsOf(bg, theme).map((b) => contrastRatio(fgColor, b)));
+  const unders = (over && over.length ? over : ["--bg"]).flatMap((u) => backgroundsOf(u, theme));
   return Math.min(
-    ...unders.map((u) => {
-      const under = color(u, theme);
+    ...unders.map((under) => {
       const effectiveBg = bgColor.a < 1 ? composite(bgColor, under) : bgColor;
       const effectiveFg = fgColor.a < 1 ? composite(fgColor, effectiveBg) : fgColor;
       return contrastRatio(effectiveFg, effectiveBg);
@@ -261,7 +308,7 @@ describe("tokens.css - estrutura", () => {
 });
 
 describe.each(EXPECTED_VALUES)("valor do design: %s", (name, light, dark) => {
-  it("claro e escuro iguais ao design rev. 5", () => {
+  it("claro e escuro iguais ao design (rev. 5 + fundo rev. 6)", () => {
     expect(tokens[name], `${name} ausente`).toBeDefined();
     expect(norm(tokens[name].light)).toBe(norm(light));
     expect(norm(tokens[name].dark)).toBe(norm(dark));
@@ -332,7 +379,147 @@ describe("matriz de producao (contrast-pairs.ts)", () => {
     // decorativos ou nao textuais por definicao (design 1.9: D = decorativo)
     const ALLOWLIST = new Set(["--skeleton", "--scrim", "--border", "--primary", "--chart-grid", "--chart-cursor", "--shadow-color"]);
     const used = new Set([...CONTRAST_PAIRS, ...DECORATIVE_PAIRS].flatMap((p) => [p.fg, p.bg]));
+    // paradas e brilhos contam como cobertos pelos pares de --bg (que valem contra as amostras do gradiente, ADR 0003 5.5)
+    if (used.has("--bg")) for (const t of PAGE_SET) used.add(t);
     const uncovered = Object.keys(tokens).filter((t) => !used.has(t) && !ALLOWLIST.has(t));
     expect(uncovered).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fundo em gradiente (design rev. 6, ADR 0003 5.2 / 5.5 / 4.1)
+// ---------------------------------------------------------------------------
+describe("fundo em gradiente - tokens (TQ2)", () => {
+  it("declara exatamente 3 paradas (--bg-stop-1..3) e 2 brilhos (--bg-glow-1..2) com light-dark()", () => {
+    expect(stopNames).toEqual(["--bg-stop-1", "--bg-stop-2", "--bg-stop-3"]);
+    expect(glowNames).toEqual(["--bg-glow-1", "--bg-glow-2"]);
+  });
+
+  it("paradas e brilhos sao opacos nos dois temas (a lista de tokens com alfa nao cresce)", () => {
+    for (const name of [...stopNames, ...glowNames]) for (const theme of THEMES) expect(color(name, theme).a, `${name} ${theme}`).toBe(1);
+  });
+
+  it("--bg-gradient e declarado UMA vez, fora de light-dark(): 2 radiais + linear 160deg, so var(--bg-stop-*|--bg-glow-*) e transparent", () => {
+    const decl = [...css.matchAll(/--bg-gradient\s*:\s*([^;]+);/g)];
+    expect(decl).toHaveLength(1);
+    const value = decl[0][1];
+    expect(value).not.toContain("light-dark(");
+    expect(tokens["--bg-gradient"]).toBeUndefined();
+    expect(value.match(/radial-gradient\(/g) ?? []).toHaveLength(2);
+    expect(value.match(/linear-gradient\(/g) ?? []).toHaveLength(1);
+    expect(value).toMatch(/linear-gradient\(\s*160deg/);
+    expect(value).toContain("transparent");
+    // nenhuma cor literal: todo o resto e var() do conjunto do fundo
+    const withoutVars = value.replace(/var\(--bg-(?:stop|glow)-\d+\)/g, "").replace(/transparent/g, "");
+    expect(withoutVars).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|oklch\(|var\(/i);
+    // referencia TODOS os tokens de parada e brilho declarados
+    for (const name of [...stopNames, ...glowNames]) expect(value, name).toContain(`var(${name})`);
+    // e so eles
+    const referenced = [...value.matchAll(/var\((--[a-z0-9-]+)\)/g)].map((m) => m[1]);
+    for (const name of referenced) expect(PAGE_SET.has(name), `${name} fora do conjunto do fundo`).toBe(true);
+  });
+
+  it("brilhos ficam acima das paradas na receita: camadas radiais primeiro, linear por ultimo (ordem do design, secao 1)", () => {
+    const value = /--bg-gradient\s*:\s*([^;]+);/.exec(css)![1];
+    expect(value.indexOf("radial-gradient(")).toBeGreaterThanOrEqual(0);
+    expect(value.lastIndexOf("radial-gradient(")).toBeLessThan(value.indexOf("linear-gradient("));
+  });
+});
+
+describe("contrast-pairs.ts - conjunto do fundo (ADR 0003 5.5)", () => {
+  it("PAGE_BACKGROUND_TOKENS e exatamente --bg + as paradas + os brilhos declarados em tokens.css", () => {
+    expect(PAGE_BACKGROUND_TOKENS, "PAGE_BACKGROUND_TOKENS nao exportado").toBeDefined();
+    expect([...PAGE_BACKGROUND_TOKENS].sort()).toEqual([...PAGE_SET].sort());
+    expect(PAGE_BACKGROUND_TOKENS[0]).toBe("--bg");
+  });
+
+  it("HEADER_UNDER derivado: pares de navbar compoem sobre TODO o conjunto do fundo + --surface, --surface-2 e --text", () => {
+    const headerPairs = CONTRAST_PAIRS.filter((p) => p.bg === "--header-bg");
+    expect(headerPairs.length).toBeGreaterThan(0);
+    for (const p of headerPairs) {
+      for (const t of [...(PAGE_BACKGROUND_TOKENS ?? []), "--surface", "--surface-2", "--text"]) expect(p.over, `${p.fg} x ${p.bg} sem ${t}`).toContain(t);
+    }
+  });
+
+  it("descricao (where) dos pares com --bg menciona o pior caso do gradiente", () => {
+    for (const p of CONTRAST_PAIRS.filter((x) => x.bg === "--bg")) expect(p.where.toLowerCase(), `${p.fg} x ${p.bg}`).toMatch(/gradiente/);
+  });
+});
+
+describe.each(THEMES)("fundo em gradiente - regras de cor (RNF04, RNF05, I5-I7) - tema %s", (theme) => {
+  const names = [...PAGE_SET];
+
+  it("amostragem cobre o gradiente inteiro (paradas, interpolacoes e brilhos compostos)", () => {
+    expect(pageSamples(theme).length).toBeGreaterThan(stopNames.length * 10 + glowNames.length * 17 * 17 + 17 * 17 * 17);
+  });
+
+  if (theme === "dark") {
+    it("escuro: toda cor do conjunto e toda amostra tem luminancia em [0,005; 0,25): nao e preto e continua escuro", () => {
+      for (const n of names) {
+        const l = relativeLuminance(color(n, "dark"));
+        expect(l, `${n} muito escuro (preto)`).toBeGreaterThanOrEqual(0.005);
+        expect(l, `${n} claro demais para o tema escuro`).toBeLessThan(0.25);
+      }
+      for (const sample of pageSamples("dark")) {
+        const l = relativeLuminance(sample);
+        expect(l).toBeGreaterThanOrEqual(0.005);
+        expect(l).toBeLessThan(0.25);
+      }
+    });
+  } else {
+    it("claro: nenhuma cor do conjunto e branca pura e todas tem luminancia abaixo da de --surface", () => {
+      const surface = relativeLuminance(color("--surface", "light"));
+      for (const n of names) {
+        const c = color(n, "light");
+        expect([c.r, c.g, c.b], `${n} e branco puro`).not.toEqual([255, 255, 255]);
+        expect(relativeLuminance(c), `${n} se confunde com --surface`).toBeLessThan(surface);
+      }
+    });
+
+    it("claro: toda cor do conjunto tem matiz perceptivel (croma max-min dos canais >= 12, design G7)", () => {
+      for (const n of names) {
+        const c = color(n, "light");
+        const chroma = Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b);
+        expect(chroma, `${n} sem matiz (cinza/branco)`).toBeGreaterThanOrEqual(12);
+      }
+    });
+  }
+
+  it("a cor base --bg fica dentro da faixa de luminancia das amostras do gradiente (I7)", () => {
+    const ls = pageSamples(theme).map(relativeLuminance);
+    const base = relativeLuminance(color("--bg", theme));
+    expect(base).toBeGreaterThanOrEqual(Math.min(...ls));
+    expect(base).toBeLessThanOrEqual(Math.max(...ls));
+  });
+
+  it("a cor base --bg esta dentro da faixa das PARADAS declaradas (nao so das amostras com brilho)", () => {
+    const ls = stopNames.map((n) => relativeLuminance(color(n, theme)));
+    const base = relativeLuminance(color("--bg", theme));
+    expect(base).toBeGreaterThanOrEqual(Math.min(...ls));
+    expect(base).toBeLessThanOrEqual(Math.max(...ls));
+  });
+
+  it("par de pior caso: nenhum primeiro plano que usa --bg cai abaixo do minimo em QUALQUER amostra", () => {
+    const failures = REQUIRED.filter((p) => p.bg === "--bg").flatMap((p) =>
+      pageSamples(theme)
+        .map((s) => ({ p, ratio: contrastRatio(color(p.fg, theme), s) }))
+        .filter(({ ratio }) => ratio < MIN[p.kind])
+        .slice(0, 1)
+        .map(({ p: pair, ratio }) => `${pair.fg} x --bg = ${ratio.toFixed(2)} (< ${MIN[pair.kind]})`),
+    );
+    expect(failures).toEqual([]);
+  });
+
+  it("navbar (--header-bg 0,95) composta sobre cada amostra do fundo passa nos tres pares", () => {
+    const header = color("--header-bg", theme);
+    for (const [fg, kind] of [["--text", "text"], ["--text-muted", "text"], ["--accent", "text"], ["--focus-color", "non-text"]] as const) {
+      const worst = Math.min(...pageSamples(theme).map((s) => contrastRatio(color(fg, theme), composite(header, s))));
+      expect(worst, `${fg} sobre navbar sobre o fundo`).toBeGreaterThanOrEqual(MIN[kind]);
+    }
+  });
+
+  it("--chart-cursor (claro) e --input-bg (escuro) mantem os valores da rev. 5 (P3), deixando de ser 'iguais ao fundo'", () => {
+    if (theme === "light") expect(norm(tokens["--chart-cursor"].light)).toBe("#eef1f5");
+    else expect(norm(tokens["--input-bg"].dark)).toBe("#151b26");
   });
 });

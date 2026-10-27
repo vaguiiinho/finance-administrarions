@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { evaluateButton, incompleteVerdict, resolveBackground, type ButtonStyleSnapshot, type TextContrastResult } from "./contrast";
+import { contrastRatio } from "../lib/theme/contrast";
+import { evaluateButton, incompleteVerdict, resolveBackground, worstOverRegion, type ButtonStyleSnapshot, type TextContrastResult } from "./contrast";
 
 /** Testes do helper de contraste do Playwright (ADR 0002 T2): matematica pura, sem navegador. */
 const base: ButtonStyleSnapshot = {
@@ -91,5 +92,87 @@ describe("incompleteVerdict (resolucao restrita dos 'incomplete' do axe)", () =>
   });
   it("razao abaixo do limite falha com a razao no texto", () => {
     expect(incompleteVerdict("imgNode", { ...ok, ratio: 3.2, ok: false })).toBe("3.20:1 < 4.5:1");
+  });
+});
+
+/**
+ * ADR 0003 5.5 (camada 2): `bgGradient`/`bgImage` so sao resolviveis quando o primeiro background-image da cadeia pertence a
+ * uma `GradientRegion` declarada pela tela, e o veredito usa o pior caso sobre o gradiente (`worstOverGradient`).
+ */
+describe("incompleteVerdict com regiao de gradiente declarada (ADR 0003 5.5)", () => {
+  const ok: TextContrastResult = { ratio: 7, large: false, required: 4.5, ok: true, text: "Jan", opacity: 1, backgroundImage: true, covered: false, coveredByOverlay: false };
+  const region = { ...ok, gradientRegion: true, worstOverGradient: 5.2 } as TextContrastResult;
+
+  it("bgGradient e bgImage sao resolvidos dentro de regiao declarada com pior caso >= minimo", () => {
+    for (const key of ["bgGradient", "bgImage"]) expect(incompleteVerdict(key, region)).toBeNull();
+  });
+
+  it("bgGradient/bgImage fora de regiao declarada continuam falhando", () => {
+    for (const key of ["bgGradient", "bgImage"]) {
+      expect(incompleteVerdict(key, { ...ok, gradientRegion: false } as TextContrastResult)).toMatch(/nao e resolvivel/);
+      expect(incompleteVerdict(key, ok)).toMatch(/nao e resolvivel/);
+    }
+  });
+
+  it("regiao com pior caso abaixo do minimo falha com a razao no texto", () => {
+    expect(incompleteVerdict("bgGradient", { ...region, worstOverGradient: 4.1 } as TextContrastResult)).toBe("4.10:1 < 4.5:1");
+  });
+
+  it("texto grande usa o minimo de 3:1 sobre o gradiente", () => {
+    const large = { ...region, large: true, required: 3, worstOverGradient: 3.4 } as TextContrastResult;
+    expect(incompleteVerdict("bgGradient", large)).toBeNull();
+    expect(incompleteVerdict("bgGradient", { ...large, worstOverGradient: 2.9 } as TextContrastResult)).toBe("2.90:1 < 3:1");
+  });
+
+  it("regiao sem pior caso calculado nao e resolvida", () => {
+    expect(incompleteVerdict("bgGradient", { ...region, worstOverGradient: undefined } as TextContrastResult)).not.toBeNull();
+  });
+
+  it("opacidade < 1 e sobreposicao real continuam reprovando dentro da regiao", () => {
+    expect(incompleteVerdict("bgGradient", { ...region, opacity: 0.6 } as TextContrastResult)).toMatch(/opacidade/);
+    expect(incompleteVerdict("bgGradient", { ...region, covered: true } as TextContrastResult)).toMatch(/sobreposicao/);
+  });
+
+  it("a regiao nao abre outros messageKey (fgAlpha, pseudoContent, bgOverlap, ausente)", () => {
+    for (const key of ["fgAlpha", "pseudoContent", "bgOverlap", undefined]) expect(incompleteVerdict(key, region)).toMatch(/nao e resolvivel/);
+  });
+
+  it("imgNode com background-image so passa se a cadeia pertence a regiao declarada", () => {
+    expect(incompleteVerdict("imgNode", ok)).toMatch(/background-image/);
+    expect(incompleteVerdict("imgNode", region)).toBeNull();
+  });
+});
+
+describe("worstOverRegion (cadeia entre o texto e a regiao de gradiente)", () => {
+  it("falha fechado com amostras vazias", () => {
+    expect(() => worstOverRegion({ r: 0, g: 0, b: 0, a: 1 }, [], [])).toThrow(/vazias/);
+  });
+
+  const black = { r: 0, g: 0, b: 0, a: 1 };
+  const samples = [{ r: 255, g: 255, b: 255, a: 1 }, { r: 20, g: 20, b: 20, a: 1 }];
+
+  it("sem fundos entre o texto e a regiao, e o pior caso sobre as amostras", () => {
+    expect(worstOverRegion(black, [], samples)).toBeCloseTo(contrastRatio(black, samples[1]), 10);
+  });
+
+  it("fundo opaco antes da regiao: o gradiente nao aparece e o veredito e o do fundo opaco", () => {
+    const inner = ["rgb(255, 255, 255)", "rgba(0, 0, 0, 0)"];
+    const expected = contrastRatio(black, resolveBackground(inner));
+    expect(worstOverRegion(black, inner, samples)).toBeCloseTo(expected, 10);
+    expect(expected).toBeGreaterThan(4.5);
+  });
+
+  it("fundo opaco claro com texto claro reprova mesmo que as amostras sejam todas escuras", () => {
+    const white = { r: 255, g: 255, b: 255, a: 1 };
+    expect(worstOverRegion(white, ["rgb(250, 250, 250)"], [samples[1]])).toBeLessThan(1.2);
+  });
+
+  it("fundo translucido antes da regiao: compoe sobre cada amostra e o pior caso muda", () => {
+    const inner = ["rgba(255, 255, 255, 0.5)"];
+    const worst = worstOverRegion(black, inner, samples);
+    const effective = resolveBackground(inner, samples[1]);
+    expect(worst).toBeCloseTo(contrastRatio(black, effective), 10);
+    expect(worst).toBeGreaterThan(contrastRatio(black, samples[1]));
+    expect(worst).toBeLessThan(contrastRatio(black, resolveBackground(inner, samples[0])));
   });
 });

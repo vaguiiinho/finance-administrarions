@@ -5,6 +5,32 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+### Fundo em gradiente nos temas claro e escuro (ADR 0003, design rev. 6)
+
+#### Added
+
+- Fundo da página em gradiente fixo e estático: escuro "Grafite com brilho ciano" e claro "Lavanda → azul-gelo" (presets escolhidos pelo usuário). Camada `body::before` (`position: fixed`) em `web/app/globals.css`, em todas as rotas e nos estados de loading e erro.
+- Tokens `--bg-stop-1..3`, `--bg-glow-1..2` e `--bg-gradient` em `web/app/styles/tokens.css`; `PAGE_BACKGROUND_TOKENS` em `web/lib/theme/contrast-pairs.ts`.
+- Classe `.page-bg-window`: faixa de abas sticky de `/entries` mostra o mesmo trecho do gradiente (`background-attachment: fixed`).
+- `web/lib/theme/gradient.ts` (amostras do gradiente e pior caso de contraste) e testes: `gradient.spec.ts`, `page-background.spec.ts`, `web/e2e/page-background.pw.ts`, auditoria `auditPageGradient` em `web/e2e/support.ts` e regiões de gradiente declaradas em `web/e2e/contrast.ts`.
+- Teste permanente `web/test/background-preview-removed.spec.ts`, que garante que a pré-visualização temporária não deixou resíduos.
+
+#### Changed
+
+- `--bg` passa a ser a cor base do gradiente (`#ECEEFC` claro, `#181E2A` escuro). Todo par de contraste com `--bg` vale no pior caso contra as paradas, interpolações e brilhos; nenhum mínimo foi afrouxado e superfícies, textos e semântica mantêm os valores da rev. 5.
+- `.segmented` e `.tablist` com fundo transparente; 2ª linha da navbar mobile sem fundo; `bg-bg` removido de `entries-tabs-bar.tsx` e `app-header.tsx`.
+- `no-literal-colors.spec.ts` agora usa lista de arquivos autorizados com motivo (só `tokens.css`).
+- `docs/design/design-system.md` rev. 6.
+
+#### Removed
+
+- Página temporária `/background-preview` (Fase A) e seus dados, testes e variável de ambiente.
+
+#### Notes
+
+- Limitação conhecida: no iOS Safari `background-attachment: fixed` é ignorado, e a faixa de abas mostra o gradiente relativo a ela (pequena diferença de tom, sem barra sólida).
+- Desvios em relação ao ADR 0003 (premissa de `color-scheme` por seção, teste permanente de remoção, local de `auditPageGradient`): ADR 0003, seção 13. Sem mudança em `api/`, contratos HTTP, schema ou migrations.
+
 ### Changed
 
 - Paleta suavizada (design rev. 5): fundo escuro `#151B26` em vez do quase preto `#0B0F1A`, texto e ciano menos contrastantes no escuro, fundo claro `#EEF1F5` com cartões brancos destacados; nova sombra `--shadow-card` (`--shadow-color` por tema) em cartões, blocos e tabelas apoiados no fundo. Todos os pares seguem >= 4,5:1 (texto) e >= 3:1 (não-texto).

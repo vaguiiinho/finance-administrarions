@@ -13,7 +13,7 @@ const ORDER: EntriesTab[] = ["expenses", "invoices", "income"];
 export const HEADER_CONTROLS_ID = "entries-header-controls";
 
 /**
- * Faixa de abas fixa (sticky) abaixo da navbar: fundo opaco `--bg`. A partir de `md`, mostra o mes compacto e
+ * Faixa de abas fixa (sticky) abaixo da navbar: fundo opaco com o mesmo gradiente da pagina (`.page-bg-window`). A partir de `md`, mostra o mes compacto e
  * "+ Novo lancamento" SOMENTE quando os controles do cabecalho saem da vista (sem controles duplicados visiveis).
  */
 export function EntriesTabsBar({ state, currentMonth }: { state: EntriesState; currentMonth: string }) {
@@ -33,7 +33,7 @@ export function EntriesTabsBar({ state, currentMonth }: { state: EntriesState; c
   const items: TabItem<EntriesTab>[] = ORDER.map((id) => ({ id, label: LABELS[id], href: entriesHref(changeTab(state, id)) }));
 
   return (
-    <div className="sticky top-[var(--navbar-h)] z-30 -mx-4 border-b border-border bg-bg px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
+    <div className="sticky top-[var(--navbar-h)] z-30 -mx-4 page-bg-window border-b border-border px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">
       <div className="flex min-h-[var(--tabsbar-h)] items-center gap-3 py-1">
         {headerGone ? (
           <div className="hidden md:block">

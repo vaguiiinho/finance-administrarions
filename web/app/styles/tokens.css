@@ -7,7 +7,18 @@
   color-scheme: light dark;
 
   /* superficies e texto */
-  --bg: light-dark(#EEF1F5, #151B26);
+  /* fundo da pagina (design rev. 6): cor base + paradas + brilhos, todos opacos */
+  --bg: light-dark(#ECEEFC, #181E2A);
+  --bg-stop-1: light-dark(#EEEEFE, #141A24);
+  --bg-stop-2: light-dark(#E8F0FC, #181E2A);
+  --bg-stop-3: light-dark(#F0ECFC, #12182A);
+  --bg-glow-1: light-dark(#E4F0FE, #0C3044);
+  --bg-glow-2: light-dark(#F4ECFE, #20244D);
+  /* receita: so var() dos tokens acima + transparent; o tema resolve no elemento que usa (light-dark) */
+  --bg-gradient:
+    radial-gradient(circle at 12% 8%, var(--bg-glow-1), transparent 55%),
+    radial-gradient(circle at 88% 92%, var(--bg-glow-2), transparent 50%),
+    linear-gradient(160deg, var(--bg-stop-1), var(--bg-stop-2) 55%, var(--bg-stop-3));
   --surface: light-dark(#FFFFFF, #1C2330);
   --surface-2: light-dark(#F4F6F9, #252D3C);
   --surface-active: light-dark(#E4E8EE, #303A4C);

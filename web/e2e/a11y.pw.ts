@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { ENTRIES_URL, MONTH, audit, releaseMutations, setScenario, setThemeCookie, showChartTooltip } from "./support";
+import { ENTRIES_URL, MONTH, PAGE_BG_REGION, audit, auditPageGradient, releaseMutations, setScenario, setThemeCookie, showChartTooltip } from "./support";
 
 type ScreenDef = {
   name: string;
@@ -309,7 +309,9 @@ for (const theme of THEMES) {
         await page.waitForLoadState("networkidle");
         try {
           await screen.prepare?.(page);
-          await audit(page, `${screen.name} [${theme}]`, { overlays: screen.overlays });
+          // a faixa de abas de /entries pinta o gradiente (.page-bg-window): regiao declarada, resolvida pelo pior caso (ADR 0003 5.5)
+          await audit(page, `${screen.name} [${theme}]`, { overlays: screen.overlays, gradients: [PAGE_BG_REGION] });
+          await auditPageGradient(page, `${screen.name} [${theme}]`);
           if (screen.holdsQueries) await expect(page.getByText("Atualizando…").first(), "o estado atualizando deve durar ate o fim do audit").toBeVisible();
         } finally {
           if (screen.holdsQueries) await releaseMutations().catch(() => undefined);
@@ -326,7 +328,8 @@ test.describe("axe - 'sistema' via emulateMedia (sem cookie)", () => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.goto(ENTRIES_URL);
       await page.waitForLoadState("networkidle");
-      await audit(page, `/entries sistema ${scheme}`);
+      await audit(page, `/entries sistema ${scheme}`, { gradients: [PAGE_BG_REGION] });
+      await auditPageGradient(page, `/entries sistema ${scheme}`);
     });
   }
 });

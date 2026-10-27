@@ -3,7 +3,6 @@
 
 /* Tokens -> utilitarios do Tailwind (bg-surface, text-muted, border-border-strong...). Nenhuma cor literal aqui. */
 @theme inline {
-  --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-active: var(--surface-active);
@@ -58,10 +57,29 @@ html {
 body {
   margin: 0;
   min-height: 100dvh;
-  background: var(--bg);
+  isolation: isolate; /* o ::before (z -1) pinta acima do fundo do body e abaixo do conteudo */
+  background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Fundo em gradiente (ADR 0003 5.3): camada fixa na viewport, estatica, atras do conteudo. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--bg);
+  background-image: var(--bg-gradient);
+}
+
+/* Janela de fundo (ADR 0003 5.6): faixa opaca que mostra o mesmo trecho do gradiente da camada fixa. */
+.page-bg-window {
+  background-color: var(--bg);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
 }
 
 * {
@@ -327,7 +345,7 @@ dialog::backdrop {
   display: flex;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
-  background: var(--bg);
+  background: transparent;
   overflow-x: auto;
 }
 .segmented > * {
@@ -379,7 +397,7 @@ dialog::backdrop {
   display: flex;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
-  background: var(--bg);
+  background: transparent;
   overflow-x: auto;
 }
 .tab {
