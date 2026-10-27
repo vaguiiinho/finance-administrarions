@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { BG, ENTRIES_URL, audit, bodyBackground, htmlTheme, setScenario, setThemeCookie, themeToggle } from "./support";
+import { BG, ENTRIES_URL, PAGE_BG_REGION, audit, bodyBackground, htmlTheme, setScenario, setThemeCookie, themeToggle } from "./support";
 
 test.beforeEach(async () => {
   await setScenario("default");
@@ -187,7 +187,7 @@ test.describe("CA84 - alternancias repetidas", () => {
       expect(cookie?.value, `cookie apos clique ${i + 1}`).toBe(expected);
       if (i >= 3) {
         audited.add(expected);
-        await audit(page, `/entries apos alternar para ${expected} (clique ${i + 1})`);
+        await audit(page, `/entries apos alternar para ${expected} (clique ${i + 1})`, { gradients: [PAGE_BG_REGION] });
       }
     }
     expect([...audited].sort()).toEqual(["dark", "light"]);
@@ -236,7 +236,7 @@ test.describe("CA84 - alternancias repetidas", () => {
       if (i >= 3) {
         audited.add(scheme);
         await settle(page);
-        await audit(page, `drawer aberto, sistema ${scheme}`);
+        await audit(page, `drawer aberto, sistema ${scheme}`, { gradients: [PAGE_BG_REGION] });
       }
     });
     expect([...audited].sort()).toEqual(["dark", "light"]);
@@ -265,7 +265,7 @@ test.describe("CA84 - alternancias repetidas", () => {
       if (i >= 3) {
         audited.add(scheme);
         await settle(page);
-        await audit(page, `painel de novo cartao aberto, sistema ${scheme}`);
+        await audit(page, `painel de novo cartao aberto, sistema ${scheme}`, { gradients: [PAGE_BG_REGION] });
       }
     });
     expect([...audited].sort()).toEqual(["dark", "light"]);
@@ -285,7 +285,7 @@ test.describe("CA84 - alternancias repetidas", () => {
       if (i >= 3) {
         audited.add(scheme);
         await settle(page);
-        await audit(page, `modal de pagamento aberto, sistema ${scheme}`);
+        await audit(page, `modal de pagamento aberto, sistema ${scheme}`, { gradients: [PAGE_BG_REGION] });
       }
     });
     expect([...audited].sort()).toEqual(["dark", "light"]);

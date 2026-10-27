@@ -95,7 +95,7 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
   ) : null;
 
   return (
-    <div role="group" aria-labelledby={headingId} className="flex flex-col gap-4 rounded-xl border border-border-strong bg-surface p-4 md:p-5">
+    <div role="group" aria-labelledby={headingId} className="flex flex-col gap-4 rounded-xl border border-border-strong bg-surface p-4 shadow-card md:p-5">
       <div className="flex flex-col gap-1 md:flex-row md:items-start md:justify-between md:gap-4">
         <div className="flex flex-col gap-1">
           <h3 id={headingId} ref={headingRef} tabIndex={-1} className="font-display text-lg font-semibold text-text">

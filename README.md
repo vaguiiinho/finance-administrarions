@@ -11,7 +11,7 @@ Aplicação de finanças pessoais com `api` (NestJS 12, Prisma 7, PostgreSQL) e 
 - Mostra **faturas** do mês por cartão, com "pagar fatura".
 - **Paga despesas** individualmente ou em lote (tudo ou nada).
 - Mostra **resumo do mês** (receitas, despesas pagas/pendentes, saldo realizado e previsto) e **dashboard** (série de 12 meses e distribuição por categoria).
-- Tema claro/escuro com alternador sol/lua.
+- Tema claro/escuro com alternador sol/lua, com fundo em gradiente fixo e estático (escuro grafite com brilho ciano, claro lavanda e azul-gelo).
 
 Telas: `/entries` (abas Despesas, Faturas, Receitas), `/cards`, `/dashboard`. A raiz `/` redireciona para `/entries`.
 
@@ -102,5 +102,6 @@ Detalhes, diagramas (camadas, aggregates, pagamento em lote) e exemplos de paylo
 
 - API: [`docs/api/finance.md`](docs/api/finance.md)
 - ADR: [`docs/adr/0001-lancamentos-financeiros.md`](docs/adr/0001-lancamentos-financeiros.md)
+- Fundo em gradiente nos temas claro e escuro: [`docs/adr/0003-fundo-gradiente-temas.md`](docs/adr/0003-fundo-gradiente-temas.md), [`docs/specs/fundo-gradiente-temas.md`](docs/specs/fundo-gradiente-temas.md) e [`docs/design/fundo-gradiente-temas.md`](docs/design/fundo-gradiente-temas.md)
 - Design: [`docs/design/lancamentos-financeiros.md`](docs/design/lancamentos-financeiros.md) e [`docs/design/design-system.md`](docs/design/design-system.md)
 - Histórico de mudanças: [`CHANGELOG.md`](CHANGELOG.md)

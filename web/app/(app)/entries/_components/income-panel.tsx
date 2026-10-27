@@ -54,7 +54,7 @@ export async function IncomePanel({ state }: { state: EntriesState }) {
   } else {
     body = (
       <>
-        <table className="hidden w-full border-collapse text-sm md:table">
+        <table className="hidden w-full border-collapse rounded-xl border border-border text-sm shadow-card md:table">
           <caption className="sr-only">Receitas do mês, mais recentes primeiro</caption>
           <thead className="sticky top-[calc(var(--navbar-h)+var(--tabsbar-h))] z-10 bg-surface text-left text-muted">
             <tr className="border-b border-border-strong">
@@ -90,7 +90,7 @@ export async function IncomePanel({ state }: { state: EntriesState }) {
         </table>
         <ul className="flex flex-col gap-3 md:hidden">
           {items.map((entry) => (
-            <EntryItem key={entry.id} id={entry.id} className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4">
+            <EntryItem key={entry.id} id={entry.id} className="flex flex-col gap-1 rounded-xl border border-border bg-surface p-4 shadow-card">
               <div className="flex items-start justify-between gap-2">
                 <p className="flex min-w-0 items-center gap-2 font-medium text-text">
                   <span className="truncate">{entry.description}</span>

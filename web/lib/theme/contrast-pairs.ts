@@ -15,20 +15,22 @@ export interface ContrastPair {
   where: string;
 }
 
-const HEADER_UNDER = ["--bg", "--surface", "--surface-2", "--text"] as const;
+/** Tokens que compoem o fundo da pagina (design rev. 6). Pares com bg "--bg" valem contra as amostras de todos eles. */
+export const PAGE_BACKGROUND_TOKENS = ["--bg", "--bg-stop-1", "--bg-stop-2", "--bg-stop-3", "--bg-glow-1", "--bg-glow-2"] as const;
+const HEADER_UNDER = [...PAGE_BACKGROUND_TOKENS, "--surface", "--surface-2", "--text"] as const;
 
 const p = (fg: ContrastPair["fg"], bg: ContrastPair["bg"], kind: ContrastKind, where: string, over?: ContrastPair["over"]): ContrastPair =>
   over ? { fg, bg, kind, where, over } : { fg, bg, kind, where };
 
 export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   // texto sobre superficies
-  p("--text", "--bg", "text", "texto principal, aba ativa, faixa de abas"),
+  p("--text", "--bg", "text", "texto principal, aba ativa, faixa de abas (pior caso do gradiente)"),
   p("--text", "--surface", "text", "cards, tabela, drawer, modal"),
   p("--text", "--surface-2", "text", "hover, linha selecionada, toast, subtotal, painel de novo cartao"),
   p("--text", "--surface-active", "text", "botao secundario pressionado, aba pressionada"),
   p("--text", "--input-bg", "text", "texto digitado em campos"),
   p("--text", "--header-bg", "text", "navbar", HEADER_UNDER),
-  p("--text-muted", "--bg", "text", "aba inativa, rotulos"),
+  p("--text-muted", "--bg", "text", "aba inativa, rotulos (pior caso do gradiente)"),
   p("--text-muted", "--surface", "text", "rotulos e metadados em cards"),
   p("--text-muted", "--surface-2", "text", "rotulos do subtotal e do painel de cartao"),
   p("--text-muted", "--surface-active", "text", "texto secundario pressionado"),
@@ -37,7 +39,7 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   p("--text-muted", "--tooltip-bg", "text", "tooltip - rotulos"),
   p("--text", "--tooltip-bg", "text", "tooltip - valores"),
   p("--accent", "--surface", "text", "links, disclosure"),
-  p("--accent", "--bg", "text", "links sobre o fundo"),
+  p("--accent", "--bg", "text", "links sobre o fundo (pior caso do gradiente)"),
   p("--accent", "--surface-2", "text", "links sobre superficie 2, toast com acao"),
   p("--accent-active", "--surface-active", "text", "botao terciario pressionado (:active)"),
   p("--accent", "--header-bg", "text", "navbar - item ativo", HEADER_UNDER),
@@ -50,7 +52,7 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   p("--warning-text", "--surface-2", "text", "badge Pendente em linha selecionada"),
   p("--danger-text", "--surface", "text", "mensagens de erro"),
   p("--danger-text", "--surface-2", "text", "erro no painel de cartao"),
-  p("--danger-text", "--bg", "text", "erro sobre o fundo"),
+  p("--danger-text", "--bg", "text", "erro sobre o fundo (pior caso do gradiente)"),
   p("--danger-text", "--input-bg", "text", "erro abaixo de campo"),
   p("--income", "--surface", "text", "rotulo Receita, badge Recebida"),
   p("--income", "--surface-2", "text", "rotulo Receita em linha selecionada"),
@@ -62,23 +64,23 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   // desabilitado
   p("--text-disabled", "--surface-2", "disabled", "botao/campo desabilitado"),
   p("--text-disabled", "--surface", "disabled", "texto desabilitado sobre card"),
-  p("--text-disabled", "--bg", "disabled", "texto desabilitado sobre o fundo"),
+  p("--text-disabled", "--bg", "disabled", "texto desabilitado sobre o fundo (pior caso do gradiente)"),
 
   // bordas de controles, foco e estados
   p("--border-strong", "--surface", "non-text", "borda de controles e blocos de fatura"),
-  p("--border-strong", "--bg", "non-text", "contorno do segmented e da faixa de abas"),
+  p("--border-strong", "--bg", "non-text", "contorno do segmented e da faixa de abas (pior caso do gradiente)"),
   p("--border-strong", "--surface-2", "non-text", "borda de input dentro do painel de cartao"),
   p("--border-strong", "--surface-active", "non-text", "borda de controle pressionado"),
   p("--border-strong", "--input-bg", "non-text", "borda de input"),
   p("--primary-border", "--surface", "non-text", "borda do botao primario / pagina atual"),
-  p("--primary-border", "--bg", "non-text", "segmento ativo e checkbox marcado"),
+  p("--primary-border", "--bg", "non-text", "segmento ativo e checkbox marcado (pior caso do gradiente)"),
   p("--primary-border", "--surface-2", "non-text", "botao primario no painel de cartao"),
   p("--focus-color", "--surface", "non-text", "anel de foco"),
-  p("--focus-color", "--bg", "non-text", "anel de foco sobre o fundo / aba"),
+  p("--focus-color", "--bg", "non-text", "anel de foco sobre o fundo / aba (pior caso do gradiente)"),
   p("--focus-color", "--surface-2", "non-text", "anel de foco sobre superficie 2"),
   p("--focus-color", "--input-bg", "non-text", "anel de foco em campos"),
   p("--focus-color", "--header-bg", "non-text", "anel de foco na navbar", HEADER_UNDER),
-  p("--accent", "--bg", "non-text", "indicador da aba ativa"),
+  p("--accent", "--bg", "non-text", "indicador da aba ativa (pior caso do gradiente)"),
   p("--accent", "--surface-2", "non-text", "barra da linha selecionada, progresso"),
   p("--danger", "--input-bg", "non-text", "borda de campo com erro"),
   p("--danger", "--surface", "non-text", "borda de banner de erro"),

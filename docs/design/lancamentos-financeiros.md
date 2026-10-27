@@ -5,7 +5,7 @@
 - **Design system:** `docs/design/design-system.md` (breakpoints sm 640 / md 768 / lg 1024 / xl 1280)
 - **Tokens:** `web/app/styles/tokens.css`, cada token declarado uma única vez com `light-dark(<claro>, <escuro>)`. O caminho no `design-system.md` foi corrigido e a tabela de tokens da seção 1.2 foi copiada para lá.
 - **Autor:** ui-designer
-- **Status:** Implementado (rev. 3) + revisão 4 de fechamento; desvio 2 da seção 12 aprovado (B1 da spec de fechamento, 2026-10-25)
+- **Status:** Implementado (rev. 3) + revisão 4 de fechamento; desvio 2 da seção 12 aprovado (B1 da spec de fechamento, 2026-10-25). Revisão 5 (paleta suavizada) aprovada pelo usuário em 2026-10-25; valores ainda a aplicar em `tokens.css` pelo frontend-dev.
 
 ### Histórico
 
@@ -15,6 +15,7 @@
 | 2 | Tipo Receita/Despesa, meio conta/cartão, mês de referência, tela `/cards`, filtros e totais com saldos, "Pagar fatura" em barra acima da lista, dashboard revisto (DR3), tratamento de 404/409/422, navbar com três destinos, tema claro e escuro com valores de tokens e tabela de contraste. |
 | 3 | Spec rev. 3. `/entries` reestruturada em **cabeçalho comum** (seletor de mês, "+ Novo lançamento", resumo do mês inteiro) + **abas Despesas / Faturas / Receitas** (D16-D21). Removidos: filtro de período (intervalo de/até e "Todos"), filtro de tipo, status "Recebida" no filtro, barra de fatura (D14) e regra de filtros incompatíveis (D13). Formas de pagamento **PIX e Cartão** (sai "Conta"); "Ainda não paguei" (D23); atalho **"+ Novo cartão" embutido** no drawer (D22). Mês da fatura = **mês do vencimento**; datas de fechamento/vencimento em `dd/MM/yyyy` na aba Faturas. Atalho de `/cards` para a aba Despesas filtrada (DR8). Dashboard só com seletor de mês. Tokens, contraste, D1-D5 mantidos; novos pares de contraste para abas, subtotal, blocos de fatura e painel de novo cartão (sem tokens novos). CAs renumerados conforme a spec rev. 3. |
 | 4 | Fechamento (sem tela nova). Ajustados ao código conferido: combobox de categoria (3.9.1), destaque estático de recém-criado (3.9.2), gráfico estreito e movimento reduzido (5.5), destaque do donut pela legenda (5.6). Desvio 2 (tema com diálogo aberto) em 12, aprovado. Seção 13: divergências para o frontend-dev e matriz de verificação CA82/CA83/CA86. |
+| 5 | **Paleta suavizada** (aprovada pelo usuário em 2026-10-25; sem tela nem componente novo). Escuro: fundos azul-ardósia (`--bg` `#151B26`, `--surface` `#1C2330`, `--surface-2` `#252D3C`) no lugar do quase-preto, texto `#E3E7EE`, `--text-muted` `#9BA5B7` e `--accent` `#5CC8DB`. Claro: fundo `#EEF1F5` com cartões brancos, borda `#D9DEE6`, texto `#1E293B`, `--text-muted` `#4B5567`. Tokens dependentes derivados (`--surface-active`, `--input-bg`, `--header-bg`, `--border-strong`, `--text-disabled`, `--skeleton`, `--scrim`, `--tooltip-*`, `--scrollbar-*`, `--chart-axis/grid/zero-line/cursor`, `--chart-1`, `--chart-6`, `--focus-color`, `--accent-active`). Novos tokens `--shadow-color` e `--shadow-card` (sombra sutil dos cartões). Tokens semânticos e séries de gráfico sem mudança de valor, conferidos contra os novos fundos: nenhum par abaixo do mínimo. Atualizadas 1.2, 1.3, 1.9 e 13.3; `design-system.md` sincronizado. |
 
 Este documento define estrutura visual, hierarquia, componentes, estados e interação. Não contém código. Nomes de componentes são sugestões para o frontend-dev.
 
@@ -63,25 +64,29 @@ Este documento define estrutura visual, hierarquia, componentes, estados e inter
 
 ### 1.2 Tokens: valores por tema
 
-Sem mudanças de valor na rev. 3 e **sem tokens novos**: abas, subtotal, blocos de fatura e painel de novo cartão são compostos com os tokens abaixo (pares em 1.9). Um token de preenchimento (`--success`, `--warning`, `--danger`) **nunca** é cor de texto: para texto existem as variantes `*-text`.
+**Rev. 5 (paleta suavizada, aprovada pelo usuário em 2026-10-25).** O escuro deixa de ser "preto bruto": fundo e superfícies em azul-ardósia, com degraus de luminância maiores entre `--bg`, `--surface`, `--surface-2` e `--surface-active`; texto e `--accent` menos estridentes. O claro ganha fundo cinza-azulado suave com cartões brancos, o que aumenta a separação entre fundo e cartões (`--surface` sobre `--bg`: 1,13:1, reforçada por `--border` e `--shadow-card`). Valores marcados com **(rev. 5)** mudaram; os demais estão iguais à rev. 4. Tokens novos: `--shadow-color` e `--shadow-card`.
 
-**Superfícies e texto**
+Um token de preenchimento (`--success`, `--warning`, `--danger`) **nunca** é cor de texto: para texto existem as variantes `*-text`. `light-dark()` só aceita cores: tokens compostos (`--shadow-card`, `--focus-ring`) são declarados uma vez, fora de `light-dark()`, e referenciam o token de cor que varia por tema.
+
+**Superfícies, texto e profundidade**
 
 | Token | Claro | Escuro | Uso |
 |---|---|---|---|
-| `--bg` | `#F5F7FB` | `#0B0F1A` | Fundo da página; **fundo opaco da faixa de abas fixa** |
-| `--surface` | `#FFFFFF` | `#121829` | Cards, resumo, tabela, blocos de fatura, drawer, modal, folha, menus |
-| `--surface-2` | `#EEF1F7` | `#18203A` | Hover, linha selecionada, toast, tooltip (escuro), desabilitados, **faixa de subtotal**, **painel de novo cartão** |
-| `--surface-active` | `#E2E7F0` | `#222B4A` | Pressionado de botões secundários/ícone, itens de menu e abas |
-| `--input-bg` | `#FFFFFF` | `#0B0F1A` | Fundo de inputs, selects, combobox, date picker |
-| `--header-bg` | `rgb(255 255 255 / 0.95)` | `rgb(18 24 41 / 0.95)` | Navbar fixa (blur 12px); alfa 0.95 mantém AA com conteúdo rolando por baixo |
-| `--border` | `#DDE2EC` | `#1F2940` | Bordas decorativas (cards não interativos, divisórias, base da faixa de abas) |
-| `--border-strong` | `#737D92` | `#6E7891` | Borda de controles, blocos de fatura, painel de novo cartão, drawer/modal (>= 3:1) |
-| `--text` | `#0F172A` | `#E6EAF5` | Texto principal, valores monetários, aba ativa |
-| `--text-muted` | `#475569` | `#8B95AD` | Texto secundário, rótulos, placeholders, ticks, aba inativa |
-| `--text-disabled` | `#737D92` | `#6E7891` | Texto e ícone de controles desabilitados (>= 3:1 sobre `--surface-2`) |
-| `--skeleton` | `#E2E7F0` | `#222B4A` | Blocos de skeleton (decorativo) |
-| `--scrim` | `rgb(15 23 42 / 0.45)` | `rgb(11 15 26 / 0.72)` | Fundo atrás de drawer/modal/folha |
+| `--bg` (rev. 5) | `#EEF1F5` | `#151B26` | Fundo da página; **fundo opaco da faixa de abas fixa** |
+| `--surface` (rev. 5) | `#FFFFFF` | `#1C2330` | Cards, resumo, tabela, blocos de fatura, drawer, modal, folha, menus |
+| `--surface-2` (rev. 5) | `#F4F6F9` | `#252D3C` | Hover, linha selecionada, toast, tooltip (escuro), desabilitados, **faixa de subtotal**, **painel de novo cartão** |
+| `--surface-active` (rev. 5) | `#E4E8EE` | `#303A4C` | Pressionado de botões secundários/ícone, itens de menu e abas, opção ativa do combobox, `::selection`. Um degrau acima de `--surface-2`; no escuro, limitado para manter `--text-muted` (4,60) e `--border-strong` (3,03) dentro do mínimo |
+| `--input-bg` (rev. 5) | `#FFFFFF` | `#151B26` | Fundo de inputs, selects, combobox, date picker. No escuro = `--bg` (campo "rebaixado" em relação ao cartão) |
+| `--header-bg` (rev. 5) | `rgb(255 255 255 / 0.95)` | `rgb(28 35 48 / 0.95)` | Navbar fixa (blur 12px); `--surface` com alfa 0.95, que mantém AA com conteúdo rolando por baixo |
+| `--border` (rev. 5) | `#D9DEE6` | `#2E3747` | Bordas decorativas (cards não interativos, divisórias, base da faixa de abas) |
+| `--border-strong` (rev. 5) | `#6F798C` | `#7A8497` | Borda de controles, blocos de fatura, painel de novo cartão, drawer/modal (>= 3:1) |
+| `--text` (rev. 5) | `#1E293B` | `#E3E7EE` | Texto principal, valores monetários, aba ativa |
+| `--text-muted` (rev. 5) | `#4B5567` | `#9BA5B7` | Texto secundário, rótulos, placeholders, ticks, aba inativa |
+| `--text-disabled` (rev. 5) | `#6F798C` | `#7A8497` | Texto e ícone de controles desabilitados (= `--border-strong`; >= 3:1 sobre `--surface-2`) |
+| `--skeleton` (rev. 5) | `#E4E8EE` | `#303A4C` | Blocos de skeleton (decorativo; = `--surface-active`) |
+| `--scrim` (rev. 5 no escuro) | `rgb(15 23 42 / 0.45)` | `rgb(8 11 17 / 0.72)` | Fundo atrás de drawer/modal/folha |
+| `--shadow-color` (rev. 5, novo) | `rgb(15 23 42 / 0.06)` | `rgb(0 0 0 / 0.3)` | Cor da sombra dos cartões. Único token de sombra com `light-dark()` |
+| `--shadow-card` (rev. 5, novo) | `0 1px 2px var(--shadow-color)` | idem | Sombra sutil de todo `--surface` apoiado em `--bg` (regra 7 da 1.3). Declarado sem `light-dark()` |
 
 **Ação, foco e links**
 
@@ -91,14 +96,14 @@ Sem mudanças de valor na rev. 3 e **sem tokens novos**: abas, subtotal, blocos 
 | `--primary-strong` | `#4F46E5` | `#4F46E5` | Botão primário, segmento selecionado (inclusive abas no mobile), checkbox marcado, página atual |
 | `--primary-strong-hover` | `#4338CA` | `#4338CA` | Hover do primário |
 | `--primary-strong-active` | `#3730A3` | `#3730A3` | Pressionado do primário |
-| `--primary-border` | `#4F46E5` | `#818CF8` | Borda 1px de tudo que é preenchido com `--primary-strong` (no escuro o preenchimento sozinho tem 2,81:1) |
+| `--primary-border` | `#4F46E5` | `#818CF8` | Borda 1px de tudo que é preenchido com `--primary-strong` (no escuro o preenchimento sozinho tem 2,50:1 sobre `--surface`) |
 | `--on-primary` | `#FFFFFF` | `#FFFFFF` | Texto/ícone sobre `--primary-strong` e variantes |
-| `--accent` | `#0E7490` | `#22D3EE` | Links, terciário, item de navegação ativo, **indicador da aba ativa**, barra de linha selecionada, barra de progresso |
-| `--accent-active` (rev. 4) | `#0C6980` | `#22D3EE` | Texto do botão terciário pressionado (`:active`), sobre `--surface-active`. `--accent` ficava abaixo de 4,5:1 sobre `--surface-active` no claro |
-| `--focus-color` | `#0E7490` | `#22D3EE` | Cor do anel de foco |
+| `--accent` (rev. 5 no escuro) | `#0E7490` | `#5CC8DB` | Links, terciário, item de navegação ativo, **indicador da aba ativa**, barra de linha selecionada, barra de progresso |
+| `--accent-active` (rev. 4; rev. 5 no escuro) | `#0C6980` | `#5CC8DB` | Texto do botão terciário pressionado (`:active`), sobre `--surface-active`. No claro, `--accent` tem 4,35 sobre `--surface-active` (abaixo de 4,5); `#0C6980` dá 5,10. No escuro, `--accent` já tem 5,85 e o valor é o mesmo |
+| `--focus-color` (rev. 5 no escuro) | `#0E7490` | `#5CC8DB` | Cor do anel de foco (= `--accent`) |
 | `--focus-ring` | contorno 2px `--focus-color`, afastamento 2px | idem | Anel de foco; forma em sombra dupla só para elementos com `overflow: hidden` |
 
-**Semântica de status e tipo**
+**Semântica de status e tipo** (sem mudança de valor; conferidos contra os novos fundos na 1.9)
 
 | Token | Claro | Escuro | Uso |
 |---|---|---|---|
@@ -120,27 +125,28 @@ Sem mudanças de valor na rev. 3 e **sem tokens novos**: abas, subtotal, blocos 
 | `--chart-pending` | `#B45309` | `#FBBF24` | Segmento "Despesas pendentes" (com hachura) |
 | `--chart-balance-realized` | `#6D28D9` | `#A78BFA` | Linha contínua "Saldo realizado" |
 | `--chart-balance-projected` | `#BE185D` | `#F472B6` | Linha tracejada "Saldo previsto" |
-| `--chart-axis` | `#475569` | `#8B95AD` | Ticks dos eixos |
-| `--chart-grid` | `#DDE2EC` | `#2A3552` | Grade (decorativa) |
-| `--chart-zero-line` | `#475569` | `#8B95AD` | Linha do zero (1,5px) |
-| `--chart-cursor` | `#EEF1F7` | `#18203A` | Faixa de hover/foco e do mês selecionado |
-| `--chart-1` .. `--chart-5` | `#0E7490` `#4F46E5` `#BE185D` `#4D7C0F` `#C2410C` | `#22D3EE` `#818CF8` `#F472B6` `#A3E635` `#FB923C` | Donut, 1a a 5a categoria |
-| `--chart-6` | `#64748B` | `#8B95AD` | Donut, "Outras" |
-| `--tooltip-bg` | `#FFFFFF` | `#18203A` | Fundo dos tooltips (opaco) |
-| `--tooltip-border` | `#737D92` | `#6E7891` | Borda dos tooltips |
-| `--scrollbar-thumb` | `#737D92` | `#6E7891` | Polegar da barra de rolagem (inclusive faixa de abas rolável) |
-| `--scrollbar-track` | `#EEF1F7` | `#18203A` | Trilho |
+| `--chart-axis` (rev. 5) | `#4B5567` | `#9BA5B7` | Ticks dos eixos (= `--text-muted`) |
+| `--chart-grid` (rev. 5) | `#D9DEE6` | `#343E51` | Grade (decorativa). Claro = `--border`; escuro um pouco acima de `--border` para continuar visível sobre `--surface` |
+| `--chart-zero-line` (rev. 5) | `#4B5567` | `#9BA5B7` | Linha do zero (1,5px; = `--text-muted`) |
+| `--chart-cursor` (rev. 5) | `#EEF1F5` | `#252D3C` | Faixa de hover/foco e do mês selecionado. Claro = `--bg` (com `--surface-2` a faixa ficaria quase invisível, 1,08:1); escuro = `--surface-2` |
+| `--chart-1` .. `--chart-5` (rev. 5: `--chart-1` no escuro) | `#0E7490` `#4F46E5` `#BE185D` `#4D7C0F` `#C2410C` | `#5CC8DB` `#818CF8` `#F472B6` `#A3E635` `#FB923C` | Donut, 1a a 5a categoria (`--chart-1` = `--accent`) |
+| `--chart-6` (rev. 5 no escuro) | `#64748B` | `#9BA5B7` | Donut, "Outras" (escuro = `--text-muted`) |
+| `--tooltip-bg` (rev. 5 no escuro) | `#FFFFFF` | `#252D3C` | Fundo dos tooltips (opaco; escuro = `--surface-2`) |
+| `--tooltip-border` (rev. 5) | `#6F798C` | `#7A8497` | Borda dos tooltips (= `--border-strong`) |
+| `--scrollbar-thumb` (rev. 5) | `#6F798C` | `#7A8497` | Polegar da barra de rolagem (inclusive faixa de abas rolável; = `--border-strong`) |
+| `--scrollbar-track` (rev. 5) | `#F4F6F9` | `#252D3C` | Trilho (= `--surface-2`) |
 
-`--primary-strong`, `--on-primary`, `--surface-2`, `--scrim`, `--focus-ring` e `--chart-1..6` foram aprovados na rev. 1. Os tokens introduzidos na rev. 2 (`--surface-active`, `--input-bg`, `--header-bg`, `--primary-strong-hover`, `--primary-strong-active`, `--primary-border`, `--focus-color`, `--tooltip-border`, variantes `*-text`, `--income`, `--expense`, `--chart-*` semânticos) continuam pendentes de aprovação formal (seção 11, item 12).
+`--primary-strong`, `--on-primary`, `--surface-2`, `--scrim`, `--focus-ring` e `--chart-1..6` foram aprovados na rev. 1. Os tokens introduzidos na rev. 2 (`--surface-active`, `--input-bg`, `--header-bg`, `--primary-strong-hover`, `--primary-strong-active`, `--primary-border`, `--focus-color`, `--tooltip-border`, variantes `*-text`, `--income`, `--expense`, `--chart-*` semânticos) continuam pendentes de aprovação formal (seção 11, item 12). Os valores de base da rev. 5 (`--bg`, `--surface`, `--surface-2`, `--border`, `--text`, `--text-muted`, `--accent` escuro, `--border-strong` e a sombra) foram aprovados pelo usuário em 2026-10-25; os dependentes foram derivados deles pelo ui-designer.
 
 ### 1.3 Regras de uso das cores (válidas nos dois temas)
 
-1. **Texto só com tokens de texto**: `--text`, `--text-muted`, `--text-disabled`, `--accent`, `--on-primary`, `--success-text`, `--warning-text`, `--danger-text`, `--income`, `--expense`.
+1. **Texto só com tokens de texto**: `--text`, `--text-muted`, `--text-disabled`, `--accent`, `--accent-active`, `--on-primary`, `--success-text`, `--warning-text`, `--danger-text`, `--income`, `--expense`.
 2. **Sem opacidade em texto ou controles**: desabilitado usa `--surface-2` + `--text-disabled`; atualizando segue D11; destaque do donut usa contorno; despesas pagas e faturas pagas não são "apagadas".
-3. **Transparência só em**: `--scrim`, `--header-bg` (0.95) e sombras. Conteúdo de diálogos sempre sobre `--surface` opaco.
+3. **Transparência só em**: `--scrim`, `--header-bg` (0.95) e sombras (`--shadow-color`). Conteúdo de diálogos sempre sobre `--surface` opaco.
 4. **Sobreposição**: elementos fixos/sticky (navbar, **faixa de abas**, cabeçalho de tabela, toolbar de seleção, barra de seleção mobile, rodapé do drawer) têm fundo opaco (ou `--header-bg`) e reservam espaço, para que nenhum texto ou botão fique por cima de outro conteúdo. O cabeçalho sticky da tabela gruda **abaixo** da faixa de abas, não abaixo da navbar.
 5. **Controles nativos**: herdam o tema por `color-scheme` e recebem tokens explícitos: `input`/`select`/`textarea` com `--input-bg`, `--text`, `--border-strong`; `option` com `--surface`/`--text`; placeholder `--text-muted` com opacidade 1; autofill forçado para `--input-bg`/`--text`; date/month picker segue `color-scheme`; `scrollbar-color` com `--scrollbar-*` em toda região rolável; `::selection` com `--surface-active`/`--text`.
 6. **Recharts**: `fill`/`stroke` sempre de `var(--token)`; tooltip e legenda próprios; sem rótulos padrão da lib; `cursor` com `--chart-cursor`.
+7. **Profundidade (rev. 5)**: todo `--surface` apoiado diretamente em `--bg` (cards do resumo e do dashboard, cards de lista, tabela, blocos de fatura, cards de `/cards`, gráficos) usa borda 1px (`--border`, ou `--border-strong` nos blocos de ação) **e** `--shadow-card`. A sombra é reforço: a separação nunca depende só dela (o contorno continua). Não se aplica a elementos dentro de cartões (faixa de subtotal, painel de novo cartão, linhas) nem a diálogos sobre o scrim. Sombra não muda no hover nem no tema durante a troca (troca instantânea, CA87).
 
 ### 1.4 Semântica de cor
 
@@ -232,109 +238,115 @@ O indicador da aba (3px) é mais espesso que o da navbar (2px) e fica sobre a li
 
 ### 1.9 Tabela de contraste por tema
 
-Razões WCAG 2.x, arredondadas para baixo. **T** = texto normal 4,5:1; **C** = componente, ícone, texto grande, borda de controle, anel de foco, indicador de aba, série de gráfico e **desabilitado** 3:1; **D** = decorativo. Matriz inicial do teste de pares de contraste (ADR, tema); o teste recalcula a partir de `tokens.css`.
+Razões WCAG 2.x (luminância relativa sRGB), **arredondadas para baixo** na 2a casa; valores da rev. 5. **T** = texto normal 4,5:1; **C** = componente, ícone, texto grande, borda de controle, anel de foco, indicador de aba, série de gráfico e **desabilitado** 3:1; **D** = decorativo. Cores com alfa são compostas em sRGB sobre o fundo indicado. Matriz inicial do teste de pares de contraste (ADR, tema); o teste recalcula a partir de `tokens.css`.
+
+**Resultado da conferência da rev. 5: nenhum par T fica abaixo de 4,5:1 e nenhum par C abaixo de 3:1; nenhum token semântico ou de série precisou de ajuste.** Margens mais justas (monitorar se algum valor mudar): `--border-strong` sobre `--surface-active` no escuro (3,03), `--text-muted` sobre `--surface-active` no escuro (4,60), `--accent` sobre `--bg` no claro (4,72), `--danger` sobre `--surface-2` no claro (4,46, par C). `--accent` sobre `--surface-active` no claro tem 4,35 e por isso **não** é usado como texto nesse fundo (usa-se `--accent-active`, 5,10).
 
 **Texto sobre superfícies**
 
 | Frente | Fundo | Min. | Claro | Escuro |
 |---|---|---|---|---|
-| `--text` | `--bg` | T | 16,64 | 15,90 |
-| `--text` | `--surface` | T | 17,85 | 14,68 |
-| `--text` | `--surface-2` | T | 15,77 | 13,35 |
-| `--text` | `--surface-active` | T | 14,38 | 11,53 |
-| `--text` | `--header-bg` composto (pior caso) | T | 16,13 | 13,08 |
-| `--text` | `--input-bg` | T | 17,85 | 15,90 |
-| `--text-muted` | `--bg` | T | 7,06 | 6,37 |
-| `--text-muted` | `--surface` | T | 7,57 | 5,89 |
-| `--text-muted` | `--surface-2` | T | 6,69 | 5,35 |
-| `--text-muted` | `--surface-active` | T | 6,10 | 4,62 |
-| `--text-muted` | `--header-bg` composto | T | 6,84 | 5,24 |
-| `--text-muted` (placeholder) | `--input-bg` | T | 7,57 | 6,37 |
-| `--accent` | `--surface` | T | 5,35 | 9,77 |
-| `--accent` | `--bg` | T | 4,99 | 10,58 |
-| `--accent` | `--surface-2` | T | 4,73 | 8,89 |
-| `--accent` | `--header-bg` composto | T | 4,84 | 8,71 |
-| `--accent-active` (rev. 4) | `--surface-active` | T | 5,05 | 7,68 |
+| `--text` | `--bg` | T | 12,91 | 13,91 |
+| `--text` | `--surface` | T | 14,62 | 12,70 |
+| `--text` | `--surface-2` | T | 13,51 | 11,14 |
+| `--text` | `--surface-active` | T | 11,89 | 9,22 |
+| `--text` | `--header-bg` composto (pior caso: preto por baixo no claro, branco no escuro) | T | 13,09 | 10,99 |
+| `--text` | `--input-bg` | T | 14,62 | 13,91 |
+| `--text-muted` | `--bg` | T | 6,63 | 6,95 |
+| `--text-muted` | `--surface` | T | 7,51 | 6,34 |
+| `--text-muted` | `--surface-2` | T | 6,94 | 5,56 |
+| `--text-muted` | `--surface-active` | T | 6,11 | 4,60 |
+| `--text-muted` | `--header-bg` composto | T | 6,72 | 5,49 |
+| `--text-muted` (placeholder) | `--input-bg` | T | 7,51 | 6,95 |
+| `--accent` | `--surface` | T | 5,35 | 8,06 |
+| `--accent` | `--bg` | T | 4,72 | 8,82 |
+| `--accent` | `--surface-2` | T | 4,94 | 7,06 |
+| `--accent` | `--header-bg` composto | T | 4,79 | 6,97 |
+| `--accent` (referência; não usar como texto no claro) | `--surface-active` | - | 4,35 | 5,85 |
+| `--accent-active` | `--surface-active` | T | 5,10 | 5,85 |
 | `--on-primary` | `--primary-strong` / `-hover` / `-active` | T | 6,28 / 7,90 / 9,93 | 6,28 / 7,90 / 9,93 |
-| `--success-text` | `--surface` / `--surface-2` | T | 5,48 / 4,84 | 9,19 / 8,36 |
-| `--warning-text` | `--surface` / `--surface-2` | T | 7,08 / 6,26 | 10,58 / 9,62 |
-| `--danger-text` | `--surface` / `--surface-2` / `--bg` | T | 6,47 / 5,71 / 6,03 | 6,38 / 5,81 / 6,91 |
-| `--income` | `--surface` / `--surface-2` | T | 6,70 / 5,92 | 6,95 / 6,32 |
-| `--expense` | `--surface` / `--surface-2` | T | 6,28 / 5,55 | 6,56 / 5,97 |
+| `--success-text` | `--surface` / `--surface-2` / `--bg` | T | 5,48 / 5,06 / 4,84 | 8,19 / 7,19 / 8,97 |
+| `--warning-text` | `--surface` / `--surface-2` / `--bg` | T | 7,09 / 6,54 / 6,25 | 9,44 / 8,28 / 10,33 |
+| `--danger-text` | `--surface` / `--surface-2` / `--bg` | T | 6,46 / 5,97 / 5,71 | 5,69 / 4,99 / 6,24 |
+| `--income` | `--surface` / `--surface-2` / `--bg` | T | 6,70 / 6,19 / 5,91 | 6,19 / 5,43 / 6,78 |
+| `--expense` | `--surface` / `--surface-2` / `--bg` | T | 6,28 / 5,80 / 5,54 | 5,85 / 5,13 / 6,41 |
 
 **Desabilitado (texto e ícone)**
 
 | Frente | Fundo | Min. | Claro | Escuro |
 |---|---|---|---|---|
-| `--text-disabled` | `--surface-2` (botão/campo desabilitado; "Pagar fatura" desabilitado; "Salvar lançamento" com painel de cartão aberto) | C | 3,65 | 3,64 |
-| `--text-disabled` | `--surface` | C | 4,13 | 4,00 |
-| `--text-disabled` | `--bg` | C | 3,85 | 4,33 |
+| `--text-disabled` | `--surface-2` (botão/campo desabilitado; "Pagar fatura" desabilitado; "Salvar lançamento" com painel de cartão aberto) | C | 4,04 | 3,66 |
+| `--text-disabled` | `--surface` | C | 4,38 | 4,18 |
+| `--text-disabled` | `--bg` | C | 3,87 | 4,58 |
 
-**Componentes, bordas e foco**
+**Componentes, bordas, foco e profundidade**
 
 | Frente | Fundo | Min. | Claro | Escuro |
 |---|---|---|---|---|
-| `--border-strong` | `--surface` / `--bg` / `--surface-2` / `--surface-active` | C | 4,13 / 3,85 / 3,65 / 3,33 | 4,00 / 4,33 / 3,64 / 3,14 |
-| `--primary-border` | `--surface` / `--bg` / `--surface-2` | C | 6,28 / 5,86 / 5,55 | 5,92 / 6,41 / 5,38 |
-| `--primary-strong` (preenchimento, referência) | `--surface` | D (coberto pela borda) | 6,28 | 2,81 |
-| `--focus-color` | `--surface` / `--bg` / `--surface-2` | C | 5,35 / 4,99 / 4,73 | 9,77 / 10,58 / 8,89 |
-| `--danger` | `--surface` / `--input-bg` / `--surface-2` | C | 4,82 / 4,82 / 4,26 | 6,38 / 6,91 / 5,81 |
-| `--accent` (barra de linha selecionada, progresso) | `--surface-2` | C | 4,73 | 8,89 |
-| `--success` | `--surface` / `--surface-2` | C | 3,76 / 3,33 | 9,19 / 8,36 |
-| `--warning` | `--surface` / `--surface-2` | C | 5,02 / 4,43 | 10,58 / 9,62 |
-| `--surface` (drawer/modal) | `--scrim` composto sobre `--bg` | C | 3,11 | (borda) |
-| `--border-strong` (drawer/modal) | `--scrim` composto sobre `--bg` | C | (fundo) | 4,33 |
-| `--scrollbar-thumb` | `--scrollbar-track` | C | 3,65 | 3,64 |
-| `--border`, `--skeleton` | `--surface` | D | 1,30 | 1,26 |
+| `--border-strong` | `--surface` / `--bg` / `--surface-2` / `--surface-active` | C | 4,38 / 3,87 / 4,04 / 3,56 | 4,18 / 4,58 / 3,66 / 3,03 |
+| `--border-strong` | `--input-bg` | C | 4,38 | 4,58 |
+| `--primary-border` | `--surface` / `--bg` / `--surface-2` | C | 6,28 / 5,54 / 5,80 | 5,28 / 5,78 / 4,63 |
+| `--primary-strong` (preenchimento, referência) | `--surface` | D (coberto pela borda) | 6,28 | 2,50 |
+| `--focus-color` | `--surface` / `--bg` / `--surface-2` | C | 5,35 / 4,72 / 4,94 | 8,06 / 8,82 / 7,06 |
+| `--danger` | `--surface` / `--input-bg` / `--surface-2` | C | 4,82 / 4,82 / 4,46 | 5,69 / 6,24 / 4,99 |
+| `--accent` (barra de linha selecionada, progresso) | `--surface-2` | C | 4,94 | 7,06 |
+| `--success` | `--surface` / `--surface-2` / `--bg` | C | 3,76 / 3,48 / 3,32 | 8,19 / 7,19 / 8,97 |
+| `--warning` | `--surface` / `--surface-2` / `--bg` | C | 5,02 / 4,63 / 4,43 | 9,44 / 8,28 / 10,33 |
+| `--surface` (drawer/modal) | `--scrim` composto sobre `--bg` | C | 3,24 | (borda) |
+| `--border-strong` (drawer/modal) | `--scrim` composto sobre `--bg` | C | (fundo) | 5,07 |
+| `--scrollbar-thumb` | `--scrollbar-track` | C | 4,04 | 3,66 |
+| `--surface` (cartão) | `--bg` | D (+ `--border` + `--shadow-card`) | 1,13 | 1,09 |
+| `--border` / `--skeleton` | `--surface` | D | 1,35 / 1,22 | 1,31 / 1,37 |
 
-**Novos pares da rev. 3 (abas, subtotal, blocos de fatura, painel de novo cartão)** - todos com tokens existentes; entram na matriz de teste com o contexto indicado.
+**Pares da rev. 3 (abas, subtotal, blocos de fatura, painel de novo cartão)** - todos com tokens existentes; entram na matriz de teste com o contexto indicado.
 
 | Elemento | Frente | Fundo | Min. | Claro | Escuro |
 |---|---|---|---|---|---|
-| Aba inativa (>= `md`) | `--text-muted` | `--bg` (faixa de abas) | T | 7,06 | 6,37 |
-| Aba ativa (>= `md`) | `--text` | `--bg` | T | 16,64 | 15,90 |
-| Aba em hover | `--text` | `--surface-2` | T | 15,77 | 13,35 |
-| Aba pressionada | `--text` | `--surface-active` | T | 14,38 | 11,53 |
-| Indicador da aba ativa | `--accent` | `--bg` | C | 4,99 | 10,58 |
-| Indicador da aba ativa em hover | `--accent` | `--surface-2` | C | 4,73 | 8,89 |
-| Foco da aba | `--focus-color` | `--bg` | C | 4,99 | 10,58 |
-| Abas no mobile (segmented) | contêiner `--border-strong` / segmento ativo `--primary-border` / `--on-primary` | `--bg` / `--bg` / `--primary-strong` | C / C / T | 3,85 / 5,86 / 6,28 | 4,33 / 6,41 / 6,28 |
-| Mês compacto na faixa | `--text` / setas `--text` | `--bg` | T / C | 16,64 | 15,90 |
-| Faixa de subtotal: rótulos | `--text-muted` | `--surface-2` | T | 6,69 | 5,35 |
-| Faixa de subtotal: valores | `--text` | `--surface-2` | T | 15,77 | 13,35 |
-| Bloco de fatura: contorno | `--border-strong` | `--bg` | C | 3,85 | 4,33 |
-| Bloco de fatura: datas e rótulos | `--text-muted` | `--surface` | T | 7,57 | 5,89 |
-| Bloco de fatura: "Fatura paga" | `--success-text` | `--surface` | T | 5,48 | 9,19 |
-| Bloco de fatura: disclosure | `--accent` | `--surface` | T | 5,35 | 9,77 |
-| Bloco de fatura: "Pagar fatura" desabilitado | `--text-disabled` | `--surface-2` | C | 3,65 | 3,64 |
-| Lista expandida: divisórias | `--border` | `--surface` | D | 1,30 | 1,26 |
-| Painel de novo cartão: contorno | `--border-strong` | `--surface` (drawer) | C | 4,13 | 4,00 |
-| Painel: rótulos / ajuda | `--text` / `--text-muted` | `--surface-2` | T | 15,77 / 6,69 | 13,35 / 5,35 |
-| Painel: borda dos inputs | `--border-strong` | `--surface-2` (em volta do input) | C | 3,65 | 3,64 |
-| Painel: erro 409 | `--danger-text` / borda `--danger` | `--surface-2` / `--input-bg` | T / C | 5,71 / 4,82 | 5,81 / 6,91 |
-| Painel: foco | `--focus-color` | `--surface-2` | C | 4,73 | 8,89 |
-| Painel: "Criar cartão" (primário) | `--primary-border` | `--surface-2` | C | 5,55 | 5,38 |
-| Status inicial / aviso PIX futuro | `--text-muted` | `--surface` | T | 7,57 | 5,89 |
+| Aba inativa (>= `md`) | `--text-muted` | `--bg` (faixa de abas) | T | 6,63 | 6,95 |
+| Aba ativa (>= `md`) | `--text` | `--bg` | T | 12,91 | 13,91 |
+| Aba em hover | `--text` | `--surface-2` | T | 13,51 | 11,14 |
+| Aba pressionada | `--text` | `--surface-active` | T | 11,89 | 9,22 |
+| Indicador da aba ativa | `--accent` | `--bg` | C | 4,72 | 8,82 |
+| Indicador da aba ativa em hover | `--accent` | `--surface-2` | C | 4,94 | 7,06 |
+| Foco da aba | `--focus-color` | `--bg` | C | 4,72 | 8,82 |
+| Abas no mobile (segmented) | contêiner `--border-strong` / segmento ativo `--primary-border` / `--on-primary` | `--bg` / `--bg` / `--primary-strong` | C / C / T | 3,87 / 5,54 / 6,28 | 4,58 / 5,78 / 6,28 |
+| Mês compacto na faixa | `--text` / setas `--text` | `--bg` | T / C | 12,91 | 13,91 |
+| Faixa de subtotal: rótulos | `--text-muted` | `--surface-2` | T | 6,94 | 5,56 |
+| Faixa de subtotal: valores | `--text` | `--surface-2` | T | 13,51 | 11,14 |
+| Bloco de fatura: contorno | `--border-strong` | `--bg` | C | 3,87 | 4,58 |
+| Bloco de fatura: datas e rótulos | `--text-muted` | `--surface` | T | 7,51 | 6,34 |
+| Bloco de fatura: "Fatura paga" | `--success-text` | `--surface` | T | 5,48 | 8,19 |
+| Bloco de fatura: disclosure | `--accent` | `--surface` | T | 5,35 | 8,06 |
+| Bloco de fatura: "Pagar fatura" desabilitado | `--text-disabled` | `--surface-2` | C | 4,04 | 3,66 |
+| Lista expandida: divisórias | `--border` | `--surface` | D | 1,35 | 1,31 |
+| Painel de novo cartão: contorno | `--border-strong` | `--surface` (drawer) | C | 4,38 | 4,18 |
+| Painel: rótulos / ajuda | `--text` / `--text-muted` | `--surface-2` | T | 13,51 / 6,94 | 11,14 / 5,56 |
+| Painel: borda dos inputs | `--border-strong` | `--surface-2` (em volta do input) | C | 4,04 | 3,66 |
+| Painel: erro 409 | `--danger-text` / borda `--danger` | `--surface-2` / `--input-bg` | T / C | 5,97 / 4,82 | 4,99 / 6,24 |
+| Painel: foco | `--focus-color` | `--surface-2` | C | 4,94 | 7,06 |
+| Painel: "Criar cartão" (primário) | `--primary-border` | `--surface-2` | C | 5,80 | 4,63 |
+| Status inicial / aviso PIX futuro | `--text-muted` | `--surface` | T | 7,51 | 6,34 |
 
-**Gráficos** (séries contra `--surface`; marcadores contra `--tooltip-bg`) - sem mudança na rev. 3.
+**Gráficos** (séries contra `--surface`; marcadores contra `--tooltip-bg`). Séries sem mudança de valor (exceto `--chart-1` e `--chart-6` no escuro, que acompanham `--accent` e `--text-muted`).
 
 | Frente | Fundo | Min. | Claro | Escuro |
 |---|---|---|---|---|
-| `--chart-income` / `-paid` / `-pending` | `--surface` | C | 6,70 / 3,76 / 5,02 | 6,95 / 9,19 / 10,58 |
-| `--chart-balance-realized` / `-projected` | `--surface` | C | 7,10 / 6,03 | 6,49 / 6,67 |
-| `--chart-zero-line` | `--surface` | C | 7,57 | 5,89 |
-| `--chart-axis` (12px) | `--surface` | T | 7,57 | 5,89 |
-| `--chart-1` .. `--chart-6` | `--surface` | C | 5,35 / 6,28 / 6,03 / 4,99 / 5,17 / 4,75 | 9,77 / 5,92 / 6,67 / 11,71 / 7,80 / 5,89 |
-| Marcadores income / paid / pending / realized / projected | `--tooltip-bg` | C | 6,70 / 3,76 / 5,02 / 7,10 / 6,03 | 6,32 / 8,36 / 9,62 / 5,90 / 6,06 |
-| `--text` / `--text-muted` no tooltip | `--tooltip-bg` | T | 17,85 / 7,57 | 13,35 / 5,35 |
-| `--tooltip-border` | `--surface` | C | 4,13 | 4,00 |
-| `--chart-grid` / `--chart-cursor` | `--surface` | D | 1,29 / 1,13 | 1,45 / 1,09 |
+| `--chart-income` / `-paid` / `-pending` | `--surface` | C | 6,70 / 3,76 / 5,02 | 6,19 / 8,19 / 9,44 |
+| `--chart-balance-realized` / `-projected` | `--surface` | C | 7,10 / 6,03 | 5,79 / 5,95 |
+| `--chart-zero-line` | `--surface` | C | 7,51 | 6,34 |
+| `--chart-axis` (12px) | `--surface` | T | 7,51 | 6,34 |
+| `--chart-1` .. `--chart-6` | `--surface` | C | 5,35 / 6,28 / 6,03 / 4,99 / 5,17 / 4,75 | 8,06 / 5,28 / 5,95 / 10,45 / 6,96 / 6,34 |
+| Marcadores income / paid / pending / realized / projected | `--tooltip-bg` | C | 6,70 / 3,76 / 5,02 / 7,10 / 6,03 | 5,43 / 7,19 / 8,28 / 5,07 / 5,21 |
+| `--text` / `--text-muted` no tooltip | `--tooltip-bg` | T | 14,62 / 7,51 | 11,14 / 5,56 |
+| `--tooltip-border` | `--surface` / `--tooltip-bg` | C | 4,38 / 4,38 | 4,18 / 3,66 |
+| `--chart-grid` / `--chart-cursor` | `--surface` | D | 1,35 / 1,13 | 1,46 / 1,14 |
 
 Observações:
 - Séries adjacentes (pago x pendente; fatias do donut) não têm 3:1 entre si; a distinção vem de separação 2px `--surface`, hachura, legenda, tooltip e tabela. Linhas de saldo têm halo 4px `--surface`.
-- No escuro, `--primary-strong` sozinho tem 2,81:1 contra `--surface`; a borda `--primary-border` é obrigatória em tudo que usa esse preenchimento (inclui a aba ativa no mobile).
-- O bloco de fatura é contornado por `--border-strong` (e não `--border`) porque é um bloco de ação com botão próprio; os cards do resumo continuam com `--border` decorativa.
-- Rev. 4, sem tokens novos: destaque de recém-criado (`--accent` sobre `--surface-2` 4,73 / 8,89; selo `--text-muted` sobre `--surface-2` 6,69 / 5,35); opção ativa do combobox (`--text` sobre `--surface-active` 14,38 / 11,53); lista do combobox (`--border-strong` sobre `--surface` 4,13 / 4,00); item ativo da legenda do donut (`--text` sobre `--surface-2`, anel `--text` sobre `--surface` 17,85 / 14,68).
+- No escuro, `--primary-strong` sozinho tem 2,50:1 contra `--surface` (era 2,81 com o fundo antigo, mais escuro); a borda `--primary-border` é obrigatória em tudo que usa esse preenchimento (inclui a aba ativa no mobile).
+- O bloco de fatura é contornado por `--border-strong` (e não `--border`) porque é um bloco de ação com botão próprio; os cards do resumo continuam com `--border` decorativa. Ambos levam `--shadow-card` (1.3, regra 7).
+- No escuro, a sombra `--shadow-card` (preto 30%) sobre `--bg` `#151B26` é perceptível porque o fundo deixou de ser quase-preto; no claro, a sombra é de ardósia 6% e funciona junto com o degrau `--bg` -> `--surface`.
+- Rev. 4, sem tokens novos (valores da rev. 5): destaque de recém-criado (`--accent` sobre `--surface-2` 4,94 / 7,06; selo `--text-muted` sobre `--surface-2` 6,94 / 5,56); opção ativa do combobox (`--text` sobre `--surface-active` 11,89 / 9,22); lista do combobox (`--border-strong` sobre `--surface` 4,38 / 4,18); item ativo da legenda do donut (`--text` sobre `--surface-2` 13,51 / 11,14, anel `--text` sobre `--surface` 14,62 / 12,70).
 
 ---
 
@@ -1345,9 +1357,9 @@ Tudo em **claro e escuro**, por tema salvo (cookie) e, onde indicado, pelo siste
 | default | tela real | Tokens da 1.8; texto/ícone contra o fundo do botão e borda (`--border-strong` ou `--primary-border`) contra o fundo ao redor (`--surface`, `--bg`, `--surface-2`). |
 | hover | `:hover` forçado | Fundo muda (`--surface-2` ou `--primary-strong-hover`) sem perder AA. Terciário: sublinhado presente. |
 | focus-visible | `Tab` real (preferível) ou `:focus-visible` forçado | Anel `--focus-color` 2px + afastamento visível e >= 3:1 contra o fundo ao redor; não cortado por `overflow` (abas, faixa sticky, células). |
-| active | `:active` forçado | `--surface-active` / `--primary-strong-active`; texto >= 4,5:1 (`--text-muted` sobre `--surface-active` no escuro é 4,62: margem pequena). |
+| active | `:active` forçado | `--surface-active` / `--primary-strong-active`; texto >= 4,5:1 (rev. 5, escuro: `--text-muted` sobre `--surface-active` é 4,60 e `--border-strong` sobre `--surface-active` é 3,03, margens pequenas). |
 | carregando | stub lento ("Salvar lançamento", "Criar cartão", "Pagar fatura", confirmação de lote) | Spinner + texto mantêm cor e contraste do default; `aria-busy`; novo clique ignorado. Com `reduce`, spinner parado. |
-| disabled | "Pagar fatura" com fatura paga, "Salvar" com painel de cartão aberto, "Marcar como pago" sem seleção, seta de gráfico na ponta, segmento "Cartão" com Receita | `--surface-2` + `--text-disabled` (>= 3:1; 3,65 / 3,64) e borda `--border-strong`; continua focável (`aria-disabled`) e tem o anel de foco. |
+| disabled | "Pagar fatura" com fatura paga, "Salvar" com painel de cartão aberto, "Marcar como pago" sem seleção, seta de gráfico na ponta, segmento "Cartão" com Receita | `--surface-2` + `--text-disabled` (>= 3:1; 4,04 / 3,66) e borda `--border-strong`; continua focável (`aria-disabled`) e tem o anel de foco. |
 
 **Estados de tela (CA82, CAF06).**
 
@@ -1363,6 +1375,7 @@ Tudo em **claro e escuro**, por tema salvo (cookie) e, onde indicado, pelo siste
 | Tooltip dos gráficos (barras e donut) | hover ou setas no gráfico | `--tooltip-bg` opaco (nunca branco no escuro); textos e marcadores conforme 1.9; borda `--tooltip-border`. |
 | Tabela alternativa (barras e donut) | alternador "Tabela" | Cabeçalho `--text-muted`, células `--text`; coluna Mês fixa opaca ao rolar; região rolável focável com anel visível. |
 | Rev. 4: destaque de recém-criado, combobox aberto (opção ativa e `Usar "..."`), legenda do donut com item ativo | criar lançamento; digitar na Categoria; focar a legenda | Pares da nota rev. 4 em 1.9; selo "Novo" legível; nada sobreposto ao erro do campo (F1). |
+| Rev. 5: cartões sobre o fundo | `/entries`, `/dashboard`, `/cards` | Todo `--surface` apoiado em `--bg` tem borda (`--border` ou `--border-strong`) e `--shadow-card`; sombra visível nos dois temas; nenhuma cor literal de sombra fora de `tokens.css`. |
 
 **Gráficos e controles nativos após alternar (CA86, CAF09).**
 

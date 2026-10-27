@@ -1,5 +1,7 @@
 import type { Locator } from "@playwright/test";
 import { composite, contrastRatio, parseColor, type Rgba } from "../lib/theme/contrast";
+// ADR 0003 4.4: o amostrador mora em lib/theme/gradient.ts
+import { samplesFromTokenColors } from "../lib/theme/gradient";
 
 /**
  * Contraste calculado no navegador (ADR 0002 T2). O axe nao avalia elementos desabilitados nem bordas, entao lemos as
@@ -106,6 +108,14 @@ export function evaluateButton(snap: ButtonStyleSnapshot, { state, expectUnderli
   return problems;
 }
 
+/** Regiao que pinta um gradiente declarado pela tela (ADR 0003 5.5): unica forma de `background-image` resolvivel. */
+export interface GradientRegion {
+  /** Seletor do elemento que pinta o gradiente (ex.: ".page-bg-window") */
+  selector: string;
+  /** Tokens (custom properties) das cores do gradiente, "stop" = paradas, "glow" = brilhos, demais = amostras soltas */
+  tokens: readonly string[];
+}
+
 export interface TextContrastResult {
   ratio: number;
   /** Texto grande (>= 24px, ou >= 18,66px em negrito): limite de 3:1 em vez de 4,5:1 */
@@ -121,6 +131,10 @@ export interface TextContrastResult {
   covered: boolean;
   /** O que cobre o centro do no e (descendente de) um overlay declarado pela tela (ex.: lista aberta do combobox) */
   coveredByOverlay: boolean;
+  /** O primeiro `background-image` da cadeia pertence a uma `GradientRegion` declarada */
+  gradientRegion?: boolean;
+  /** Pior razao do texto contra as amostras do gradiente da regiao (so com `gradientRegion`) */
+  worstOverGradient?: number;
 }
 
 /**
@@ -130,14 +144,38 @@ export interface TextContrastResult {
  */
 export const RESOLVABLE_MESSAGE_KEYS: readonly string[] = ["imgNode", "elmPartiallyObscured", "elmPartiallyObscuring"];
 
+/** `messageKey` que so a `GradientRegion` declarada resolve (o veredito usa o pior caso sobre o gradiente). */
+const GRADIENT_MESSAGE_KEYS: readonly string[] = ["bgGradient", "bgImage"];
+
+/**
+ * Pior razao de um texto sobre uma regiao de gradiente: para cada amostra, a parte da cadeia ENTRE o texto e a regiao
+ * (`inner`, mais interno primeiro) e composta sobre a amostra e o texto sobre o fundo efetivo resultante. Com um fundo
+ * opaco antes da regiao o efetivo e sempre o mesmo (o gradiente nao aparece) e o minimo coincide com `result.ok`.
+ */
+export function worstOverRegion(fg: Rgba, inner: readonly string[], samples: readonly Rgba[]): number {
+  if (samples.length === 0) throw new Error("worstOverRegion: amostras vazias (nada a verificar)");
+  return Math.min(
+    ...samples.map((sample) => {
+      const effective = resolveBackground(inner, sample);
+      return contrastRatio(composite(fg, effective), effective);
+    }),
+  );
+}
+
 /** `null` = resolvido pelo contraste computado; senao, a razao da falha. */
 export function incompleteVerdict(messageKey: string | undefined, result: TextContrastResult): string | null {
   // texto sob um overlay opaco declarado pela tela (e auditado por si so): nao ha o que ler ali; o mesmo no e auditado sem o overlay em outra tela
   if (messageKey === "bgOverlap" && result.coveredByOverlay) return null;
-  if (!messageKey || !RESOLVABLE_MESSAGE_KEYS.includes(messageKey)) return `axe: ${messageKey ?? "incomplete"} nao e resolvivel por contraste computado`;
+  const region = result.gradientRegion === true;
+  const resolvable = region ? [...RESOLVABLE_MESSAGE_KEYS, ...GRADIENT_MESSAGE_KEYS] : RESOLVABLE_MESSAGE_KEYS;
+  if (!messageKey || !resolvable.includes(messageKey)) return `axe: ${messageKey ?? "incomplete"} nao e resolvivel por contraste computado`;
   if (result.opacity < 1) return `opacidade efetiva ${result.opacity.toFixed(2)} < 1: a cor computada nao e a exibida`;
-  if (result.backgroundImage) return "background-image na cadeia de ancestrais: fundo nao e uma cor so";
+  if (result.backgroundImage && !region) return "background-image na cadeia de ancestrais: fundo nao e uma cor so";
   if (result.covered) return "sobreposicao real: outro elemento cobre o centro do no";
+  if (region) {
+    if (result.worstOverGradient === undefined) return "regiao de gradiente sem pior caso calculado";
+    return result.worstOverGradient >= result.required ? null : `${result.worstOverGradient.toFixed(2)}:1 < ${result.required}:1`;
+  }
   if (!result.ok) return `${result.ratio.toFixed(2)}:1 < ${result.required}:1`;
   return null;
 }
@@ -147,18 +185,47 @@ export function incompleteVerdict(messageKey: string | undefined, result: TextCo
  * (ver `incompleteVerdict`). Alem da razao, mede o que invalida o calculo: opacidade efetiva, background-image na cadeia
  * e sobreposicao real. Mais forte que uma allowlist cega (PF04).
  */
-export async function textContrastOf(locator: Locator, overlays: readonly string[] = []): Promise<TextContrastResult> {
-  const data = await locator.evaluate((el, overlaySelectors) => {
+export async function textContrastOf(locator: Locator, overlays: readonly string[] = [], gradients: readonly GradientRegion[] = []): Promise<TextContrastResult> {
+  const data = await locator.evaluate(async (el, { overlaySelectors, regions }) => {
+    // a rolagem para medir e so da medicao: ao fim restauramos a posicao, senao o estado da tela (ex.: cabecalho compacto
+    // ao rolar) muda e os nos seguintes da mesma auditoria deixam de existir
+    const savedX = window.scrollX;
+    const savedY = window.scrollY;
+    // `scrollIntoView` tambem rola os ancestrais com overflow (ex.: lista, tabela): guardamos e restauramos cada um
+    const scrollers: { node: Element; left: number; top: number }[] = [];
+    for (let node = el.parentElement; node; node = node.parentElement) {
+      if (node.scrollLeft !== 0 || node.scrollTop !== 0 || node.scrollWidth > node.clientWidth || node.scrollHeight > node.clientHeight) {
+        scrollers.push({ node, left: node.scrollLeft, top: node.scrollTop });
+      }
+    }
     el.scrollIntoView({ block: "center", inline: "center" });
     const css = getComputedStyle(el);
     const chain: string[] = [];
     let opacity = 1;
     let backgroundImage = false;
+    let region: { element: Element; tokens: readonly string[]; index: number } | null = null;
     for (let node: Element | null = el; node; node = node.parentElement) {
       const style = getComputedStyle(node);
       chain.push(style.backgroundColor);
       opacity *= Number(style.opacity);
-      if (style.backgroundImage !== "none") backgroundImage = true;
+      if (style.backgroundImage !== "none") {
+        if (!backgroundImage) {
+          const declared = regions.find((r) => node!.matches(r.selector));
+          if (declared && declared.tokens.length > 0) region = { element: node, tokens: declared.tokens, index: chain.length - 1 };
+        }
+        backgroundImage = true;
+      }
+    }
+    // cores do gradiente resolvidas no tema da regiao: uma sonda dentro dela herda o `color-scheme`
+    const gradientColors: Record<string, string> = {};
+    if (region) {
+      const probe = document.createElement("span");
+      region.element.appendChild(probe);
+      for (const token of region.tokens) {
+        probe.style.color = `var(${token})`;
+        gradientColors[token] = getComputedStyle(probe).color;
+      }
+      probe.remove();
     }
     const box = el.getBoundingClientRect();
     // `pointer-events: none` (ex.: legenda sobre o grafico) tira o no do hit-test; forca `auto` so durante a medicao
@@ -170,7 +237,7 @@ export async function textContrastOf(locator: Locator, overlays: readonly string
     const coveredByOverlay = covers && !!top && overlaySelectors.some((sel) => top.closest(sel) !== null);
     const covered = covers && !coveredByOverlay;
     const svgFill = el instanceof SVGElement ? css.fill : null;
-    return {
+    const measured = {
       color: svgFill && svgFill !== "none" ? svgFill : css.color,
       chain,
       size: parseFloat(css.fontSize) || 16,
@@ -180,11 +247,34 @@ export async function textContrastOf(locator: Locator, overlays: readonly string
       backgroundImage,
       covered,
       coveredByOverlay,
+      gradientColors: region ? gradientColors : null,
+      regionIndex: region ? region.index : -1,
     };
-  }, overlays);
+    let restored = false;
+    for (const s of scrollers) {
+      if (s.node.scrollLeft !== s.left || s.node.scrollTop !== s.top) {
+        s.node.scrollTo(s.left, s.top);
+        restored = true;
+      }
+    }
+    if (window.scrollX !== savedX || window.scrollY !== savedY) {
+      window.scrollTo(savedX, savedY);
+      restored = true;
+    }
+    if (restored) {
+      // 2 rAF + 50ms: o primeiro rAF aplica a rolagem, o segundo deixa o navegador pintar e disparar os handlers de
+      // `scroll` (ex.: cabecalho compacto, IntersectionObserver); os 50ms cobrem transicoes/debounces curtos da tela.
+      // Sem a espera, o no seguinte da auditoria mediria um DOM ainda no estado "rolado".
+      await new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(done, 50))));
+    }
+    return measured;
+  }, { overlaySelectors: overlays, regions: gradients });
   const bg = resolveBackground(data.chain);
   const ratio = contrastRatio(composite(parseColor(data.color), bg), bg);
   const large = data.size >= 24 || (data.size >= 18.66 && data.weight >= 700);
   const required = large ? MIN_COMPONENT : MIN_TEXT;
-  return { ratio, large, required, ok: ratio >= required, text: data.text, opacity: data.opacity, backgroundImage: data.backgroundImage, covered: data.covered, coveredByOverlay: data.coveredByOverlay };
+  const base = { ratio, large, required, ok: ratio >= required, text: data.text, opacity: data.opacity, backgroundImage: data.backgroundImage, covered: data.covered, coveredByOverlay: data.coveredByOverlay };
+  if (!data.gradientColors) return { ...base, gradientRegion: false };
+  const samples = samplesFromTokenColors(data.gradientColors);
+  return { ...base, gradientRegion: true, worstOverGradient: worstOverRegion(parseColor(data.color), data.chain.slice(0, data.regionIndex), samples) };
 }

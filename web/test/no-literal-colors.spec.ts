@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -11,6 +11,11 @@ const ROOT = resolve(__dirname, "..");
 const SCAN_DIRS = ["app", "components"];
 const EXTENSIONS = [".tsx", ".ts", ".css", ".mdx"];
 const TOKENS_FILE = join("app", "styles", "tokens.css");
+
+/** Arquivos autorizados a ter cor literal. So tokens.css (RF27, CA20): a feature do fundo em gradiente nao deixa excecao (ADR 0003 T11). */
+export const ALLOWED_FILES: readonly { path: string; reason: string }[] = [
+  { path: TOKENS_FILE, reason: "fonte unica de cores (RF27)" },
+];
 
 const NAMED = [
   "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet", "brown",
@@ -108,7 +113,7 @@ describe("detector de cores literais (auto-teste do scanner)", () => {
 });
 
 describe("RF27: nenhuma cor literal fora de tokens.css", () => {
-  const files = SCAN_DIRS.flatMap((d) => walk(join(ROOT, d))).filter((f) => relative(ROOT, f) !== TOKENS_FILE);
+  const files = SCAN_DIRS.flatMap((d) => walk(join(ROOT, d))).filter((f) => !ALLOWED_FILES.some((a) => a.path === relative(ROOT, f)));
 
   it("ha arquivos de UI para verificar", () => {
     expect(files.length).toBeGreaterThan(0);
@@ -124,5 +129,29 @@ describe("RF27: nenhuma cor literal fora de tokens.css", () => {
       return hits.map((h) => `${relative(ROOT, file)} -> ${h}`);
     });
     expect(offenders).toEqual([]);
+  });
+
+  it("toda entrada de ALLOWED_FILES aponta para um arquivo existente (apagar a rota sem apagar a entrada deixa o teste vermelho)", () => {
+    const missing = ALLOWED_FILES.filter((a) => !existsSync(join(ROOT, a.path))).map((a) => a.path);
+    expect(missing).toEqual([]);
+  });
+
+  it("toda entrada diferente de tokens.css tem motivo nao vazio", () => {
+    const noReason = ALLOWED_FILES.filter((a) => a.path !== TOKENS_FILE && a.reason.trim() === "").map((a) => a.path);
+    expect(noReason).toEqual([]);
+  });
+
+  it("tokens.css esta em ALLOWED_FILES (entrada permanente)", () => {
+    expect(ALLOWED_FILES.map((a) => a.path)).toContain(TOKENS_FILE);
+  });
+
+  it("CA20: tokens.css e a UNICA entrada (nenhuma excecao ligada ao fundo em gradiente / pre-visualizacao)", () => {
+    expect(ALLOWED_FILES.map((a) => a.path)).toEqual([TOKENS_FILE]);
+  });
+
+  it("caminhos sao relativos e unicos", () => {
+    const paths = ALLOWED_FILES.map((a) => a.path);
+    expect(new Set(paths).size).toBe(paths.length);
+    for (const p of paths) expect(p.startsWith("/")).toBe(false);
   });
 });

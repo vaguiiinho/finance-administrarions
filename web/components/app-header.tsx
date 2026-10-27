@@ -26,7 +26,7 @@ export async function AppHeader() {
           <ThemeToggle initialTheme={initialTheme} />
         </div>
       </header>
-      <div className="border-b border-border bg-bg sm:hidden">
+      <div className="border-b border-border sm:hidden">
         <MainNav className="mx-auto max-w-[1280px] px-1" label="Principal (mobile)" />
       </div>
     </>

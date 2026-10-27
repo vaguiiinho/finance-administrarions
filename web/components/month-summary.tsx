@@ -5,7 +5,7 @@ import { Money } from "./ui/money";
 import { Icon, SignIndicator, StatusDot } from "./ui/status";
 import { Skeleton } from "./ui/states";
 
-const GROUP = "flex flex-col gap-2 border-t border-border pt-3 first:border-t-0 first:pt-0 md:rounded-xl md:border md:border-border md:bg-surface md:p-4 md:first:pt-4 md:border-t";
+const GROUP = "flex flex-col gap-2 border-t border-border pt-3 first:border-t-0 first:pt-0 md:rounded-xl md:border md:border-border md:bg-surface md:shadow-card md:p-4 md:first:pt-4 md:border-t";
 const ROW = "flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5";
 const BIG = "display-num text-base font-semibold text-text md:text-2xl lg:text-[28px]";
 const MID = "display-num text-base font-semibold text-text md:text-lg";
@@ -18,7 +18,7 @@ const isEmpty = (t: TotalsDto) => [t.income, t.expenses.total, t.expenses.paid, 
  */
 export function MonthSummary({ month, totals, headingId }: { month: string; totals: TotalsDto; headingId: string }) {
   return (
-    <section aria-labelledby={headingId} className="card p-4 md:border-0 md:bg-transparent md:p-0">
+    <section aria-labelledby={headingId} className="card p-4 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
       <h2 id={headingId} className="sr-only md:not-sr-only md:mb-2 md:text-sm md:font-medium md:text-muted">
         Resumo de {monthLongPtBR(month)}
       </h2>
