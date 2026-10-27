@@ -104,7 +104,7 @@ function MonthlyTable({ data }: { data: ChartPoint[] }) {
         <caption className="sr-only">Evolução mensal: receitas, despesas e saldos</caption>
         <thead className="text-left text-muted">
           <tr className="border-b border-border-strong">
-            <th scope="col" className="sticky left-0 bg-surface px-2 py-2 font-medium">Mês</th>
+            <th scope="col" className="sticky left-0 bg-bar px-2 py-2 font-medium">Mês</th>
             <th scope="col" className="px-2 py-2 text-right font-medium">Receitas</th>
             <th scope="col" className="px-2 py-2 text-right font-medium">Despesas pagas</th>
             <th scope="col" className="px-2 py-2 text-right font-medium">Despesas pendentes</th>
@@ -116,7 +116,7 @@ function MonthlyTable({ data }: { data: ChartPoint[] }) {
         <tbody>
           {data.map(({ month, totals }) => (
             <tr key={month} className="border-b border-border">
-              <th scope="row" className="sticky left-0 bg-surface px-2 py-2 text-left font-medium text-text">{monthLongPtBR(month)}</th>
+              <th scope="row" className="sticky left-0 bg-bar px-2 py-2 text-left font-medium text-text">{monthLongPtBR(month)}</th>
               <td className="px-2 py-2 text-right text-text"><Money value={totals.income} /></td>
               <td className="px-2 py-2 text-right text-text"><Money value={totals.expenses.paid} /></td>
               <td className="px-2 py-2 text-right text-text"><Money value={totals.expenses.pending} /></td>
@@ -153,7 +153,7 @@ function Plot({ data, selectedLabel, scale, animate, part, activeIndex = null }:
           <defs>
             <pattern id={patternId} patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
               <rect width="6" height="6" style={{ fill: "var(--chart-pending)" }} />
-              <line x1="0" y1="0" x2="0" y2="6" strokeWidth="2" style={{ stroke: "var(--surface)" }} />
+              <line x1="0" y1="0" x2="0" y2="6" strokeWidth="2" style={{ stroke: "var(--chart-sep)" }} />
             </pattern>
           </defs>
         ) : null}
@@ -189,10 +189,10 @@ function Plot({ data, selectedLabel, scale, animate, part, activeIndex = null }:
           />
         ) : null}
         <Bar dataKey="incomeValue" name="Receitas" fill="var(--chart-income)" radius={[4, 4, 0, 0]} isAnimationActive={animate} animationDuration={250} />
-        <Bar dataKey="paidValue" name="Despesas pagas" stackId="expenses" fill="var(--chart-paid)" stroke="var(--surface)" strokeWidth={2} isAnimationActive={animate} animationDuration={250} />
-        <Bar dataKey="pendingValue" name="Despesas pendentes" stackId="expenses" fill={`url(#${patternId})`} stroke="var(--surface)" strokeWidth={2} radius={[4, 4, 0, 0]} isAnimationActive={animate} animationDuration={250} />
-        <Line dataKey="realizedValue" name="Saldo realizado" stroke="var(--chart-balance-realized)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--chart-balance-realized)", stroke: "var(--surface)", strokeWidth: 2 }} activeDot={{ r: 5, fill: "var(--chart-balance-realized)", stroke: "var(--surface)", strokeWidth: 2 }} isAnimationActive={animate} animationDuration={250} />
-        <Line dataKey="projectedValue" name="Saldo previsto" stroke="var(--chart-balance-projected)" strokeWidth={2.5} strokeDasharray="6 4" dot={{ r: 4, fill: "var(--surface)", stroke: "var(--chart-balance-projected)", strokeWidth: 2 }} activeDot={{ r: 5, fill: "var(--surface)", stroke: "var(--chart-balance-projected)", strokeWidth: 2 }} isAnimationActive={animate} animationDuration={250} />
+        <Bar dataKey="paidValue" name="Despesas pagas" stackId="expenses" fill="var(--chart-paid)" stroke="var(--chart-sep)" strokeWidth={2} isAnimationActive={animate} animationDuration={250} />
+        <Bar dataKey="pendingValue" name="Despesas pendentes" stackId="expenses" fill={`url(#${patternId})`} stroke="var(--chart-sep)" strokeWidth={2} radius={[4, 4, 0, 0]} isAnimationActive={animate} animationDuration={250} />
+        <Line dataKey="realizedValue" name="Saldo realizado" stroke="var(--chart-balance-realized)" strokeWidth={2.5} dot={{ r: 4, fill: "var(--chart-balance-realized)", stroke: "var(--chart-sep)", strokeWidth: 2 }} activeDot={{ r: 5, fill: "var(--chart-balance-realized)", stroke: "var(--chart-sep)", strokeWidth: 2 }} isAnimationActive={animate} animationDuration={250} />
+        <Line dataKey="projectedValue" name="Saldo previsto" stroke="var(--chart-balance-projected)" strokeWidth={2.5} strokeDasharray="6 4" dot={{ r: 4, fill: "var(--chart-sep)", stroke: "var(--chart-balance-projected)", strokeWidth: 2 }} activeDot={{ r: 5, fill: "var(--chart-sep)", stroke: "var(--chart-balance-projected)", strokeWidth: 2 }} isAnimationActive={animate} animationDuration={250} />
       </ComposedChart>
     </ResponsiveContainer>
   );

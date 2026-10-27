@@ -30,6 +30,18 @@ describe("blocos do dashboard (RF15-RF17, RF26)", () => {
     expect(screen.getByRole("region", { name: "Resumo de novembro de 2026" })).toBeInTheDocument();
   });
 
+  it("resumo do /dashboard segue o mesmo layout de /entries: titulo visivel, tres cards soltos, sem card externo (CA21, B3)", async () => {
+    ep.getSummary.mockResolvedValue({ month: "2026-11", totals: zero });
+    render(await SummaryCards({ month: "2026-11" }));
+    const region = screen.getByRole("region", { name: "Resumo de novembro de 2026" });
+    const title = screen.getByRole("heading", { level: 2, name: "Resumo de novembro de 2026" });
+    expect(title.className).not.toMatch(/sr-only/);
+    expect(region.classList.contains("card")).toBe(false);
+    expect(region.querySelectorAll(".card")).toHaveLength(3);
+    const notice = screen.getByText("Sem lançamentos neste mês");
+    expect(notice.closest(".card")).toBeNull();
+  });
+
   it("grafico e donut recebem os dados dos endpoints D2 e D3", async () => {
     const months = ["2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11"];
     ep.getMonthlySeries.mockResolvedValue({ from: "2025-12", to: "2026-11", points: months.map((month) => ({ month, totals: zero })) });

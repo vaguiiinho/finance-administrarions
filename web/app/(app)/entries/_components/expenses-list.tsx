@@ -157,7 +157,7 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
       ) : null}
 
       {/* Toolbar de selecao (>= md) */}
-      <div className="hidden min-h-12 items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-2 md:flex">
+      <div className="hidden min-h-12 items-center justify-between gap-3 glass rounded-lg px-4 py-2 md:flex">
         {selected.length > 0 ? (
           <>
             <p className="text-sm text-text" aria-live="polite">
@@ -179,9 +179,10 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
       </div>
 
       {/* Tabela (>= md) */}
-      <table className="hidden w-full border-collapse rounded-xl border border-border text-sm shadow-card md:table">
+      <div className="glass-flat hidden overflow-clip rounded-xl md:block">
+      <table className="w-full border-collapse text-sm">
         <caption className="sr-only">Despesas do mês, mais recentes primeiro</caption>
-        <thead className="sticky top-[calc(var(--navbar-h)+var(--tabsbar-h))] z-10 bg-surface text-left text-muted">
+        <thead className="sticky top-[calc(var(--navbar-h)+var(--tabsbar-h))] z-10 glass-bar text-left text-muted">
           <tr className="border-b border-border-strong">
             <th scope="col" className="w-12 p-0 font-medium">
               {selectAll}
@@ -213,7 +214,7 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
           {items.map((entry) => {
             const isSelected = selectedIds.has(entry.id) && entry.status === "PENDING";
             return (
-              <EntryRow key={entry.id} id={entry.id} className={`min-h-14 border-b border-border hover:bg-surface-2 ${isSelected ? "row-selected" : "bg-surface"}`}>
+              <EntryRow key={entry.id} id={entry.id} className={`min-h-14 border-b border-border hover:bg-card-2 ${isSelected ? "row-selected" : ""}`}>
                 <td className="w-12 p-0">
                   <Checkbox aria-label={checkboxLabel(entry)} checked={isSelected} disabled={entry.status !== "PENDING"} onChange={(e) => toggle(entry.id, e.target.checked)} />
                 </td>
@@ -256,6 +257,7 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
           })}
         </tbody>
       </table>
+      </div>
 
       {/* Cards (< md) */}
       <div className="flex flex-col gap-3 md:hidden">
@@ -268,7 +270,7 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
             const titleId = `${uid}-card-${entry.id}`;
             const isSelected = selectedIds.has(entry.id) && entry.status === "PENDING";
             return (
-              <EntryItem key={entry.id} id={entry.id} aria-labelledby={titleId} className={`rounded-xl border p-4 ${isSelected ? "border-accent bg-surface-2" : "border-border bg-surface"} shadow-card`}>
+              <EntryItem key={entry.id} id={entry.id} aria-labelledby={titleId} className={`glass-flat rounded-xl p-4 ${isSelected ? "border-accent bg-card-2" : ""}`}>
                 <div className="flex items-start gap-1">
                   <Checkbox aria-label={checkboxLabel(entry)} checked={isSelected} disabled={entry.status !== "PENDING"} onChange={(e) => toggle(entry.id, e.target.checked)} className="-ml-3 -mt-2" />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -310,7 +312,7 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
       {selected.length > 0 ? (
         <>
           <div aria-hidden="true" className="h-24 md:hidden" />
-          <div className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-2 border-t border-border-strong bg-surface-2 px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 md:hidden">
+          <div className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-2 glass-bar border-t border-border-strong px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 md:hidden">
             <p className="text-sm text-text" aria-live="polite">
               {countLabel(selected.length, "selecionado", "selecionados")} · <Money value={selectedTotal} />
             </p>

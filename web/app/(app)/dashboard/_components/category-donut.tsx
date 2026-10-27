@@ -88,9 +88,9 @@ export function CategoryDonut({ distribution }: { distribution: CategoryDistribu
           <div className="relative h-[220px] w-[220px] shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart accessibilityLayer>
-                <Pie data={geometry} dataKey="value" nameKey="category" innerRadius="68%" outerRadius="100%" startAngle={90} endAngle={-270} stroke="var(--surface)" strokeWidth={2} isAnimationActive={!reduced} animationDuration={250} onMouseEnter={(_, index) => setActive(index)} onMouseLeave={() => setActive(null)}>
+                <Pie data={geometry} dataKey="value" nameKey="category" innerRadius="68%" outerRadius="100%" startAngle={90} endAngle={-270} stroke="var(--chart-sep)" strokeWidth={2} isAnimationActive={!reduced} animationDuration={250} onMouseEnter={(_, index) => setActive(index)} onMouseLeave={() => setActive(null)}>
                   {geometry.map((slice, index) => (
-                    <Cell key={slice.key} fill={colorOf(index)} data-active={active === index} stroke={active === index ? "var(--text)" : "var(--surface)"} strokeWidth={active === index ? 3 : 2} />
+                    <Cell key={slice.key} fill={colorOf(index)} data-active={active === index} stroke={active === index ? "var(--text)" : "var(--chart-sep)"} strokeWidth={active === index ? 3 : 2} />
                   ))}
                 </Pie>
                 <Tooltip content={<DonutTooltip />} isAnimationActive={false} />

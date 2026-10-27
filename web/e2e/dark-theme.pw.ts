@@ -95,11 +95,20 @@ test.describe("superficies do escuro usam tokens do escuro", () => {
       els.filter((el) => el === document.body || (el as HTMLElement).offsetParent !== null || getComputedStyle(el).position === "fixed").map((el) => getComputedStyle(el).backgroundColor),
     );
   }
+  // Superficies de vidro (rev. 7) tem alfa < 1: a luminancia que importa e a da COMPOSICAO sobre o fundo escuro (BG.dark), nao so a dos canais RGB.
+  const flatten = (color: string): string => {
+    const m = /rgba\(\s*([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)\s*\)/.exec(color);
+    if (!m) return color;
+    const a = Number(m[4]);
+    const base = (BG.dark.match(/\d+/g) ?? []).map(Number);
+    const out = [m[1], m[2], m[3]].map((v, i) => Math.round(Number(v) * a + base[i] * (1 - a)));
+    return `rgb(${out.join(", ")})`;
+  };
   const expectDark = (label: string, colors: string[]) => {
     expect(colors.length, `${label}: nenhum elemento encontrado`).toBeGreaterThan(0);
     for (const color of colors) {
       const transparent = /rgba\(.*,\s*0\)$/.test(color);
-      if (!transparent) expect(luminanceOf(color), `${label}: ${color} claro demais para o tema escuro`).toBeLessThan(DARK_MAX_LUMINANCE);
+      if (!transparent) expect(luminanceOf(flatten(color)), `${label}: ${color} claro demais para o tema escuro`).toBeLessThan(DARK_MAX_LUMINANCE);
     }
   };
 

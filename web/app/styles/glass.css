@@ -1,0 +1,62 @@
+/*
+ * Papeis de superficie do vidro fosco (ADR 0004 5.1, 5.2). Os componentes consomem SO estes papeis; o contexto decide o
+ * material por heranca de custom property. Sem cor literal: tudo aponta para tokens de tokens.css (design rev. 7).
+ * Fallback opaco em um unico conjunto de valores (a rev. 6), repetido nos tres blocos abaixo (G9, travado por glass-css.spec.ts).
+ */
+:root {
+  --card-bg: var(--glass-bg);
+  --card-bg-2: var(--glass-bg-2);
+  --field-bg: var(--glass-input-bg);
+  --bar-bg: var(--glass-bar-bg);
+  --card-border: var(--glass-border);
+  --card-shadow: var(--glass-shadow);
+  --glass-filter: blur(var(--glass-blur));
+  --item-filter: none;
+  --chart-sep: var(--chart-separator);
+}
+
+/* (1) sem suporte a backdrop-filter, com ou sem prefixo: nao existe translucidez sem desfoque (RF06) */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --card-bg: var(--surface);
+    --card-bg-2: var(--surface-2);
+    --field-bg: var(--input-bg);
+    --bar-bg: var(--surface);
+    --card-border: var(--border);
+    --card-shadow: var(--shadow-card);
+    --glass-filter: none;
+    --item-filter: none;
+    --chart-sep: var(--surface);
+  }
+}
+
+/* (2) preferencias do usuario (RF07, RF08). Lista com virgula: quem nao suporta uma condicao so a ignora */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  :root {
+    --card-bg: var(--surface);
+    --card-bg-2: var(--surface-2);
+    --field-bg: var(--input-bg);
+    --bar-bg: var(--surface);
+    --card-border: var(--border);
+    --card-shadow: var(--shadow-card);
+    --glass-filter: none;
+    --item-filter: none;
+    --chart-sep: var(--surface);
+  }
+}
+
+/* (3) contexto opaco: overlays e quem declarar [data-surface="opaque"] (RF05) */
+dialog,
+.drawer,
+.modal,
+[data-surface="opaque"] {
+  --card-bg: var(--surface);
+  --card-bg-2: var(--surface-2);
+  --field-bg: var(--input-bg);
+  --bar-bg: var(--surface);
+  --card-border: var(--border);
+  --card-shadow: var(--shadow-card);
+  --glass-filter: none;
+  --item-filter: none;
+  --chart-sep: var(--surface);
+}

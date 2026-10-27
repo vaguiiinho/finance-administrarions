@@ -2,6 +2,7 @@ import type { Locator } from "@playwright/test";
 import { composite, contrastRatio, parseColor, type Rgba } from "../lib/theme/contrast";
 // ADR 0003 4.4: o amostrador mora em lib/theme/gradient.ts
 import { samplesFromTokenColors } from "../lib/theme/gradient";
+import { compositeChain, worstOverLayers } from "../lib/theme/glass";
 
 /**
  * Contraste calculado no navegador (ADR 0002 T2). O axe nao avalia elementos desabilitados nem bordas, entao lemos as
@@ -15,9 +16,7 @@ const WHITE: Rgba = { r: 255, g: 255, b: 255, a: 1 };
 
 /** Compoe a cadeia de `background-color` (do elemento para fora, mais interno primeiro) sobre um fundo opaco. */
 export function resolveBackground(chain: readonly string[], fallback: Rgba = WHITE): Rgba {
-  let bg: Rgba = { ...fallback, a: 1 };
-  for (let i = chain.length - 1; i >= 0; i--) bg = composite(parseColor(chain[i]), bg);
-  return bg;
+  return compositeChain(chain, fallback);
 }
 
 export interface ButtonStyleSnapshot {
@@ -148,19 +147,10 @@ export const RESOLVABLE_MESSAGE_KEYS: readonly string[] = ["imgNode", "elmPartia
 const GRADIENT_MESSAGE_KEYS: readonly string[] = ["bgGradient", "bgImage"];
 
 /**
- * Pior razao de um texto sobre uma regiao de gradiente: para cada amostra, a parte da cadeia ENTRE o texto e a regiao
- * (`inner`, mais interno primeiro) e composta sobre a amostra e o texto sobre o fundo efetivo resultante. Com um fundo
- * opaco antes da regiao o efetivo e sempre o mesmo (o gradiente nao aparece) e o minimo coincide com `result.ok`.
+ * Pior razao de um texto sobre uma regiao de gradiente (ADR 0004 4.4: a implementacao mora em `lib/theme/glass.ts`).
+ * `inner` e a parte da cadeia ENTRE o texto e a regiao, mais interna primeiro.
  */
-export function worstOverRegion(fg: Rgba, inner: readonly string[], samples: readonly Rgba[]): number {
-  if (samples.length === 0) throw new Error("worstOverRegion: amostras vazias (nada a verificar)");
-  return Math.min(
-    ...samples.map((sample) => {
-      const effective = resolveBackground(inner, sample);
-      return contrastRatio(composite(fg, effective), effective);
-    }),
-  );
-}
+export const worstOverRegion = worstOverLayers;
 
 /** `null` = resolvido pelo contraste computado; senao, a razao da falha. */
 export function incompleteVerdict(messageKey: string | undefined, result: TextContrastResult): string | null {

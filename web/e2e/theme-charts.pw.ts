@@ -11,7 +11,7 @@ import { resolveTokens } from "./tokens";
  */
 const CHART_TOKENS = [
   "--chart-axis", "--chart-grid", "--chart-zero-line", "--chart-cursor", "--chart-income", "--chart-paid", "--chart-pending",
-  "--chart-balance-realized", "--chart-balance-projected", "--tooltip-bg", "--tooltip-border", "--scrollbar-thumb", "--scrollbar-track", "--text", "--surface",
+  "--chart-balance-realized", "--chart-balance-projected", "--tooltip-bg", "--tooltip-border", "--scrollbar-thumb", "--scrollbar-track", "--text", "--chart-sep", "--surface",
 ];
 
 test.beforeEach(async () => {
@@ -35,6 +35,8 @@ async function chartColors(page: Page) {
       projected: css(svg.querySelector("path.recharts-line-curve[stroke='var(--chart-balance-projected)']"), "stroke"),
       tooltipBg: css(wrapper, "backgroundColor"),
       tooltipBorder: css(wrapper, "borderTopColor"),
+      // separadores (TQ8, R6): contorno das barras empilhadas, dos pontos e das fatias do donut = papel --chart-sep, nunca --surface
+      separators: [...new Set([...document.querySelectorAll(".recharts-wrapper .recharts-bar-rectangle path, .recharts-wrapper .recharts-dot, .recharts-wrapper .recharts-pie-sector path")].map((el) => getComputedStyle(el).stroke))].filter((v) => v !== "none"),
       literals: [...document.querySelectorAll(".recharts-wrapper *")]
         .flatMap((el) => ["fill", "stroke"].map((a) => el.getAttribute(a)))
         .filter((v): v is string => !!v && /^(#|rgb|hsl)/i.test(v)),
@@ -69,6 +71,9 @@ for (const [label, size] of [["largo", { width: 1280, height: 900 }], ["360px (e
         expect(c.projected, "saldo previsto").toBe(t["--chart-balance-projected"]);
         expect(c.tooltipBg, "tooltip").toBe(t["--tooltip-bg"]);
         expect(c.tooltipBorder, "borda do tooltip").toBe(t["--tooltip-border"]);
+        expect(c.separators.length, "o grafico tem separadores").toBeGreaterThan(0);
+        expect(c.separators, "separadores de barras, pontos e fatias").toContain(t["--chart-sep"]);
+        expect(c.separators, "nenhum separador com --surface").not.toContain(t["--surface"]);
         expect(c.literals, "fill/stroke com cor literal").toEqual([]);
         await audit(page, `dashboard ${label} apos ${from}->${to}`);
       });

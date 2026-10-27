@@ -86,7 +86,7 @@ describe("destaque do lancamento recem-criado (design 3.9.2, D25)", () => {
     const block = /\.row-highlight\s*\{([^}]*)\}/.exec(css)![1];
     expect(block).not.toMatch(/animation|transition/);
     expect(block).toContain("var(--accent)");
-    expect(block).toContain("var(--surface-2)");
+    expect(block).toContain("var(--card-bg-2)");
     expect(block).toMatch(/box-shadow:\s*inset 0 0 0 2px/);
   });
 
