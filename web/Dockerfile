@@ -3,8 +3,7 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json package-lock.json ./
-# Instala as dependências de produção
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci
 
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
