@@ -4,7 +4,6 @@ on:
   push:
     branches: [ "main" ]
 
-# Variáveis globais do workflow (disponíveis para todos os jobs)
 env:
   REGISTRY_USER: vaguiiinho
   API_IMAGE_NAME: finance-api
@@ -31,7 +30,7 @@ jobs:
       # BUILD E PUSH DA API (NestJS)
       # ==========================================
       - name: Build and push API image (NestJS)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./api
           file: ./api/Dockerfile
@@ -39,7 +38,6 @@ jobs:
           tags: |
             ${{ env.REGISTRY_USER }}/${{ env.API_IMAGE_NAME }}:latest
             ${{ env.REGISTRY_USER }}/${{ env.API_IMAGE_NAME }}:${{ github.sha }}
-          # Injetando variáveis de ambiente para o build do NestJS
           build-args: |
             NODE_ENV=production
             DATABASE_URL=${{ secrets.DATABASE_URL }}
@@ -48,7 +46,7 @@ jobs:
       # BUILD E PUSH DO WEB (NextJS)
       # ==========================================
       - name: Build and push Web image (NextJS)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./web
           file: ./web/Dockerfile
@@ -56,7 +54,6 @@ jobs:
           tags: |
             ${{ env.REGISTRY_USER }}/${{ env.WEB_IMAGE_NAME }}:latest
             ${{ env.REGISTRY_USER }}/${{ env.WEB_IMAGE_NAME }}:${{ github.sha }}
-          # O Next.js requer variáveis com 'NEXT_PUBLIC_' registradas NO MOMENTO DO BUILD
           build-args: |
             NODE_ENV=production
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
