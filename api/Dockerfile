@@ -2,7 +2,8 @@ FROM node:22-alpine AS base
 WORKDIR /app
 
 FROM base AS dependencies
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json prisma.config.ts ./
+COPY prisma ./prisma
 RUN npm ci
 
 FROM dependencies AS build
@@ -11,7 +12,7 @@ RUN npm run build
 
 FROM base AS production-dependencies
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
@@ -21,7 +22,6 @@ COPY --chown=node:node --from=build /app/package.json ./package.json
 COPY --chown=node:node --from=build /app/dist ./dist
 COPY --chown=node:node --from=build /app/prisma ./prisma
 COPY --chown=node:node --from=build /app/prisma.config.ts ./prisma.config.ts
-COPY --chown=node:node --from=build /app/healthcheck.js ./healthcheck.js
 RUN mkdir -p /app/uploads && chown node:node /app/uploads
 USER node
 EXPOSE 3001
