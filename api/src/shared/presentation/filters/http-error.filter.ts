@@ -7,6 +7,9 @@ const STATUS_BY_KIND: Record<ErrorKind, number> = {
   not_found: 404,
   conflict: 409,
   business_rule: 422,
+  unauthenticated: 401,
+  forbidden: 403,
+  rate_limited: 429,
 };
 
 interface ErrorBody {
@@ -25,7 +28,18 @@ export class HttpErrorFilter implements ExceptionFilter {
     const request = http.getRequest<Request>();
     const response = http.getResponse<Response>();
     const { status, body } = this.translate(exception, request);
+    this.setAuthHeaders(exception, response);
     response.status(status).json(body);
+  }
+
+  /** 401 -> `WWW-Authenticate: Bearer`; 429 -> `Retry-After` (ADR 0005 6.6). */
+  private setAuthHeaders(exception: unknown, response: Response): void {
+    if (!(exception instanceof AppError)) return;
+    if (exception.kind === 'unauthenticated') response.setHeader('WWW-Authenticate', 'Bearer');
+    if (exception.kind === 'rate_limited') {
+      const seconds = (exception.details as { retryAfterSeconds?: unknown } | null)?.retryAfterSeconds;
+      if (typeof seconds === 'number') response.setHeader('Retry-After', String(seconds));
+    }
   }
 
   private translate(exception: unknown, request: Request): { status: number; body: ErrorBody } {
@@ -54,7 +68,8 @@ export class HttpErrorFilter implements ExceptionFilter {
     if (bodyParserType === 'entity.parse.failed' || exception instanceof BadRequestException) {
       return { status: 400, body: { code: 'MALFORMED_JSON', message: 'JSON malformado.', details: null } };
     }
-    if (bodyParserType === 'entity.too.large') {
+    // O adaptador do Nest (>= 12.3) também embrulha os erros do body parser (http-errors) numa HttpException com o status original.
+    if (bodyParserType === 'entity.too.large' || (exception instanceof HttpException && exception.getStatus() === 413)) {
       return { status: 413, body: { code: 'PAYLOAD_TOO_LARGE', message: 'Corpo da requisição grande demais.', details: null } };
     }
 

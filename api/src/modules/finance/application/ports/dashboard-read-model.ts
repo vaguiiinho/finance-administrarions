@@ -1,5 +1,6 @@
 import type { Money } from '@shared/domain/value-objects/money.js';
 import type { ReferenceMonth } from '../../domain/billing/reference-month.js';
+import type { OwnerId } from '../../domain/owner/owner-id.js';
 import type { TotalsRow } from './monthly-summary-read-model.js';
 
 export interface MonthlyRow {
@@ -16,9 +17,9 @@ export interface CategoryShare {
 
 export interface DashboardReadModel {
   /** Um ponto por mês, com zeros. */
-  monthlySeries(from: ReferenceMonth, to: ReferenceMonth): Promise<MonthlyRow[]>;
+  monthlySeries(ownerId: OwnerId, from: ReferenceMonth, to: ReferenceMonth): Promise<MonthlyRow[]>;
   /** Só EXPENSE, em ordem decrescente de total. */
-  expenseDistribution(month: ReferenceMonth): Promise<CategoryShare[]>;
+  expenseDistribution(ownerId: OwnerId, month: ReferenceMonth): Promise<CategoryShare[]>;
 }
 
 export const DASHBOARD_READ_MODEL = Symbol('DASHBOARD_READ_MODEL');

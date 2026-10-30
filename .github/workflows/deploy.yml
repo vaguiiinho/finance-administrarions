@@ -37,7 +37,6 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY_USER }}/${{ env.API_IMAGE_NAME }}:1.0.1
-            ${{ env.REGISTRY_USER }}/${{ env.API_IMAGE_NAME }}:${{ github.sha }}
           build-args: |
             NODE_ENV=production
 
@@ -52,7 +51,5 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY_USER }}/${{ env.WEB_IMAGE_NAME }}:1.0.1
-            ${{ env.REGISTRY_USER }}/${{ env.WEB_IMAGE_NAME }}:${{ github.sha }}
           build-args: |
             NODE_ENV=production
-            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}

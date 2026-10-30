@@ -1,9 +1,10 @@
-import { startE2eApp, UUID_V7, type E2eApp } from '../support/e2e-app.js';
+import { UUID_V7, type E2eApp } from '../support/e2e-app.js';
+import { startFinanceE2e } from '../support/finance-e2e.js';
 import { query } from '../support/db.js';
 
 let e: E2eApp;
 beforeAll(async () => {
-  e = await startE2eApp();
+  e = await startFinanceE2e();
 });
 afterAll(() => e.close());
 beforeEach(() => e.reset());

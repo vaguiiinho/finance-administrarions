@@ -1,6 +1,13 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./auth-support";
+import { signInAsAna } from "./legacy-auth";
 import { BG, ENTRIES_URL, MONTH, PAGE_BG_REGION, PAGE_BG_TOKENS, audit, gotoReady, releaseMutations, setScenario, setThemeCookie, showChartTooltip } from "./support";
 import { luminanceOf, resolveTokens } from "./tokens";
+
+// ADR 0005 D10: o stub nao aceita requisicao sem Bearer; as telas protegidas pedem sessao (usuaria comum "ana").
+test.beforeEach(async ({ page }) => {
+  await signInAsAna(page);
+});
 
 /**
  * CA85 / CAF08: tema escuro sem "tons lavados". (1) estado "atualizando" sem opacidade nem scrim e acima de AA (stub

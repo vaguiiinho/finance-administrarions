@@ -184,11 +184,12 @@ export function buildVolumeDataset(): VolumeDataset {
 
 const BATCH = 5_000;
 
-export async function seedVolume(pool: pg.Pool): Promise<VolumeSeed> {
+/** Todos os dados pertencem a `ownerId` (usuario existente: a FK exige dono, ADR 0005 7.1). */
+export async function seedVolume(pool: pg.Pool, ownerId: string): Promise<VolumeSeed> {
   const { cards, entries } = buildVolumeDataset();
   await pool.query(
-    `INSERT INTO cards (id, name, name_key, closing_day, due_day, created_at, updated_at)
-     SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::smallint[], $5::smallint[], $6::timestamptz[], $7::timestamptz[])`,
+    `INSERT INTO cards (id, name, name_key, closing_day, due_day, created_at, updated_at, user_id)
+     SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::smallint[], $5::smallint[], $6::timestamptz[], $7::timestamptz[], $8::uuid[])`,
     [
       cards.map((c) => c.id),
       cards.map((c) => c.name),
@@ -197,16 +198,17 @@ export async function seedVolume(pool: pg.Pool): Promise<VolumeSeed> {
       cards.map((c) => c.dueDay),
       cards.map((c) => c.createdAt),
       cards.map((c) => c.updatedAt),
+      cards.map(() => ownerId),
     ],
   );
   for (let from = 0; from < entries.length; from += BATCH) {
     const b = entries.slice(from, from + BATCH);
     await pool.query(
       `INSERT INTO entries (id, type, description, category, category_key, date, amount, payment_method, card_id,
-         closing_date, due_date, reference_month, status, paid_at, created_at, updated_at)
+         closing_date, due_date, reference_month, status, paid_at, created_at, updated_at, user_id)
        SELECT * FROM unnest($1::uuid[], $2::entry_type[], $3::text[], $4::text[], $5::text[], $6::date[], $7::numeric[],
          $8::payment_method[], $9::uuid[], $10::date[], $11::date[], $12::date[], $13::entry_status[],
-         $14::timestamptz[], $15::timestamptz[], $16::timestamptz[])`,
+         $14::timestamptz[], $15::timestamptz[], $16::timestamptz[], $17::uuid[])`,
       [
         b.map((e) => e.id),
         b.map((e) => e.type),
@@ -224,6 +226,7 @@ export async function seedVolume(pool: pg.Pool): Promise<VolumeSeed> {
         b.map((e) => e.paidAt),
         b.map((e) => e.createdAt),
         b.map((e) => e.updatedAt),
+        b.map(() => ownerId),
       ],
     );
   }

@@ -18,8 +18,8 @@ export default defineConfig({
     env: { TZ: "America/Sao_Paulo" },
     coverage: {
       provider: "v8",
-      include: ["lib/**/*.ts", "components/**/*.{ts,tsx}", "app/**/_components/**/*.{ts,tsx}"],
-      exclude: ["**/*.spec.{ts,tsx}", "lib/api/**"],
+      include: ["lib/**/*.ts", "components/**/*.{ts,tsx}", "features/**/*.{ts,tsx}", "app/**/_components/**/*.{ts,tsx}", "app/**/actions.ts"],
+      exclude: ["**/*.spec.{ts,tsx}", "**/test-support.tsx", "lib/api/**"],
       reporter: ["text", "text-summary"],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
     },

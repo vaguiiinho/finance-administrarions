@@ -74,6 +74,11 @@ export class Money {
     return this.cents;
   }
 
+  /** Valores monetários trafegam como string decimal ("1234.56"); evita o erro de serializar BigInt. */
+  toJSON(): string {
+    return this.toString();
+  }
+
   toString(): string {
     const negative = this.cents < 0n;
     const abs = negative ? -this.cents : this.cents;

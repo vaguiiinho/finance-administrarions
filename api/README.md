@@ -14,6 +14,20 @@ PORT=3001 npm run start:dev      # padrão do código: 3000; o web espera 3001
 
 `DATABASE_URL` deve estar no ambiente do processo (a API não carrega `.env`). A sessão do banco é aberta com `timezone=UTC` e `datestyle=ISO`.
 
+### Autenticação, primeiro administrador e demo (ADR 0005)
+
+- `SESSION_TOKEN_SECRET` (>= 32 bytes) é obrigatória: a API não sobe sem ela.
+- **Primeiro administrador:** com o banco sem usuários, `main.ts` lê `ADMIN_NAME`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` **antes** de escutar a porta e cria o administrador (com troca de senha obrigatória no primeiro acesso). Variáveis ausentes ou inválidas abortam o boot e o log traz só os nomes e códigos, nunca os valores. Se já havia cartões ou lançamentos (banco anterior à autenticação), eles pertencem a esse administrador. Depois da primeira subida, `ADMIN_*` podem sair do ambiente; mudá-las não altera nada.
+- **Seed da demo:** `npx prisma db seed` (o `CMD` do Docker já o executa) cria o usuário demo e os dados de exemplo do mês corrente; roda de novo a cada `MAINTENANCE_INTERVAL_MS`. Em desenvolvimento: `npm run build && npm run seed`.
+- **Recuperar o acesso de administrador** (somente por linha de comando, dentro do container, nunca por HTTP):
+
+```bash
+docker exec -i <container-da-api> sh -c 'RECOVERY_PASSWORD="<senha temporária>" npm run admin:recover -- --email <email>'
+```
+
+  Promove o usuário a administrador, reativa, redefine a senha (com troca obrigatória) e encerra todas as sessões. A senha nunca vai como argumento (aparece em `ps`): use `RECOVERY_PASSWORD` ou a entrada padrão.
+- A API **não deve ser exposta**: só o servidor do web a alcança, pela rede interna. O IP do cliente vem do `X-Forwarded-For` (`TRUST_PROXY`).
+
 ## Scripts
 
 | Script | Descrição |
@@ -29,6 +43,8 @@ PORT=3001 npm run start:dev      # padrão do código: 3000; o web espera 3001
 | `npm run typecheck` | `tsc --noEmit -p tsconfig.build.json` |
 | `npm run prisma:generate` | Gera o client em `src/shared/infrastructure/prisma/generated` |
 | `npm run prisma:migrate:deploy` | Aplica as migrations de `prisma/migrations` |
+| `npm run seed` | Usuário demo + dados de exemplo (após `npm run build`) |
+| `npm run admin:recover -- --email <email>` | Recuperação de acesso de administrador (após `npm run build`; ver acima) |
 
 ## Desempenho (RNF06)
 

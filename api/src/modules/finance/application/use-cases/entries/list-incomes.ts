@@ -3,9 +3,11 @@ import type { Money } from '@shared/domain/value-objects/money.js';
 import type { ReferenceMonth } from '../../../domain/billing/reference-month.js';
 import type { EntryReadModel } from '../../ports/entry-read-model.js';
 import type { EntryView, PaginationView } from '../../ports/views.js';
+import { requireOwnerId } from '../../queries/owner.js';
 import { parseCategoryKey, parsePaging, parseRequiredMonth, throwIfInvalid, totalPages } from '../../queries/query-params.js';
 
 export interface ListIncomesInput {
+  ownerId: string;
   month: string;
   category?: string;
   page?: string;
@@ -23,6 +25,7 @@ export class ListIncomes {
   constructor(private readonly entries: EntryReadModel) {}
 
   async execute(input: ListIncomesInput): Promise<ListIncomesResult> {
+    const ownerId = requireOwnerId(input.ownerId);
     const violations: FieldViolation[] = [];
     const month = parseRequiredMonth(input.month, 'month', violations);
     const categoryKey = parseCategoryKey(input.category, violations);
@@ -30,7 +33,7 @@ export class ListIncomes {
     throwIfInvalid(violations);
     if (!month) throw new InvariantViolationError('mês validado ausente.');
 
-    const result = await this.entries.listIncomes({ month, categoryKey, paging });
+    const result = await this.entries.listIncomes(ownerId, { month, categoryKey, paging });
     return {
       month,
       items: result.items,

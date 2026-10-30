@@ -1,4 +1,5 @@
 import {
+  DEFAULT_OWNER,
   NOW,
   cardExpense,
   cardId,
@@ -117,19 +118,19 @@ describe('Entry.create - despesa no cartao (CA09, CA21, CA22)', () => {
 
   it('CARD sem snapshot de cartao -> InvariantViolationError (erro de programacao)', () => {
     const input = NewEntryInput.parse(rawEntry({ paymentMethod: 'CARD', cardId: newCard(1).id.value }));
-    const error = thrown(() => Entry.create({ id: entryId(1), input, card: null, now: NOW }));
+    const error = thrown(() => Entry.create({ id: entryId(1), ownerId: DEFAULT_OWNER, input, card: null, now: NOW }));
     expect(isInvariantViolation(error)).toBe(true);
   });
 
   it('CARD com snapshot de OUTRO cartao -> InvariantViolationError', () => {
     const input = NewEntryInput.parse(rawEntry({ paymentMethod: 'CARD', cardId: newCard(1).id.value }));
-    const error = thrown(() => Entry.create({ id: entryId(1), input, card: newCard(2).billingInfo(), now: NOW }));
+    const error = thrown(() => Entry.create({ id: entryId(1), ownerId: DEFAULT_OWNER, input, card: newCard(2).billingInfo(), now: NOW }));
     expect(isInvariantViolation(error)).toBe(true);
   });
 
   it('PIX com snapshot de cartao -> InvariantViolationError', () => {
     const input = NewEntryInput.parse(rawEntry());
-    const error = thrown(() => Entry.create({ id: entryId(1), input, card: newCard(1).billingInfo(), now: NOW }));
+    const error = thrown(() => Entry.create({ id: entryId(1), ownerId: DEFAULT_OWNER, input, card: newCard(1).billingInfo(), now: NOW }));
     expect(isInvariantViolation(error)).toBe(true);
   });
 });

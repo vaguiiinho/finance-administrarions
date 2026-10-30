@@ -6,6 +6,7 @@ import type { PaymentMethod } from '../value-objects/payment-method.js';
 export class EntryCreated implements DomainEvent {
   constructor(
     readonly entryId: string,
+    readonly ownerId: string,
     readonly type: EntryType,
     readonly amount: string,
     readonly date: string,

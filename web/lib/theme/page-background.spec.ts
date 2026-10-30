@@ -117,18 +117,16 @@ describe("marcacao - faixas opacas (RF14, CA16)", () => {
   });
 
   it("faixa de abas de /entries usa .page-bg-window (e e sticky abaixo da navbar)", () => {
-    const src = readFileSync(join(ROOT, "app/(app)/entries/_components/entries-tabs-bar.tsx"), "utf8");
+    const src = readFileSync(join(ROOT, "features/entries/_components/entries-tabs-bar.tsx"), "utf8");
     expect(src).toMatch(/className="[^"]*\bpage-bg-window\b/);
     expect(src).toMatch(/\bsticky\b/);
     expect(src).toMatch(/border-b border-border/);
   });
 
-  it("2a linha da navbar no mobile fica sem fundo e mantem a borda inferior", () => {
+  it("a navbar tem uma linha so: sem a 2a linha de links no mobile (design 17, DL1); a borda inferior fica na propria barra", () => {
     const src = readFileSync(join(ROOT, "components/app-header.tsx"), "utf8");
-    const line = src.split("\n").find((l) => l.includes("sm:hidden") && l.includes("border-b"));
-    expect(line, "linha mobile da navbar nao encontrada").toBeDefined();
-    expect(line).toContain("border-border");
-    expect(line).not.toMatch(/\bbg-/);
+    expect(src.split("\n").find((l) => l.includes("sm:hidden") && l.includes("border-b"))).toBeUndefined();
+    expect(src.split("\n").find((l) => l.includes("data-navbar"))).toContain("border-b border-card-border");
   });
 });
 

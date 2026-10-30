@@ -1,5 +1,12 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./auth-support";
+import { signInAsAna } from "./legacy-auth";
 import { ENTRIES_URL, MONTH, PAGE_BG_REGION, audit, auditPageGradient, releaseMutations, setScenario, setThemeCookie, showChartTooltip } from "./support";
+
+// ADR 0005 D10: o stub nao aceita requisicao sem Bearer; as telas protegidas pedem sessao (usuaria comum "ana").
+test.beforeEach(async ({ page }) => {
+  await signInAsAna(page);
+});
 
 type ScreenDef = {
   name: string;

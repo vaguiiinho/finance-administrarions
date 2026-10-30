@@ -1,4 +1,5 @@
-import { startE2eApp, type E2eApp } from '../support/e2e-app.js';
+import { type E2eApp } from '../support/e2e-app.js';
+import { startFinanceE2e } from '../support/finance-e2e.js';
 import { query } from '../support/db.js';
 
 let e: E2eApp;
@@ -9,7 +10,7 @@ const MISSING = '0192f1e2-0000-7000-8000-000000000999';
 const MISSING_2 = '0192f1e2-0000-7000-8000-000000000998';
 
 beforeAll(async () => {
-  e = await startE2eApp(T0);
+  e = await startFinanceE2e(T0);
 });
 afterAll(() => e.close());
 beforeEach(async () => {

@@ -13,6 +13,7 @@ import { EntryId } from '../../domain/entry/value-objects/entry-id.js';
 import type { EntryStatus } from '../../domain/entry/value-objects/entry-status.js';
 import type { EntryType } from '../../domain/entry/value-objects/entry-type.js';
 import type { PaymentMethod } from '../../domain/entry/value-objects/payment-method.js';
+import { OwnerId } from '../../domain/owner/owner-id.js';
 
 /**
  * Linha de `entries` lida por SQL cru, com datas e valores já como texto
@@ -20,6 +21,7 @@ import type { PaymentMethod } from '../../domain/entry/value-objects/payment-met
  */
 export interface EntryRecord {
   id: string;
+  user_id: string;
   type: EntryType;
   description: string;
   category: string;
@@ -36,7 +38,7 @@ export interface EntryRecord {
   updated_at: Date;
 }
 
-export interface EntryViewRecord extends EntryRecord {
+export interface EntryViewRecord extends Omit<EntryRecord, 'user_id'> {
   card_name: string | null;
 }
 
@@ -56,6 +58,7 @@ export const EntryMapper = {
 
     return Entry.restore({
       id: unwrapPersisted(EntryId.create(row.id), 'entries.id'),
+      ownerId: unwrapPersisted(OwnerId.create(row.user_id), 'entries.user_id'),
       type: row.type,
       description: unwrapPersisted(Description.create(row.description), 'entries.description'),
       category: unwrapPersisted(Category.create(row.category), 'entries.category'),
@@ -76,6 +79,7 @@ export const EntryMapper = {
     const s = entry.toSnapshot();
     return {
       id: s.id.value,
+      userId: s.ownerId.value,
       type: s.type,
       description: s.description.value,
       category: s.category.value,

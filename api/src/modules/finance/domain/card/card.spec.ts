@@ -1,4 +1,4 @@
-import { NOW, cardId, eventNames, newCard, pullEvents, thrown } from '@test/support/builders.js';
+import { DEFAULT_OWNER, NOW, cardId, eventNames, newCard, pullEvents, thrown } from '@test/support/builders.js';
 import { Card } from './card.js';
 
 const LATER = new Date('2026-10-06T09:30:00.000Z');
@@ -12,7 +12,7 @@ const fieldsOf = (fn: () => unknown) => {
 
 describe('Card.create (CA01, CA02)', () => {
   it('CA01: cria com nome normalizado, dias e timestamps; emite CardCreated', () => {
-    const card = Card.create({ id: cardId(1), name: '  Nubank ', closingDay: 25, dueDay: 5, now: NOW });
+    const card = Card.create({ ownerId: DEFAULT_OWNER, id: cardId(1), name: '  Nubank ', closingDay: 25, dueDay: 5, now: NOW });
     expect(card.name.value).toBe('Nubank');
     expect(card.closingDay.value).toBe(25);
     expect(card.dueDay.value).toBe(5);
@@ -30,7 +30,7 @@ describe('Card.create (CA01, CA02)', () => {
   });
 
   it.each([[0], [32], [-3]])('CA02: dia %i -> OUT_OF_RANGE nos dois campos', (day) => {
-    const list = fieldsOf(() => Card.create({ id: cardId(1), name: 'X', closingDay: day, dueDay: day, now: NOW }));
+    const list = fieldsOf(() => Card.create({ ownerId: DEFAULT_OWNER, id: cardId(1), name: 'X', closingDay: day, dueDay: day, now: NOW }));
     expect(list).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ field: 'closingDay', code: 'OUT_OF_RANGE' }),
@@ -40,7 +40,7 @@ describe('Card.create (CA01, CA02)', () => {
   });
 
   it('CA02: 10.5 -> NOT_INTEGER', () => {
-    const list = fieldsOf(() => Card.create({ id: cardId(1), name: 'X', closingDay: 10.5, dueDay: 5, now: NOW }));
+    const list = fieldsOf(() => Card.create({ ownerId: DEFAULT_OWNER, id: cardId(1), name: 'X', closingDay: 10.5, dueDay: 5, now: NOW }));
     expect(list).toContainEqual(expect.objectContaining({ field: 'closingDay', code: 'NOT_INTEGER' }));
   });
 
@@ -52,7 +52,7 @@ describe('Card.create (CA01, CA02)', () => {
   });
 
   it('CA02: acumula TODAS as violacoes', () => {
-    const list = fieldsOf(() => Card.create({ id: cardId(1), name: '', closingDay: 0, dueDay: 32, now: NOW }));
+    const list = fieldsOf(() => Card.create({ ownerId: DEFAULT_OWNER, id: cardId(1), name: '', closingDay: 0, dueDay: 32, now: NOW }));
     expect(new Set(list.map((v) => v.field))).toEqual(new Set(['name', 'closingDay', 'dueDay']));
   });
 });

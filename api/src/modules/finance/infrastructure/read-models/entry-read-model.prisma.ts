@@ -10,6 +10,7 @@ import type {
 } from '../../application/ports/entry-read-model.js';
 import type { EntryView, Page, Paging } from '../../application/ports/views.js';
 import type { EntryId } from '../../domain/entry/value-objects/entry-id.js';
+import type { OwnerId } from '../../domain/owner/owner-id.js';
 import { EntryMapper, type EntryViewRecord } from '../mappers/entry.mapper.js';
 import { ENTRY_VIEW_COLUMNS, monthStart } from '../mappers/entry-sql.js';
 
@@ -24,8 +25,12 @@ type BatchCapable = PrismaExecutor & {
 export class PrismaEntryReadModel implements EntryReadModel {
   constructor(private readonly prisma: PrismaExecutor) {}
 
-  async listExpenses(c: ExpenseListCriteria): Promise<Page<EntryView> & { subtotal: ExpenseSubtotalRow }> {
-    const conditions = [Prisma.sql`e.reference_month = ${monthStart(c.month)}::date`, Prisma.sql`e.type = 'EXPENSE'`];
+  async listExpenses(ownerId: OwnerId, c: ExpenseListCriteria): Promise<Page<EntryView> & { subtotal: ExpenseSubtotalRow }> {
+    const conditions = [
+      Prisma.sql`e.user_id = ${ownerId.value}::uuid`,
+      Prisma.sql`e.reference_month = ${monthStart(c.month)}::date`,
+      Prisma.sql`e.type = 'EXPENSE'`,
+    ];
     if (c.status) conditions.push(Prisma.sql`e.status = ${c.status}::entry_status`);
     if (c.categoryKey !== undefined) conditions.push(Prisma.sql`e.category_key = ${c.categoryKey}`);
     if (c.card.kind === 'card') conditions.push(Prisma.sql`e.card_id = ${c.card.cardId.value}::uuid`);
@@ -51,8 +56,12 @@ export class PrismaEntryReadModel implements EntryReadModel {
     };
   }
 
-  async listIncomes(c: IncomeListCriteria): Promise<Page<EntryView> & { subtotal: Money }> {
-    const conditions = [Prisma.sql`e.reference_month = ${monthStart(c.month)}::date`, Prisma.sql`e.type = 'INCOME'`];
+  async listIncomes(ownerId: OwnerId, c: IncomeListCriteria): Promise<Page<EntryView> & { subtotal: Money }> {
+    const conditions = [
+      Prisma.sql`e.user_id = ${ownerId.value}::uuid`,
+      Prisma.sql`e.reference_month = ${monthStart(c.month)}::date`,
+      Prisma.sql`e.type = 'INCOME'`,
+    ];
     if (c.categoryKey !== undefined) conditions.push(Prisma.sql`e.category_key = ${c.categoryKey}`);
     const where = Prisma.join(conditions, ' AND ');
 
@@ -70,11 +79,11 @@ export class PrismaEntryReadModel implements EntryReadModel {
     };
   }
 
-  async findById(id: EntryId): Promise<EntryView | null> {
+  async findById(ownerId: OwnerId, id: EntryId): Promise<EntryView | null> {
     const rows = await this.prisma.$queryRaw<EntryViewRecord[]>(Prisma.sql`
       SELECT ${ENTRY_VIEW_COLUMNS}
       FROM entries e LEFT JOIN cards c ON c.id = e.card_id
-      WHERE e.id = ${id.value}::uuid`);
+      WHERE e.user_id = ${ownerId.value}::uuid AND e.id = ${id.value}::uuid`);
     return rows.length > 0 ? EntryMapper.toView(rows[0]!) : null;
   }
 

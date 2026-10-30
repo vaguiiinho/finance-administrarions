@@ -1,8 +1,9 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, Post, Put } from '@nestjs/common';
+import { CurrentOwnerId } from '@shared/presentation/auth/current-principal.decorators.js';
 import { ZodValidationPipe } from '@shared/presentation/pipes/zod-validation.pipe.js';
 import { CreateCard } from '../../application/use-cases/cards/create-card.js';
-import { ListCards } from '../../application/use-cases/cards/list-cards.js';
 import { UpdateCard } from '../../application/use-cases/cards/update-card.js';
+import { FinanceReadHandlers } from './finance-read-handlers.js';
 import { presentCard } from './presenters/card.presenter.js';
 import { cardBodySchema, type CardBody } from './schemas/card.schemas.js';
 
@@ -10,24 +11,27 @@ import { cardBodySchema, type CardBody } from './schemas/card.schemas.js';
 export class CardsController {
   constructor(
     @Inject(CreateCard) private readonly createCard: CreateCard,
-    @Inject(ListCards) private readonly listCards: ListCards,
     @Inject(UpdateCard) private readonly updateCard: UpdateCard,
+    @Inject(FinanceReadHandlers) private readonly reads: FinanceReadHandlers,
   ) {}
 
   @Post()
-  async create(@Body(new ZodValidationPipe(cardBodySchema)) body: CardBody) {
-    return presentCard(await this.createCard.execute(body));
+  async create(@CurrentOwnerId() ownerId: string, @Body(new ZodValidationPipe(cardBodySchema)) body: CardBody) {
+    return presentCard(await this.createCard.execute({ ownerId, ...body }));
   }
 
   @Get()
-  async list() {
-    const { items } = await this.listCards.execute({});
-    return { items: items.map(presentCard) };
+  list(@CurrentOwnerId() ownerId: string) {
+    return this.reads.cards(ownerId);
   }
 
   @Put(':id')
   @HttpCode(200)
-  async update(@Param('id') id: string, @Body(new ZodValidationPipe(cardBodySchema)) body: CardBody) {
-    return presentCard(await this.updateCard.execute({ id, ...body }));
+  async update(
+    @CurrentOwnerId() ownerId: string,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(cardBodySchema)) body: CardBody,
+  ) {
+    return presentCard(await this.updateCard.execute({ ownerId, id, ...body }));
   }
 }

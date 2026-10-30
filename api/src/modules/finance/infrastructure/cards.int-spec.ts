@@ -1,7 +1,7 @@
 import type pg from 'pg';
 import { buildInfra, type Infra } from '@test/support/infra.js';
-import { createPool, resetDb, insertCard, cardUuid, expectCheckViolation, query } from '@test/support/db.js';
-import { NOW, cardId, newCard, rejected } from '@test/support/builders.js';
+import { createPool, resetDb, insertCard, cardUuid, expectCheckViolation, query } from '@test/support/default-owner-db.js';
+import { DEFAULT_OWNER, NOW, cardId, newCard, rejected } from '@test/support/builders.js';
 
 let pool: pg.Pool;
 let infra: Infra;
@@ -19,7 +19,7 @@ describe('PrismaCardRepository', () => {
   it('insert + findById fazem round trip de todos os campos', async () => {
     const card = newCard(1, { name: 'Nubank', closingDay: 25, dueDay: 5 });
     await infra.cards.insert(card);
-    const found = await infra.cards.findById(cardId(1));
+    const found = await infra.cards.findById(DEFAULT_OWNER, cardId(1));
     expect(found).not.toBeNull();
     expect(found!.toSnapshot()).toEqual(card.toSnapshot());
   });
@@ -33,9 +33,9 @@ describe('PrismaCardRepository', () => {
 
   it('findById inexistente -> null; findByNameKey encontra pela chave', async () => {
     await infra.cards.insert(newCard(1, { name: 'Nubank' }));
-    expect(await infra.cards.findById(cardId(9))).toBeNull();
-    expect((await infra.cards.findByNameKey('nubank'))?.id.value).toBe(cardUuid(1));
-    expect(await infra.cards.findByNameKey('itau')).toBeNull();
+    expect(await infra.cards.findById(DEFAULT_OWNER, cardId(9))).toBeNull();
+    expect((await infra.cards.findByNameKey(DEFAULT_OWNER, 'nubank'))?.id.value).toBe(cardUuid(1));
+    expect(await infra.cards.findByNameKey(DEFAULT_OWNER, 'itau')).toBeNull();
   });
 
   it('update persiste nome, dias e updatedAt', async () => {
@@ -44,7 +44,7 @@ describe('PrismaCardRepository', () => {
     const later = new Date('2026-10-06T09:30:00.000Z');
     card.update({ name: 'Nubank Plus', closingDay: 20, dueDay: 25 }, later);
     await infra.cards.update(card);
-    const found = (await infra.cards.findById(cardId(1)))!.toSnapshot();
+    const found = (await infra.cards.findById(DEFAULT_OWNER, cardId(1)))!.toSnapshot();
     expect(found.name.value).toBe('Nubank Plus');
     expect(found.closingDay.value).toBe(20);
     expect(found.dueDay.value).toBe(25);
@@ -90,28 +90,28 @@ describe('PrismaCardReadModel', () => {
     await insertCard(pool, { n: 2, name: 'Itaú', closingDay: 3, dueDay: 10 });
     await insertCard(pool, { n: 3, name: 'Ágil', closingDay: 1, dueDay: 2 });
     await insertCard(pool, { n: 4, name: 'Zeta', closingDay: 1, dueDay: 2 });
-    const list = await infra.readModels.cards.listAll();
+    const list = await infra.readModels.cards.listAll(DEFAULT_OWNER);
     expect(list.map((c) => c.name)).toEqual(['Ágil', 'Itaú', 'Nubank', 'Zeta']);
     expect(list.find((c) => c.name === 'Itaú')).toMatchObject({ id: cardUuid(2), closingDay: 3, dueDay: 10 });
   });
 
   it('findById retorna a view ou null', async () => {
     await insertCard(pool, { n: 1, name: 'Nubank' });
-    expect(await infra.readModels.cards.findById(cardId(1))).toMatchObject({ id: cardUuid(1), name: 'Nubank' });
-    expect(await infra.readModels.cards.findById(cardId(2))).toBeNull();
+    expect(await infra.readModels.cards.findById(DEFAULT_OWNER, cardId(1))).toMatchObject({ id: cardUuid(1), name: 'Nubank' });
+    expect(await infra.readModels.cards.findById(DEFAULT_OWNER, cardId(2))).toBeNull();
   });
 
   it('listAll vazio', async () => {
-    expect(await infra.readModels.cards.listAll()).toEqual([]);
+    expect(await infra.readModels.cards.listAll(DEFAULT_OWNER)).toEqual([]);
   });
 });
 
 describe('CHECKs de cards', () => {
   const bad = (over: Record<string, number | string>) =>
     pool.query(
-      `INSERT INTO cards (id, name, name_key, closing_day, due_day, created_at, updated_at)
-       VALUES ($1::uuid, 'X', $2, $3, $4, $5::timestamptz, $6::timestamptz)`,
-      [cardUuid(1), 'x', over.closing ?? 10, over.due ?? 10, over.created ?? '2026-10-01T00:00:00Z', over.updated ?? '2026-10-01T00:00:00Z'],
+      `INSERT INTO cards (id, user_id, name, name_key, closing_day, due_day, created_at, updated_at)
+       VALUES ($1::uuid, $7::uuid, 'X', $2, $3, $4, $5::timestamptz, $6::timestamptz)`,
+      [cardUuid(1), 'x', over.closing ?? 10, over.due ?? 10, over.created ?? '2026-10-01T00:00:00Z', over.updated ?? '2026-10-01T00:00:00Z', DEFAULT_OWNER.value],
     );
 
   it('controle: linha valida entra', async () => {

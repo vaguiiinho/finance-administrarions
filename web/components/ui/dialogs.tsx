@@ -13,13 +13,15 @@ interface AlertDialogProps {
   cancelLabel?: string;
   busy?: boolean;
   /** Mensagem de erro inline (400/500/rede): o modal continua aberto. */
-  error?: string | null;
+  error?: ReactNode;
+  /** Linha "Esta ação não pode ser desfeita." (padrão ligado). */
+  irreversible?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
 /** Confirmacao de acao irreversivel (D2): foco inicial em "Cancelar", Esc cancela (ignorado durante o envio). */
-export function AlertDialog({ title, children, confirmLabel, busyLabel = "Aguarde…", cancelLabel = "Cancelar", busy = false, error, onConfirm, onCancel }: AlertDialogProps) {
+export function AlertDialog({ title, children, confirmLabel, busyLabel = "Aguarde…", cancelLabel = "Cancelar", busy = false, error, irreversible = true, onConfirm, onCancel }: AlertDialogProps) {
   const titleId = useId();
   const bodyId = useId();
   return (
@@ -29,13 +31,15 @@ export function AlertDialog({ title, children, confirmLabel, busyLabel = "Aguard
       </h2>
       <div id={bodyId} className="mt-3 flex flex-col gap-2 text-text">
         {children}
-        <p className="flex items-center gap-2 text-sm text-warning-text">
-          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
-            <path d="M12 3 2 20h20L12 3Z" strokeLinejoin="round" />
-            <path d="M12 10v4M12 17v.5" strokeLinecap="round" />
-          </svg>
-          Esta ação não pode ser desfeita.
-        </p>
+        {irreversible ? (
+          <p className="flex items-center gap-2 text-sm text-warning-text">
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+              <path d="M12 3 2 20h20L12 3Z" strokeLinejoin="round" />
+              <path d="M12 10v4M12 17v.5" strokeLinecap="round" />
+            </svg>
+            Esta ação não pode ser desfeita.
+          </p>
+        ) : null}
       </div>
       {error ? (
         <p role="alert" className="mt-3 flex items-start gap-2 text-sm text-danger-text">

@@ -1,38 +1,20 @@
 import { Controller, Get, Inject, Query } from '@nestjs/common';
+import { CurrentOwnerId } from '@shared/presentation/auth/current-principal.decorators.js';
 import { ZodValidationPipe } from '@shared/presentation/pipes/zod-validation.pipe.js';
-import { GetCategoryDistribution } from '../../application/use-cases/dashboard/get-category-distribution.js';
-import { GetMonthlySeries } from '../../application/use-cases/dashboard/get-monthly-series.js';
-import { presentTotals } from './presenters/totals.presenter.js';
+import { FinanceReadHandlers } from './finance-read-handlers.js';
 import { monthQuerySchema, type MonthQuery } from './schemas/query.schemas.js';
 
 @Controller('dashboard')
 export class DashboardController {
-  constructor(
-    @Inject(GetMonthlySeries) private readonly getMonthlySeries: GetMonthlySeries,
-    @Inject(GetCategoryDistribution) private readonly getCategoryDistribution: GetCategoryDistribution,
-  ) {}
+  constructor(@Inject(FinanceReadHandlers) private readonly reads: FinanceReadHandlers) {}
 
   @Get('monthly-series')
-  async monthlySeries(@Query(new ZodValidationPipe(monthQuerySchema)) query: MonthQuery) {
-    const result = await this.getMonthlySeries.execute(query);
-    return {
-      from: result.from.toString(),
-      to: result.to.toString(),
-      points: result.points.map((point) => ({ month: point.month.toString(), totals: presentTotals(point.totals) })),
-    };
+  monthlySeries(@CurrentOwnerId() ownerId: string, @Query(new ZodValidationPipe(monthQuerySchema)) query: MonthQuery) {
+    return this.reads.monthlySeries(ownerId, query);
   }
 
   @Get('category-distribution')
-  async categoryDistribution(@Query(new ZodValidationPipe(monthQuerySchema)) query: MonthQuery) {
-    const result = await this.getCategoryDistribution.execute(query);
-    return {
-      month: result.month.toString(),
-      total: result.total.toString(),
-      items: result.items.map((item) => ({
-        category: item.category,
-        total: item.total.toString(),
-        percentage: item.percentage,
-      })),
-    };
+  categoryDistribution(@CurrentOwnerId() ownerId: string, @Query(new ZodValidationPipe(monthQuerySchema)) query: MonthQuery) {
+    return this.reads.categoryDistribution(ownerId, query);
   }
 }

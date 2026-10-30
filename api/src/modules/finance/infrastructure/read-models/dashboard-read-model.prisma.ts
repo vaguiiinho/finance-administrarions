@@ -4,13 +4,14 @@ import { unwrapPersisted } from '@shared/domain/unwrap.js';
 import { Money } from '@shared/domain/value-objects/money.js';
 import type { CategoryShare, DashboardReadModel, MonthlyRow } from '../../application/ports/dashboard-read-model.js';
 import { ReferenceMonth } from '../../domain/billing/reference-month.js';
+import type { OwnerId } from '../../domain/owner/owner-id.js';
 import { monthStart } from '../mappers/entry-sql.js';
 
 export class PrismaDashboardReadModel implements DashboardReadModel {
   constructor(private readonly prisma: PrismaExecutor) {}
 
   /** Série contínua com zeros nos meses sem lançamentos. */
-  async monthlySeries(from: ReferenceMonth, to: ReferenceMonth): Promise<MonthlyRow[]> {
+  async monthlySeries(ownerId: OwnerId, from: ReferenceMonth, to: ReferenceMonth): Promise<MonthlyRow[]> {
     const rows = await this.prisma.$queryRaw<
       { month: string; income: string; expenses_paid: string; expenses_pending: string }[]
     >(Prisma.sql`
@@ -20,7 +21,7 @@ export class PrismaDashboardReadModel implements DashboardReadModel {
                SUM(amount) FILTER (WHERE type = 'EXPENSE' AND status = 'PAID')    AS paid,
                SUM(amount) FILTER (WHERE type = 'EXPENSE' AND status = 'PENDING') AS pending
         FROM entries
-        WHERE reference_month BETWEEN ${monthStart(from)}::date AND ${monthStart(to)}::date
+        WHERE user_id = ${ownerId.value}::uuid AND reference_month BETWEEN ${monthStart(from)}::date AND ${monthStart(to)}::date
         GROUP BY reference_month
       )
       SELECT to_char(m.month, 'YYYY-MM')                 AS month,
@@ -42,13 +43,13 @@ export class PrismaDashboardReadModel implements DashboardReadModel {
   }
 
   /** Só despesas, por categoria (chave case-insensitive), em ordem decrescente de total. */
-  async expenseDistribution(month: ReferenceMonth): Promise<CategoryShare[]> {
+  async expenseDistribution(ownerId: OwnerId, month: ReferenceMonth): Promise<CategoryShare[]> {
     const rows = await this.prisma.$queryRaw<{ category: string; total: string; percentage: string }[]>(Prisma.sql`
       SELECT (array_agg(category ORDER BY created_at, id))[1]             AS category,
              SUM(amount)::numeric(20,2)::text                             AS total,
              ROUND(SUM(amount) * 100 / SUM(SUM(amount)) OVER (), 2)::text AS percentage
       FROM entries
-      WHERE reference_month = ${monthStart(month)}::date AND type = 'EXPENSE'
+      WHERE user_id = ${ownerId.value}::uuid AND reference_month = ${monthStart(month)}::date AND type = 'EXPENSE'
       GROUP BY category_key
       ORDER BY SUM(amount) DESC, category_key`);
 

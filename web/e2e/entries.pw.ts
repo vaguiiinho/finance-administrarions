@@ -1,5 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./auth-support";
+import { signInAsAna } from "./legacy-auth";
 import { ENTRIES_URL, gotoReady, setScenario } from "./support";
+
+// ADR 0005 D10: o stub nao aceita requisicao sem Bearer; as telas protegidas pedem sessao (usuaria comum "ana").
+test.beforeEach(async ({ page }) => {
+  await signInAsAna(page);
+});
 
 /**
  * Fluxos da tela de lancamentos contra o stub-api. Os nomes acessiveis seguem os rotulos pt-BR do design rev. 3

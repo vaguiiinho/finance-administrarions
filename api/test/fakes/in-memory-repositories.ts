@@ -5,6 +5,7 @@ import type { FinanceTransactionScope, FinanceUnitOfWork } from '@finance/applic
 import { Card } from '@finance/domain/card/card.js';
 import { Entry } from '@finance/domain/entry/entry.js';
 import { Category } from '@finance/domain/entry/value-objects/category.js';
+import type { OwnerId } from '@finance/domain/owner/owner-id.js';
 import { unwrap } from '../support/result.js';
 
 /** Copia por snapshot: o "banco" nunca compartilha instancia com o use case (mutacao sem save nao persiste). */
@@ -23,14 +24,14 @@ export class InMemoryCardRepository implements CardRepository {
     this.calls.update++;
     this.store.set(card.id.value, copyCard(card));
   }
-  async findById(id: { value: string }): Promise<Card | null> {
+  async findById(ownerId: OwnerId, id: { value: string }): Promise<Card | null> {
     this.calls.findById++;
     const found = this.store.get(id.value);
-    return found ? copyCard(found) : null;
+    return found && found.ownerId.equals(ownerId) ? copyCard(found) : null;
   }
-  async findByNameKey(key: string): Promise<Card | null> {
+  async findByNameKey(ownerId: OwnerId, key: string): Promise<Card | null> {
     this.calls.findByNameKey++;
-    for (const card of this.store.values()) if (card.name.key === key) return copyCard(card);
+    for (const card of this.store.values()) if (card.ownerId.equals(ownerId) && card.name.key === key) return copyCard(card);
     return null;
   }
   seed(card: Card): void {
@@ -60,21 +61,25 @@ export class InMemoryEntryRepository implements EntryRepository {
     this.calls.insert++;
     this.store.set(entry.id.value, copyEntry(entry));
   }
-  async findByIdsForUpdate(ids: readonly { value: string }[]): Promise<Entry[]> {
+  async findByIdsForUpdate(ownerId: OwnerId, ids: readonly { value: string }[]): Promise<Entry[]> {
     this.calls.findByIdsForUpdate++;
     this.assertTx();
     return [...new Set(ids.map((i) => i.value))]
       .sort()
-      .filter((id) => this.store.has(id))
+      .filter((id) => this.store.has(id) && this.store.get(id)!.ownerId.equals(ownerId))
       .map((id) => copyEntry(this.store.get(id)!));
   }
-  async findPendingByInvoiceForUpdate(key: { cardId: { value: string }; referenceMonth: { toString(): string } }): Promise<Entry[]> {
+  async findPendingByInvoiceForUpdate(
+    ownerId: OwnerId,
+    key: { cardId: { value: string }; referenceMonth: { toString(): string } },
+  ): Promise<Entry[]> {
     this.calls.findPendingByInvoiceForUpdate++;
     this.assertTx();
     return [...this.store.values()]
       .filter((e) => {
         const s = e.toSnapshot();
         return (
+          e.ownerId.equals(ownerId) &&
           s.type === 'EXPENSE' &&
           s.status === 'PENDING' &&
           s.cardId?.value === key.cardId.value &&
@@ -94,6 +99,9 @@ export class InMemoryEntryRepository implements EntryRepository {
       this.store.set(entry.id.value, copyEntry(entry));
       written++;
     }
+  }
+  async deleteAllOf(ownerId: OwnerId): Promise<void> {
+    for (const [id, e] of [...this.store]) if (e.ownerId.equals(ownerId)) this.store.delete(id);
   }
   seed(entry: Entry): void {
     this.store.set(entry.id.value, copyEntry(entry));
@@ -150,10 +158,11 @@ export class InMemoryFinanceUnitOfWork implements FinanceUnitOfWork {
 export class InMemoryCategoryCatalog implements CategoryCatalog {
   calls = 0;
   constructor(private readonly entries: InMemoryEntryRepository) {}
-  async findByKey(key: string): Promise<Category | null> {
+  async findByKey(ownerId: OwnerId, key: string): Promise<Category | null> {
     this.calls++;
     const matches = this.entries
       .all()
+      .filter((e) => e.ownerId.equals(ownerId))
       .map((e) => e.toSnapshot())
       .filter((s) => s.category.key === key)
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());

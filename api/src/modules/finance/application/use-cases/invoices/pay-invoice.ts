@@ -5,6 +5,7 @@ import { Money } from '@shared/domain/value-objects/money.js';
 import type { EntryPaymentService } from '../../../domain/payment/entry-payment.service.js';
 import { CardNotFoundError } from '../../errors/application-errors.js';
 import type { FinanceUnitOfWork } from '../../ports/finance-unit-of-work.js';
+import { requireOwnerId } from '../../queries/owner.js';
 import { parseCardId, parseRequiredMonth, throwIfInvalid } from '../../queries/query-params.js';
 
 export interface PayInvoiceResult {
@@ -24,7 +25,8 @@ export class PayInvoice {
   ) {}
 
   /** Paga as despesas PENDING do cartão cujo mês de referência (mês do vencimento) é o informado. */
-  async execute(input: { cardId: string; referenceMonth: string }): Promise<PayInvoiceResult> {
+  async execute(input: { ownerId: string; cardId: string; referenceMonth: string }): Promise<PayInvoiceResult> {
+    const ownerId = requireOwnerId(input.ownerId);
     const violations: FieldViolation[] = [];
     const cardId = parseCardId(input.cardId, 'cardId', violations);
     const referenceMonth = parseRequiredMonth(input.referenceMonth, 'referenceMonth', violations);
@@ -33,9 +35,9 @@ export class PayInvoice {
 
     const now = this.clock.now();
     const { paid, events } = await this.uow.run(async ({ entries, cards }) => {
-      if (!(await cards.findById(cardId))) throw new CardNotFoundError(cardId.value);
+      if (!(await cards.findById(ownerId, cardId))) throw new CardNotFoundError(cardId.value);
 
-      const pending = await entries.findPendingByInvoiceForUpdate({ cardId, referenceMonth });
+      const pending = await entries.findPendingByInvoiceForUpdate(ownerId, { cardId, referenceMonth });
       const outcome = this.paymentService.payAll(pending, now);
       if (outcome.paid.length > 0) await entries.saveAll(outcome.paid);
       return { paid: outcome.paid, events: outcome.paid.flatMap((e) => e.pullEvents()) };

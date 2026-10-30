@@ -65,10 +65,10 @@ const EXPECTED_VALUES: [string, string, string][] = [
   ["--surface-active", "#E4E8EE", "#303A4C"],
   ["--input-bg", "#FFFFFF", "#151B26"],
   // rev. 7 (vidro fosco): mesma tinta das superficies opacas (G1), so o alfa difere. Barra: B1 = opcao (a), 0,91 claro / 0,90 escuro
-  ["--glass-bg", "rgb(255 255 255 / 0.70)", "rgb(28 35 48 / 0.70)"],
+  ["--glass-bg", "rgb(255 255 255 / 0.70)", "rgba(12, 28, 59, 0.7)"], // escuro: tinta azul-marinho (commit 0e1dcf9, aprovado 2026-10-30)
   ["--glass-bg-2", "rgb(244 246 249 / 0.70)", "rgb(37 45 60 / 0.70)"],
-  ["--glass-input-bg", "rgb(255 255 255 / 0.70)", "rgb(21 27 38 / 0.70)"],
-  ["--glass-bar-bg", "rgb(255 255 255 / 0.91)", "rgb(28 35 48 / 0.90)"],
+  ["--glass-input-bg", "rgb(255 255 255 / 0.70)", "rgba(12, 28, 59, 0.7)"],
+  ["--glass-bar-bg", "rgb(255 255 255 / 0.91)", "rgba(9, 32, 75, 0.9)"],
   ["--glass-border", "rgb(255 255 255 / 0.80)", "rgb(255 255 255 / 0.10)"],
   ["--chart-separator", "#F9FAFE", "#1B222E"],
   ["--border", "#D9DEE6", "#2E3747"],
@@ -212,12 +212,12 @@ const REQUIRED: Required[] = [
   P("--success", "--glass-bg-2", "non-text", [3.4, 7.21], GLASS_2_UNDER),
   P("--warning", "--glass-bg-2", "non-text", [4.54, 8.3], GLASS_2_UNDER),
   // campo (0,70), sobre o fundo ou sobre um card de vidro
-  P("--text", "--glass-input-bg", "text", [14.0, 13.12], GLASS_2_UNDER),
-  P("--text-muted", "--glass-input-bg", "text", [7.19, 6.55], GLASS_2_UNDER),
-  P("--border-strong", "--glass-input-bg", "non-text", [4.19, 4.32], GLASS_2_UNDER),
-  P("--focus-color", "--glass-input-bg", "non-text", [5.12, 8.32], GLASS_2_UNDER),
-  P("--danger", "--glass-input-bg", "non-text", [4.62, 5.88], GLASS_2_UNDER),
-  P("--danger-text", "--glass-input-bg", "text", [6.19, 5.88], GLASS_2_UNDER),
+  P("--text", "--glass-input-bg", "text", [14.0, 12.89], GLASS_2_UNDER),
+  P("--text-muted", "--glass-input-bg", "text", [7.19, 6.44], GLASS_2_UNDER),
+  P("--border-strong", "--glass-input-bg", "non-text", [4.19, 4.24], GLASS_2_UNDER),
+  P("--focus-color", "--glass-input-bg", "non-text", [5.12, 8.17], GLASS_2_UNDER),
+  P("--danger", "--glass-input-bg", "non-text", [4.62, 5.78], GLASS_2_UNDER),
+  P("--danger-text", "--glass-input-bg", "text", [6.19, 5.78], GLASS_2_UNDER),
   // vidro de barra (B1 = opcao (a), 0,91 / 0,90): pior caso inclui o conteudo que rola por baixo (BAR_UNDER)
   P("--text", "--glass-bar-bg", "text", [12.34, 9.35], BAR_UNDER),
   P("--text-muted", "--glass-bar-bg", "text", [6.34, 4.67], BAR_UNDER),
@@ -416,10 +416,17 @@ describe("tokens.css - estrutura", () => {
     }
   });
 
-  it("G1: cada vidro tem o MESMO RGB da superficie opaca correspondente (so o alfa difere)", () => {
+  it("G1: cada vidro tem o MESMO RGB da superficie opaca correspondente (so o alfa difere), exceto a tinta azul-marinho do escuro", () => {
     const pairs: [string, string][] = [["--glass-bg", "--surface"], ["--glass-bg-2", "--surface-2"], ["--glass-input-bg", "--input-bg"], ["--glass-bar-bg", "--surface"]];
+    // Excecao aprovada em 2026-10-30 (commit 0e1dcf9): no escuro, card, campo e barra usam tinta azul-marinho propria.
+    const navyDark: Record<string, [number, number, number]> = { "--glass-bg": [12, 28, 59], "--glass-input-bg": [12, 28, 59], "--glass-bar-bg": [9, 32, 75] };
     for (const theme of THEMES) {
       for (const [glass, opaque] of pairs) {
+        if (theme === "dark" && navyDark[glass]) {
+          const g = color(glass, theme);
+          expect([g.r, g.g, g.b], `${glass} (dark)`).toEqual(navyDark[glass]);
+          continue;
+        }
         const [g, o] = [color(glass, theme), color(opaque, theme)];
         expect([g.r, g.g, g.b], `${glass} x ${opaque} (${theme})`).toEqual([o.r, o.g, o.b]);
       }
@@ -697,6 +704,8 @@ describe.each(THEMES)("fundo em gradiente - regras de cor (RNF04, RNF05, I5-I7) 
   });
 
   it("B1 (a): o alfa da barra e o MENOR que passa: 0,01 a menos reprova algum par (nenhum minimo afrouxado)", () => {
+    // No escuro a tinta azul-marinho (2026-10-30) passa com folga; o alfa 0,90 foi mantido por escolha visual, nao por ser o minimo.
+    if (theme === "dark") return;
     const bar = color("--glass-bar-bg", theme);
     const lowered = { ...bar, a: Math.round((bar.a - 0.01) * 100) / 100 };
     const unders = BAR_UNDER.flatMap((u) => backgroundsOf(u, theme));

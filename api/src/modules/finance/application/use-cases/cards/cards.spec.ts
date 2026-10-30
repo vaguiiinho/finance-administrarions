@@ -1,5 +1,5 @@
 import { buildHarness } from '@test/support/finance-harness.js';
-import { NOW, cardUuid, newCard, rejected, rawEntry } from '@test/support/builders.js';
+import { NOW, cardUuid, newCard, rejected, rawEntry, ownedUseCase } from '@test/support/builders.js';
 import { ListCards } from './list-cards.js';
 import { InMemoryCardReadModel } from '@test/fakes/in-memory-read-models.js';
 
@@ -134,7 +134,7 @@ describe('ListCards', () => {
     const h = buildHarness();
     h.cards.seed(newCard(1, { name: 'Nubank' }));
     h.cards.seed(newCard(2, { name: 'Itau' }));
-    const result = await new ListCards(new InMemoryCardReadModel(h.cards)).execute({});
+    const result = await ownedUseCase(ListCards, new InMemoryCardReadModel(h.cards)).execute({});
     expect(result.items.map((c: { name: string }) => c.name)).toEqual(['Itau', 'Nubank']);
     expect(result.items[0]).toMatchObject({ closingDay: 25, dueDay: 5 });
   });

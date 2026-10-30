@@ -1,16 +1,15 @@
 import { Controller, Get, Inject, Query } from '@nestjs/common';
+import { CurrentOwnerId } from '@shared/presentation/auth/current-principal.decorators.js';
 import { ZodValidationPipe } from '@shared/presentation/pipes/zod-validation.pipe.js';
-import { GetMonthlySummary } from '../../application/use-cases/summary/get-monthly-summary.js';
-import { presentTotals } from './presenters/totals.presenter.js';
+import { FinanceReadHandlers } from './finance-read-handlers.js';
 import { monthQuerySchema, type MonthQuery } from './schemas/query.schemas.js';
 
 @Controller('summary')
 export class SummaryController {
-  constructor(@Inject(GetMonthlySummary) private readonly getMonthlySummary: GetMonthlySummary) {}
+  constructor(@Inject(FinanceReadHandlers) private readonly reads: FinanceReadHandlers) {}
 
   @Get()
-  async summary(@Query(new ZodValidationPipe(monthQuerySchema)) query: MonthQuery) {
-    const result = await this.getMonthlySummary.execute(query);
-    return { month: result.month.toString(), totals: presentTotals(result.totals) };
+  summary(@CurrentOwnerId() ownerId: string, @Query(new ZodValidationPipe(monthQuerySchema)) query: MonthQuery) {
+    return this.reads.summary(ownerId, query);
   }
 }

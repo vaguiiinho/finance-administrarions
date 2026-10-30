@@ -1,6 +1,7 @@
 import type { CardReadModel, CardView } from '@finance/application/ports/card-read-model.js';
 import type { EntryReadModel } from '@finance/application/ports/entry-read-model.js';
 import type { EntryView } from '@finance/application/ports/views.js';
+import type { OwnerId } from '@finance/domain/owner/owner-id.js';
 import type { InMemoryCardRepository, InMemoryEntryRepository } from './in-memory-repositories.js';
 
 /** Read model de lancamento so com `findById` (usado por MarkEntryAsPaid); o resto falha alto. */
@@ -10,9 +11,9 @@ export class InMemoryEntryReadModel implements EntryReadModel {
     private readonly cards: InMemoryCardRepository,
   ) {}
 
-  async findById(id: { value: string }): Promise<EntryView | null> {
+  async findById(ownerId: OwnerId, id: { value: string }): Promise<EntryView | null> {
     const entry = this.entries.get(id);
-    if (!entry) return null;
+    if (!entry || !entry.ownerId.equals(ownerId)) return null;
     const s = entry.toSnapshot();
     const card = s.cardId ? this.cards.store.get(s.cardId.value) : undefined;
     return {
@@ -55,10 +56,13 @@ export class InMemoryCardReadModel implements CardReadModel {
       updatedAt: s.updatedAt,
     };
   }
-  async listAll(): Promise<CardView[]> {
-    return [...this.cards.store.keys()].map((id) => this.view(id)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  async listAll(ownerId: OwnerId): Promise<CardView[]> {
+    return [...this.cards.store.entries()]
+      .filter(([, card]) => card.ownerId.equals(ownerId))
+      .map(([id]) => this.view(id)).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }
-  async findById(id: { value: string }): Promise<CardView | null> {
-    return this.cards.store.has(id.value) ? this.view(id.value) : null;
+  async findById(ownerId: OwnerId, id: { value: string }): Promise<CardView | null> {
+    const card = this.cards.store.get(id.value);
+    return card && card.ownerId.equals(ownerId) ? this.view(id.value) : null;
   }
 }

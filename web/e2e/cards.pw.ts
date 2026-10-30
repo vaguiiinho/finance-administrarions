@@ -1,5 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./auth-support";
+import { signInAsAna } from "./legacy-auth";
 import { ENTRIES_URL, setScenario, gotoReady } from "./support";
+
+// ADR 0005 D10: o stub nao aceita requisicao sem Bearer; as telas protegidas pedem sessao (usuaria comum "ana").
+test.beforeEach(async ({ page }) => {
+  await signInAsAna(page);
+});
 
 /**
  * CAF11 / RF25 / CA05 (ADR 0002 T5): edicao de cartao de ponta a ponta contra o stub com `PUT /api/cards/:id`

@@ -136,6 +136,33 @@ export interface ActionError {
   fields?: FieldIssue[];
   missingIds?: string[];
   incomeIds?: string[];
+  /** 429: segundos ate poder tentar de novo (ADR 0005 6.2). */
+  retryAfterSeconds?: number;
+  /** 401 (SESSION_EXPIRED) e 403 PASSWORD_CHANGE_REQUIRED: para onde o cliente deve navegar (ADR 0005 9.5). */
+  redirectUrl?: string;
 }
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: ActionError };
+
+/** Identidade e acesso (ADR 0005 6.2). */
+export type Role = "ADMIN" | "USER";
+export interface CurrentUserDto {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  mustChangePassword: boolean;
+}
+export interface AuthResponse {
+  user: CurrentUserDto;
+  session: { token: string; expiresAt: string };
+}
+export interface AdminUserDto {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  status: "ACTIVE" | "INACTIVE";
+  mustChangePassword: boolean;
+  createdAt: string;
+}

@@ -10,6 +10,7 @@ import type { EntryRepository } from '../../../domain/entry/entry.repository.js'
 import { NewEntryInput, type RawEntryInput } from '../../../domain/entry/new-entry-input.js';
 import { EntryId } from '../../../domain/entry/value-objects/entry-id.js';
 import { CardNotFoundError } from '../../errors/application-errors.js';
+import { requireOwnerId } from '../../queries/owner.js';
 import { toEntryView } from '../../mappers/view.mapper.js';
 import type { EntryView } from '../../ports/views.js';
 
@@ -24,22 +25,24 @@ export class CreateEntry {
   ) {}
 
   /** Precedência: 400 (NewEntryInput) > 404 (cartão). */
-  async execute(raw: RawEntryInput): Promise<EntryView> {
-    let input = NewEntryInput.parse(raw);
+  async execute(raw: RawEntryInput & { ownerId: string }): Promise<EntryView> {
+    const { ownerId: rawOwnerId, ...fields } = raw;
+    const ownerId = requireOwnerId(rawOwnerId);
+    let input = NewEntryInput.parse(fields);
 
     let card: Card | null = null;
     if (input.paymentMethod === 'CARD' && input.cardId) {
-      card = await this.cards.findById(input.cardId);
+      card = await this.cards.findById(ownerId, input.cardId);
       if (!card) throw new CardNotFoundError(input.cardId.value);
     }
 
-    const canonical = await this.catalog.findByKey(input.category.key);
+    const canonical = await this.catalog.findByKey(ownerId, input.category.key);
     if (canonical) input = input.withCanonicalCategory(canonical);
 
     const id = EntryId.create(this.ids.next());
     if (!id.ok) throw new InvariantViolationError('IdGenerator devolveu um UUID inválido.');
 
-    const entry = Entry.create({ id: id.value, input, card: card?.billingInfo() ?? null, now: this.clock.now() });
+    const entry = Entry.create({ id: id.value, ownerId, input, card: card?.billingInfo() ?? null, now: this.clock.now() });
     await this.entries.insert(entry);
     await this.publisher.publish(entry.pullEvents());
 

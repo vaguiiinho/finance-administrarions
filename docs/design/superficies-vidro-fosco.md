@@ -40,14 +40,16 @@ Todos em `web/app/styles/tokens.css`, uma declaração cada. Tokens de cor com `
 
 | Token | Claro | Escuro | Tinta (G1) | Uso |
 |---|---|---|---|---|
-| `--glass-bg` | `rgb(255 255 255 / 0.70)` | `rgb(28 35 48 / 0.70)` | `--surface` | Cards, itens de lista, contêiner da tabela, bloco de fatura, alertas, toolbar de seleção |
+| `--glass-bg` | `rgb(255 255 255 / 0.70)` | `rgba(12, 28, 59, 0.7)` ¹ | `--surface` (claro) | Cards, itens de lista, contêiner da tabela, bloco de fatura, alertas, toolbar de seleção |
 | `--glass-bg-2` | `rgb(244 246 249 / 0.70)` | `rgb(37 45 60 / 0.70)` | `--surface-2` | Hover, linha e item selecionados, `.row-highlight`, subtotal da aba |
-| `--glass-input-bg` | `rgb(255 255 255 / 0.70)` | `rgb(21 27 38 / 0.70)` | `--input-bg` | `.field` sobre a página (filtros) |
-| `--glass-bar-bg` | `rgb(255 255 255 / 0.91)` | `rgb(28 35 48 / 0.90)` | `--surface` | Navbar, `thead` sticky, barra de lote mobile, coluna sticky da tabela do gráfico |
+| `--glass-input-bg` | `rgb(255 255 255 / 0.70)` | `rgba(12, 28, 59, 0.7)` ¹ | `--input-bg` (claro) | `.field` sobre a página (filtros) |
+| `--glass-bar-bg` | `rgb(255 255 255 / 0.91)` | `rgba(9, 32, 75, 0.9)` ¹ | `--surface` (claro) | Navbar, `thead` sticky, barra de lote mobile, coluna sticky da tabela do gráfico |
 | `--glass-border` | `rgb(255 255 255 / 0.80)` | `rgb(255 255 255 / 0.10)` | branco | Borda de 1px de todo vidro e highlight do topo (decorativa, PA5/G4) |
 | `--glass-blur` | `12px` | idem | - | Raio único do desfoque (G5) |
 | `--chart-separator` | `#F9FAFE` | `#1B222E` | `--glass-bg` sobre `--bg` | Contorno entre barras, fatias e pontos dos gráficos (G6) |
 | `--glass-shadow` | `0 1px 2px var(--shadow-color), 0 8px 24px -12px var(--shadow-color), inset 0 1px 0 var(--glass-border)` | idem | - | Sombra das superfícies de vidro (§3). Composto, fora de `light-dark()`, como `--shadow-card` |
+
+¹ **Alteração aprovada em 2026-10-30 (commit `0e1dcf9`):** no tema escuro, card, campo e barra usam tinta azul-marinho própria e deixam de seguir o G1 (mesma tinta da superfície opaca). Todos os pares continuam acima dos mínimos WCAG; os `expected` de `--glass-input-bg` no escuro foram recalculados (`--text` 12,89, `--text-muted` 6,44, `--border-strong` 4,24, `--focus-color` 8,17, `--danger`/`--danger-text` 5,78). O alfa 0,90 da barra no escuro é escolha visual e não mais o mínimo que passa (B1 a vale só no claro). Consequência aceita: no fallback opaco (sem `backdrop-filter`) o tom escuro muda de azul-marinho para o cinza de `--surface`.
 
 Notas:
 - `--chart-separator` foi calculado compondo o vidro sobre a cor base: claro `0,7 x 255 + 0,3 x (236, 238, 252)` = `(249,3; 249,9; 254,1)` = `#F9FAFE`. Escuro `0,7 x (28, 35, 48) + 0,3 x (24, 30, 42)` = `(26,8; 33,5; 46,2)` = `#1B222E`.

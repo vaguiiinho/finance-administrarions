@@ -1,10 +1,11 @@
-import { startE2eApp, type E2eApp } from '../support/e2e-app.js';
-import { cardEntry, cardUuid, entryUuid, insertCard, insertEntry } from '../support/db.js';
+import { type E2eApp } from '../support/e2e-app.js';
+import { startFinanceE2e } from '../support/finance-e2e.js';
+import { cardEntry, cardUuid, entryUuid, insertCard, insertEntry } from '../support/default-owner-db.js';
 import { CATEGORY_READ_MODEL } from '@finance/application/ports/category-read-model.js';
 
 let e: E2eApp;
 beforeAll(async () => {
-  e = await startE2eApp();
+  e = await startFinanceE2e();
 });
 afterAll(() => e.close());
 beforeEach(() => e.reset());
@@ -442,7 +443,7 @@ describe('erros gerais', () => {
 
 describe('erro inesperado', () => {
   it('500 INTERNAL_ERROR sem vazar detalhes nem stack', async () => {
-    const broken = await startE2eApp(undefined, [
+    const broken = await startFinanceE2e(undefined, [
       { token: CATEGORY_READ_MODEL, value: { listDistinct: async () => { throw new Error('senha-do-banco: s3cr3t'); } } },
     ]);
     try {

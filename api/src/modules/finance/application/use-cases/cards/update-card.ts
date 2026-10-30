@@ -7,6 +7,7 @@ import { CardNameTakenError, CardValidationError } from '../../../domain/card/er
 import { CardNotFoundError, InvalidQueryError } from '../../errors/application-errors.js';
 import { toCardView } from '../../mappers/view.mapper.js';
 import type { CardView } from '../../ports/card-read-model.js';
+import { requireOwnerId } from '../../queries/owner.js';
 import { parseCardId } from '../../queries/query-params.js';
 
 export class UpdateCard {
@@ -17,7 +18,8 @@ export class UpdateCard {
   ) {}
 
   /** Precedência: 400 (id e props) > 404 > 409. */
-  async execute(input: CardProps & { id: string }): Promise<CardView> {
+  async execute(input: CardProps & { ownerId: string; id: string }): Promise<CardView> {
+    const ownerId = requireOwnerId(input.ownerId);
     const violations: FieldViolation[] = [];
     const id = parseCardId(input.id, 'id', violations);
     let parsed: ReturnType<typeof parseCardProps> | null = null;
@@ -29,13 +31,13 @@ export class UpdateCard {
     }
     if (violations.length > 0 || !id || !parsed) throw new InvalidQueryError(violations);
 
-    const card = await this.cards.findById(id);
+    const card = await this.cards.findById(ownerId, id);
     if (!card) throw new CardNotFoundError(id.value);
 
-    const sameName = await this.cards.findByNameKey(parsed.name.key);
+    const sameName = await this.cards.findByNameKey(ownerId, parsed.name.key);
     if (sameName && !sameName.id.equals(card.id)) throw new CardNameTakenError();
 
-    if (card.update(input, this.clock.now())) {
+    if (card.update({ name: input.name, closingDay: input.closingDay, dueDay: input.dueDay }, this.clock.now())) {
       await this.cards.update(card);
       await this.publisher.publish(card.pullEvents());
     }

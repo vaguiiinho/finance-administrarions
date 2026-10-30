@@ -9,6 +9,7 @@ export interface CardData {
 export class CardCreated implements DomainEvent {
   constructor(
     readonly cardId: string,
+    readonly ownerId: string,
     readonly name: string,
     readonly closingDay: number,
     readonly dueDay: number,

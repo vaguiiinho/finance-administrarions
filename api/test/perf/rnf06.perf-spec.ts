@@ -4,7 +4,8 @@ import { resolve } from 'node:path';
 import { execSync } from 'node:child_process';
 import type { AddressInfo } from 'node:net';
 import pg from 'pg';
-import { startE2eApp, type E2eApp } from '@test/support/e2e-app.js';
+import { DEFAULT_OWNER_ID } from '@test/support/default-owner-db.js';
+import { startFinanceE2e } from '@test/support/finance-e2e.js';
 import { percentile } from './p95.js';
 import { seedVolume, type VolumeSeed } from './seed-volume.js';
 
@@ -36,7 +37,8 @@ interface Result {
   plans: PlanSummary[];
 }
 
-let ctx: E2eApp;
+let ctx: Awaited<ReturnType<typeof startFinanceE2e>>;
+const auth = () => ({ Authorization: `Bearer ${ctx.token()}` });
 let base: string;
 let seed: VolumeSeed;
 let lastExpensePage = 1;
@@ -44,12 +46,12 @@ const results: Result[] = [];
 
 beforeAll(async () => {
   installCapture();
-  ctx = await startE2eApp();
+  ctx = await startFinanceE2e();
   await ctx.reset();
-  seed = await seedVolume(ctx.pool);
+  seed = await seedVolume(ctx.pool, DEFAULT_OWNER_ID);
   await ctx.app.listen(0);
   base = `http://127.0.0.1:${(ctx.app.getHttpServer().address() as AddressInfo).port}`;
-  const first = await fetch(`${base}/api/entries/expenses?month=${seed.months[seed.months.length - 2]}&page=1&pageSize=20`);
+  const first = await fetch(`${base}/api/entries/expenses?month=${seed.months[seed.months.length - 2]}&page=1&pageSize=20`, { headers: auth() });
   lastExpensePage = ((await first.json()) as { pagination: { totalPages: number } }).pagination.totalPages;
 });
 
@@ -76,7 +78,7 @@ afterAll(async () => {
 
 async function timed(method: string, url: string): Promise<number> {
   const start = performance.now();
-  const res = await fetch(url, { method });
+  const res = await fetch(url, { method, headers: auth() });
   await res.arrayBuffer();
   const elapsed = performance.now() - start;
   expect(res.status, `${method} ${url}`).toBe(200);

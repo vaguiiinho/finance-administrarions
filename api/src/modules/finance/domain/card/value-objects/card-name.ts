@@ -1,5 +1,5 @@
 import { err, ok, type Result } from '@shared/domain/result.js';
-import { codePointLength, labelKey, normalizeLabel } from '../../text.js';
+import { codePointLength, labelKey, normalizeLabel } from '@shared/domain/text.js';
 
 export type CardNameViolation = 'REQUIRED' | 'TOO_LONG';
 

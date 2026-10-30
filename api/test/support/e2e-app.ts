@@ -30,6 +30,8 @@ export async function startE2eApp(
   overrides: { token: unknown; value: unknown }[] = [],
 ): Promise<E2eApp> {
   process.env.DATABASE_URL = inject('databaseUrl');
+  // RNF03: a API nao sobe sem o segredo do HMAC de sessao (ADR 0005 6.7).
+  process.env.SESSION_TOKEN_SECRET ??= 'e2e-session-secret-e2e-session-secret-0123456789';
   const clock = new FixedClock(now);
   let builder = Test.createTestingModule({ imports: [AppModule] }).overrideProvider(CLOCK).useValue(clock);
   for (const o of overrides) builder = builder.overrideProvider(o.token as never).useValue(o.value);

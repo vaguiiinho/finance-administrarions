@@ -1,4 +1,11 @@
-export type ErrorKind = 'validation' | 'not_found' | 'conflict' | 'business_rule';
+export type ErrorKind =
+  | 'validation'
+  | 'not_found'
+  | 'conflict'
+  | 'business_rule'
+  | 'unauthenticated'
+  | 'forbidden'
+  | 'rate_limited';
 
 export interface FieldViolation {
   field: string;

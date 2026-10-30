@@ -1,8 +1,8 @@
 import type pg from 'pg';
 import fc from 'fast-check';
 import { buildInfra, type Infra } from '@test/support/infra.js';
-import { cardEntry, cardUuid, createPool, entryUuid, insertCard, insertEntry, query, resetDb, type EntryRow } from '@test/support/db.js';
-import { cardId } from '@test/support/builders.js';
+import { cardEntry, cardUuid, createPool, entryUuid, insertCard, insertEntry, query, resetDb, type EntryRow } from '@test/support/default-owner-db.js';
+import { DEFAULT_OWNER, cardId } from '@test/support/builders.js';
 import { unwrap } from '@test/support/result.js';
 import { ReferenceMonth } from '@finance/domain/billing/reference-month.js';
 import { InvoiceKey } from '@finance/domain/billing/invoice-key.js';
@@ -26,9 +26,9 @@ const rm = (v: string) => unwrap<ReferenceMonth>(ReferenceMonth.parse(v));
 const paging = (page = 1, pageSize = 20) => ({ page, pageSize });
 const any = { kind: 'any' } as const;
 const expenses = (month: string, extra: Record<string, unknown> = {}) =>
-  infra.readModels.entries.listExpenses({ month: rm(month), card: any, paging: paging(), ...extra } as never);
+  infra.readModels.entries.listExpenses(DEFAULT_OWNER, { month: rm(month), card: any, paging: paging(), ...extra } as never);
 const incomes = (month: string, extra: Record<string, unknown> = {}) =>
-  infra.readModels.entries.listIncomes({ month: rm(month), paging: paging(), ...extra } as never);
+  infra.readModels.entries.listIncomes(DEFAULT_OWNER, { month: rm(month), paging: paging(), ...extra } as never);
 const idsOf = (page: { items: { id: string }[] }) => page.items.map((i) => i.id);
 const pending = (n: number, o: Partial<EntryRow> = {}): EntryRow => ({ n, status: 'PENDING', paidAt: null, ...o });
 const NOV = { date: '2026-10-10', closing: '2026-10-25', due: '2026-11-05' };
@@ -156,8 +156,8 @@ describe('EntryReadModel.listExpenses (E2)', () => {
 
   it('findById: view ou null', async () => {
     await insertEntry(pool, { n: 1 });
-    expect((await infra.readModels.entries.findById({ value: entryUuid(1) } as never))?.id).toBe(entryUuid(1));
-    expect(await infra.readModels.entries.findById({ value: entryUuid(9) } as never)).toBeNull();
+    expect((await infra.readModels.entries.findById(DEFAULT_OWNER, { value: entryUuid(1) } as never))?.id).toBe(entryUuid(1));
+    expect(await infra.readModels.entries.findById(DEFAULT_OWNER, { value: entryUuid(9) } as never)).toBeNull();
   });
 });
 
@@ -192,7 +192,7 @@ describe('EntryReadModel.listIncomes (E3)', () => {
 
 describe('MonthlySummaryReadModel (S1)', () => {
   const summary = async (m: string) => {
-    const row = await infra.readModels.summary.summary(rm(m));
+    const row = await infra.readModels.summary.summary(DEFAULT_OWNER, rm(m));
     return FinancialTotals.of({ income: row.income, expenses: ExpenseTotals.of({ paid: row.paidExpenses, pending: row.pendingExpenses }) });
   };
 
@@ -246,7 +246,7 @@ describe('MonthlySummaryReadModel (S1)', () => {
   });
 
   it('CA65/CA58: mes sem lancamentos -> "0.00" (nunca nulo)', async () => {
-    const row = await infra.readModels.summary.summary(rm('2030-01'));
+    const row = await infra.readModels.summary.summary(DEFAULT_OWNER, rm('2030-01'));
     expect([row.income, row.paidExpenses, row.pendingExpenses].map(String)).toEqual(['0.00', '0.00', '0.00']);
   });
 
@@ -286,7 +286,7 @@ describe('MonthlySummaryReadModel (S1)', () => {
 });
 
 describe('InvoiceReadModel (I1, I2)', () => {
-  const list = (m: string) => infra.readModels.invoices.listByMonth(rm(m));
+  const list = (m: string) => infra.readModels.invoices.listByMonth(DEFAULT_OWNER, rm(m));
   const key = (cardN: number, m: string) => ({ cardId: cardId(cardN), referenceMonth: rm(m) }) as unknown as InvoiceKey;
 
   it('CA43: faturas A e B de 2026-11 com datas, contagens, totais e ordem por vencimento', async () => {
@@ -378,7 +378,7 @@ describe('InvoiceReadModel (I1, I2)', () => {
     }
     await insertEntry(pool, cardEntry(100, 1, { date: '2026-11-10', closing: '2026-11-25', due: '2026-12-05' })); // outro mes
     await insertEntry(pool, cardEntry(101, 2, { ...NOV })); // outro cartao
-    const items = await infra.readModels.invoices.listEntries(key(1, '2026-11'));
+    const items = await infra.readModels.invoices.listEntries(DEFAULT_OWNER, key(1, '2026-11'));
     expect(items).toHaveLength(25);
     const expected = await query<{ id: string }>(
       pool,
@@ -386,7 +386,7 @@ describe('InvoiceReadModel (I1, I2)', () => {
       [cardUuid(1)],
     );
     expect(items.map((i) => i.id)).toEqual(expected.map((r) => r.id));
-    expect(await infra.readModels.invoices.listEntries(key(1, '2027-05'))).toEqual([]);
+    expect(await infra.readModels.invoices.listEntries(DEFAULT_OWNER, key(1, '2027-05'))).toEqual([]);
   });
 });
 
@@ -397,23 +397,23 @@ describe('CategoryReadModel (E6) e CategoryCatalog', () => {
     await insertEntry(pool, { n: 3, type: 'INCOME', category: 'Salário', createdAt: '2026-10-05T12:00:00.000Z' });
     await insertEntry(pool, { n: 4, type: 'INCOME', category: 'ALIMENTAÇÃO', createdAt: '2026-10-05T13:00:00.000Z' });
     await insertEntry(pool, { n: 5, category: 'Moradia', createdAt: '2026-10-05T14:00:00.000Z' });
-    expect(await infra.readModels.categories.listDistinct()).toEqual(['Alimentação', 'Moradia', 'Salário']);
+    expect(await infra.readModels.categories.listDistinct(DEFAULT_OWNER)).toEqual(['Alimentação', 'Moradia', 'Salário']);
   });
 
   it('listDistinct vazio', async () => {
-    expect(await infra.readModels.categories.listDistinct()).toEqual([]);
+    expect(await infra.readModels.categories.listDistinct(DEFAULT_OWNER)).toEqual([]);
   });
 
   it('CA20: catalog.findByKey devolve a grafia do primeiro uso (entre tipos) ou null', async () => {
     await insertEntry(pool, { n: 1, type: 'INCOME', category: 'Salário', createdAt: '2026-10-05T10:00:00.000Z' });
     await insertEntry(pool, { n: 2, category: 'SALÁRIO', createdAt: '2026-10-05T11:00:00.000Z' });
-    expect((await infra.catalog.findByKey('salário'))?.value).toBe('Salário');
-    expect(await infra.catalog.findByKey('inexistente')).toBeNull();
+    expect((await infra.catalog.findByKey(DEFAULT_OWNER, 'salário'))?.value).toBe('Salário');
+    expect(await infra.catalog.findByKey(DEFAULT_OWNER, 'inexistente')).toBeNull();
   });
 });
 
 describe('DashboardReadModel (D2, D3)', () => {
-  const series = (from: string, to: string) => infra.readModels.dashboard.monthlySeries(rm(from), rm(to));
+  const series = (from: string, to: string) => infra.readModels.dashboard.monthlySeries(DEFAULT_OWNER, rm(from), rm(to));
 
   it('CA62: 12 pontos (2025-11..2026-10) com zeros nos meses sem dados e virada de ano', async () => {
     await insertEntry(pool, { n: 1, type: 'INCOME', date: '2026-03-10', amount: '100.00' });
@@ -443,7 +443,7 @@ describe('DashboardReadModel (D2, D3)', () => {
     await insertEntry(pool, { n: 2, amount: '800.00' });
     await insertEntry(pool, pending(3, { amount: '200.00' }));
     const [point] = await series('2026-10', '2026-10');
-    const summary = await infra.readModels.summary.summary(rm('2026-10'));
+    const summary = await infra.readModels.summary.summary(DEFAULT_OWNER, rm('2026-10'));
     expect(point.totals.income.toString()).toBe(summary.income.toString());
     expect(point.totals.paidExpenses.toString()).toBe(summary.paidExpenses.toString());
     expect(point.totals.pendingExpenses.toString()).toBe(summary.pendingExpenses.toString());
@@ -453,7 +453,7 @@ describe('DashboardReadModel (D2, D3)', () => {
     await insertEntry(pool, { n: 1, category: 'Alimentação', amount: '500.00' });
     await insertEntry(pool, pending(2, { category: 'Moradia', amount: '1500.00' }));
     await insertEntry(pool, { n: 3, type: 'INCOME', category: 'Salário', amount: '5000.00' });
-    const dist = await infra.readModels.dashboard.expenseDistribution(rm('2026-10'));
+    const dist = await infra.readModels.dashboard.expenseDistribution(DEFAULT_OWNER, rm('2026-10'));
     expect(dist.map((d) => [d.category, d.total.toString(), d.percentage])).toEqual([
       ['Moradia', '1500.00', '75.00'],
       ['Alimentação', '500.00', '25.00'],
@@ -463,7 +463,7 @@ describe('DashboardReadModel (D2, D3)', () => {
   it('agrupa categorias pela chave (case-insensitive) e usa a grafia do primeiro uso', async () => {
     await insertEntry(pool, { n: 1, category: 'Moradia', amount: '10.00', createdAt: '2026-10-05T10:00:00.000Z' });
     await insertEntry(pool, { n: 2, category: 'MORADIA', amount: '20.00', createdAt: '2026-10-05T11:00:00.000Z' });
-    const dist = await infra.readModels.dashboard.expenseDistribution(rm('2026-10'));
+    const dist = await infra.readModels.dashboard.expenseDistribution(DEFAULT_OWNER, rm('2026-10'));
     expect(dist).toHaveLength(1);
     expect(dist[0].category).toBe('Moradia');
     expect(dist[0].total.toString()).toBe('30.00');
@@ -472,12 +472,12 @@ describe('DashboardReadModel (D2, D3)', () => {
 
   it('percentuais com arredondamento a 2 casas (33.33)', async () => {
     for (const [n, c] of [[1, 'A'], [2, 'B'], [3, 'C']] as const) await insertEntry(pool, { n, category: c, amount: '10.00' });
-    const dist = await infra.readModels.dashboard.expenseDistribution(rm('2026-10'));
+    const dist = await infra.readModels.dashboard.expenseDistribution(DEFAULT_OWNER, rm('2026-10'));
     expect(dist.map((d) => d.percentage)).toEqual(['33.33', '33.33', '33.33']);
   });
 
   it('CA65: mes sem despesas -> lista vazia (sem divisao por zero)', async () => {
     await insertEntry(pool, { n: 1, type: 'INCOME', amount: '10.00' });
-    expect(await infra.readModels.dashboard.expenseDistribution(rm('2026-10'))).toEqual([]);
+    expect(await infra.readModels.dashboard.expenseDistribution(DEFAULT_OWNER, rm('2026-10'))).toEqual([]);
   });
 });

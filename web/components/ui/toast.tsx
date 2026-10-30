@@ -24,6 +24,11 @@ export function useToast() {
   return ctx;
 }
 
+/** Como `useToast`, mas devolve `null` fora do provider (componentes que tambem rodam em shells sem toasts). */
+export function useOptionalToast() {
+  return useContext(ToastContext);
+}
+
 const BORDER: Record<ToastKind, string> = {
   success: "border-l-success",
   error: "border-l-danger",
@@ -104,7 +109,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         className="pointer-events-none fixed inset-x-4 top-[calc(var(--navbar-h)+var(--tabsbar-h)+8px)] z-50 flex flex-col gap-2 md:inset-x-auto md:bottom-4 md:right-4 md:top-auto md:w-[380px]"
       >
         {/* Regioes vivas sempre montadas (anuncio confiavel): sucesso/info = status; erro = alert */}
-        <div role="status" className="flex flex-col gap-2">
+        {/* `aria-live` fixo (regiao viva sempre montada); o `role="status"` so existe com toast, para nao se confundir com outros avisos `status` da tela */}
+        <div role={toasts.some((t) => t.kind !== "error") ? "status" : undefined} aria-live="polite" className="flex flex-col gap-2">
           {toasts.filter((t) => t.kind !== "error").map((toast) => (
             <ToastView key={toast.id} toast={toast} onDismiss={dismiss} />
           ))}

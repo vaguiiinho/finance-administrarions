@@ -10,9 +10,9 @@ import {
   insertEntry,
   query,
   resetDb,
-} from '@test/support/db.js';
+} from '@test/support/default-owner-db.js';
 import { FixedClock } from '@test/fakes/simple-fakes.js';
-import { cardExpense, cardId, entryId, newCard, pixExpense, income, rawEntry, rejected } from '@test/support/builders.js';
+import { DEFAULT_OWNER, cardExpense, cardId, entryId, newCard, pixExpense, income, rawEntry, rejected } from '@test/support/builders.js';
 import type { FinanceUnitOfWork } from '@finance/application/ports/finance-unit-of-work.js';
 import { unwrap } from '@test/support/result.js';
 import { ReferenceMonth } from '@finance/domain/billing/reference-month.js';
@@ -64,14 +64,14 @@ describe('PrismaEntryRepository - round trip (CA23: sem deslocamento em America/
       category_key: 'alimentação',
     });
 
-    const [loaded] = await infra.uow.run((scope) => scope.entries.findByIdsForUpdate([entryId(1)]));
+    const [loaded] = await infra.uow.run((scope) => scope.entries.findByIdsForUpdate(DEFAULT_OWNER, [entryId(1)]));
     expect(loaded.toSnapshot()).toEqual(entry.toSnapshot());
   });
 
   it('despesa PIX paga: paidAt = createdAt, sem datas de fatura; receita sem paidAt', async () => {
     await infra.entries.insert(pixExpense(1, { date: '2026-03-01' }));
     await infra.entries.insert(income(2, { date: '2026-12-31' }));
-    const loaded = await infra.uow.run((scope) => scope.entries.findByIdsForUpdate([entryId(1), entryId(2)]));
+    const loaded = await infra.uow.run((scope) => scope.entries.findByIdsForUpdate(DEFAULT_OWNER, [entryId(1), entryId(2)]));
     expect(loaded.map((e) => e.toSnapshot())).toEqual([pixExpense(1, { date: '2026-03-01' }).toSnapshot(), income(2, { date: '2026-12-31' }).toSnapshot()]);
     const rows = await query<Record<string, string | null>>(pool, `SELECT "date"::text AS d, reference_month::text AS r, closing_date FROM entries ORDER BY id`);
     expect(rows[0]).toMatchObject({ d: '2026-03-01', r: '2026-03-01', closing_date: null });
@@ -81,7 +81,7 @@ describe('PrismaEntryRepository - round trip (CA23: sem deslocamento em America/
   it('findByIdsForUpdate: ids inexistentes nao aparecem; ordem por id asc', async () => {
     await infra.entries.insert(pixExpense(3));
     await infra.entries.insert(pixExpense(1));
-    const found = await infra.uow.run((scope) => scope.entries.findByIdsForUpdate([entryId(3), entryId(9), entryId(1)]));
+    const found = await infra.uow.run((scope) => scope.entries.findByIdsForUpdate(DEFAULT_OWNER, [entryId(3), entryId(9), entryId(1)]));
     expect(found.map((e) => e.id.value)).toEqual([entryUuid(1), entryUuid(3)]);
   });
 
@@ -89,7 +89,7 @@ describe('PrismaEntryRepository - round trip (CA23: sem deslocamento em America/
     await infra.entries.insert(pixExpense(1, { paid: false }));
     const later = new Date('2026-10-06T09:30:00.000Z');
     await infra.uow.run(async (scope) => {
-      const [e] = await scope.entries.findByIdsForUpdate([entryId(1)]);
+      const [e] = await scope.entries.findByIdsForUpdate(DEFAULT_OWNER, [entryId(1)]);
       e.markAsPaid(later);
       await scope.entries.saveAll([e]);
     });
@@ -224,7 +224,7 @@ describe('findPendingByInvoiceForUpdate (CA38, CA39)', () => {
   const key = (cardN: number, month: string) =>
     ({ cardId: cardId(cardN), referenceMonth: unwrap<ReferenceMonth>(ReferenceMonth.parse(month)) }) as unknown as InvoiceKey;
   const pendingIds = (cardN: number, month: string) =>
-    infra.uow.run(async (scope) => (await scope.entries.findPendingByInvoiceForUpdate(key(cardN, month))).map((e) => e.id.value));
+    infra.uow.run(async (scope) => (await scope.entries.findPendingByInvoiceForUpdate(DEFAULT_OWNER, key(cardN, month))).map((e) => e.id.value));
 
   beforeEach(async () => {
     await insertCard(pool, { n: 1 });

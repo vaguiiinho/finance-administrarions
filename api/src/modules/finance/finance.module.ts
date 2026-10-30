@@ -1,4 +1,5 @@
 import { Module, type Provider } from '@nestjs/common';
+import { BUSINESS_CALENDAR, type BusinessCalendar } from '@shared/application/ports/business-calendar.js';
 import { CLOCK, type Clock } from '@shared/application/ports/clock.js';
 import { DOMAIN_EVENT_PUBLISHER, type DomainEventPublisher } from '@shared/application/ports/domain-event-publisher.js';
 import { ID_GENERATOR, type IdGenerator } from '@shared/application/ports/id-generator.js';
@@ -12,6 +13,8 @@ import {
   MONTHLY_SUMMARY_READ_MODEL,
   type MonthlySummaryReadModel,
 } from './application/ports/monthly-summary-read-model.js';
+import { DEMO_DATASET_STORE, type DemoDatasetStore } from './application/demo/demo-dataset-store.js';
+import { RefreshDemoDataset } from './application/demo/refresh-demo-dataset.js';
 import { CreateCard } from './application/use-cases/cards/create-card.js';
 import { ListCards } from './application/use-cases/cards/list-cards.js';
 import { UpdateCard } from './application/use-cases/cards/update-card.js';
@@ -37,12 +40,20 @@ import { CategoriesController } from './presentation/http/categories.controller.
 import { DashboardController } from './presentation/http/dashboard.controller.js';
 import { EntriesController } from './presentation/http/entries.controller.js';
 import { InvoicesController } from './presentation/http/invoices.controller.js';
+import { DemoController } from './presentation/http/demo.controller.js';
+import { FinanceReadHandlers } from './presentation/http/finance-read-handlers.js';
 import { SummaryController } from './presentation/http/summary.controller.js';
 
 const ENTRY_PAYMENT_SERVICE = Symbol('ENTRY_PAYMENT_SERVICE');
 
 /** Use cases são classes simples: instanciadas por factory com as dependências injetadas por token. */
 const USE_CASE_PROVIDERS: Provider[] = [
+  {
+    provide: RefreshDemoDataset,
+    useFactory: (store: DemoDatasetStore, calendar: BusinessCalendar, ids: IdGenerator, clock: Clock) =>
+      new RefreshDemoDataset(store, calendar, ids, clock),
+    inject: [DEMO_DATASET_STORE, BUSINESS_CALENDAR, ID_GENERATOR, CLOCK],
+  },
   { provide: ENTRY_PAYMENT_SERVICE, useFactory: () => new EntryPaymentService() },
   {
     provide: CreateCard,
@@ -129,7 +140,9 @@ const USE_CASE_PROVIDERS: Provider[] = [
     CategoriesController,
     SummaryController,
     DashboardController,
+    DemoController,
   ],
-  providers: [...FINANCE_INFRASTRUCTURE_PROVIDERS, ...USE_CASE_PROVIDERS],
+  providers: [...FINANCE_INFRASTRUCTURE_PROVIDERS, ...USE_CASE_PROVIDERS, FinanceReadHandlers],
+  exports: [RefreshDemoDataset],
 })
 export class FinanceModule {}

@@ -1,6 +1,7 @@
 import { AggregateRoot } from '@shared/domain/aggregate-root.js';
 import { InvariantViolationError, type FieldViolation } from '@shared/domain/app-error.js';
 import { ClosingDay, DueDay } from '../billing/day-of-month.js';
+import type { OwnerId } from '../owner/owner-id.js';
 import type { CardBillingInfo } from './card-billing-info.js';
 import { CardValidationError } from './errors/card-errors.js';
 import { CardCreated, CardUpdated, type CardDomainEvent } from './events/card-events.js';
@@ -15,6 +16,7 @@ export interface CardProps {
 
 export interface CardSnapshot {
   id: CardId;
+  ownerId: OwnerId;
   name: CardName;
   closingDay: ClosingDay;
   dueDay: DueDay;
@@ -55,11 +57,11 @@ export class Card extends AggregateRoot<CardDomainEvent> {
   }
 
   /** Lança CardValidationError com TODAS as violações. Emite CardCreated. */
-  static create(props: CardProps & { id: CardId; now: Date }): Card {
+  static create(props: CardProps & { id: CardId; ownerId: OwnerId; now: Date }): Card {
     const parsed = parseCardProps(props);
-    const card = new Card({ id: props.id, ...parsed, createdAt: props.now, updatedAt: props.now });
+    const card = new Card({ id: props.id, ownerId: props.ownerId, ...parsed, createdAt: props.now, updatedAt: props.now });
     card.record(
-      new CardCreated(props.id.value, parsed.name.value, parsed.closingDay.value, parsed.dueDay.value, props.now),
+      new CardCreated(props.id.value, props.ownerId.value, parsed.name.value, parsed.closingDay.value, parsed.dueDay.value, props.now),
     );
     return card;
   }
@@ -83,11 +85,15 @@ export class Card extends AggregateRoot<CardDomainEvent> {
   }
 
   billingInfo(): CardBillingInfo {
-    return { cardId: this.state.id, closingDay: this.state.closingDay, dueDay: this.state.dueDay };
+    return { cardId: this.state.id, ownerId: this.state.ownerId, closingDay: this.state.closingDay, dueDay: this.state.dueDay };
   }
 
   get id(): CardId {
     return this.state.id;
+  }
+
+  get ownerId(): OwnerId {
+    return this.state.ownerId;
   }
 
   get name(): CardName {

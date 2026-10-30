@@ -5,6 +5,7 @@ import type { EntryPaymentService } from '../../../domain/payment/entry-payment.
 import type { EntryId } from '../../../domain/entry/value-objects/entry-id.js';
 import { EntriesNotFoundError } from '../../errors/application-errors.js';
 import type { FinanceUnitOfWork } from '../../ports/finance-unit-of-work.js';
+import { requireOwnerId } from '../../queries/owner.js';
 import { parseEntryId, throwIfInvalid, violation } from '../../queries/query-params.js';
 
 const MAX_IDS = 100;
@@ -18,12 +19,13 @@ export class PayEntriesInBatch {
   ) {}
 
   /** Precedência: 400 > 404 (todos os ausentes) > 422 (todas as receitas). Tudo ou nada. */
-  async execute(input: { ids: string[] }): Promise<{ paidIds: string[]; alreadyPaidIds: string[] }> {
+  async execute(input: { ownerId: string; ids: string[] }): Promise<{ paidIds: string[]; alreadyPaidIds: string[] }> {
+    const ownerId = requireOwnerId(input.ownerId);
     const ids = this.parse(input.ids);
     const now = this.clock.now();
 
     const { outcome, events } = await this.uow.run(async ({ entries }) => {
-      const found = await entries.findByIdsForUpdate(ids);
+      const found = await entries.findByIdsForUpdate(ownerId, ids);
       const foundIds = new Set(found.map((e) => e.id.value));
       const missing = ids.filter((id) => !foundIds.has(id.value)).map((id) => id.value);
       if (missing.length > 0) throw new EntriesNotFoundError(missing);

@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 
-export type DialogVariant = "modal" | "drawer" | "sheet";
+export type DialogVariant = "modal" | "drawer" | "drawer-left" | "sheet";
 
 interface ModalDialogProps {
+  id?: string;
   /** Rotulo do dialogo (id do titulo) */
   labelledBy: string;
   describedBy?: string;
@@ -25,6 +26,7 @@ interface ModalDialogProps {
 const CLASS: Record<DialogVariant, string> = {
   modal: "modal",
   drawer: "drawer drawer-right",
+  "drawer-left": "drawer drawer-left",
   sheet: "drawer drawer-sheet",
 };
 
@@ -32,17 +34,22 @@ const CLASS: Record<DialogVariant, string> = {
  * `<dialog>` nativo com showModal(): foco preso, Esc e fundo inerte nativos (D7). Montado so quando aberto;
  * ao desmontar, fecha e devolve o foco ao gatilho.
  */
-export function ModalDialog({ labelledBy, describedBy, variant, role, onClose, onEscape, closeOnBackdrop, busy = false, initialFocus, children }: ModalDialogProps) {
+export function ModalDialog({ id, labelledBy, describedBy, variant, role, onClose, onEscape, closeOnBackdrop, busy = false, initialFocus, children }: ModalDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const closeOnScrim = closeOnBackdrop ?? variant !== "modal";
 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
+    // quem abriu: o foco volta para la ao fechar (o <dialog> desmontado pelo React nao restaura sozinho em todos os navegadores)
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (!dialog.open) dialog.showModal();
     if (initialFocus) dialog.querySelector<HTMLElement>(initialFocus)?.focus();
     return () => {
       if (dialog.open) dialog.close();
+      // so se o foco ficou "solto": quem fechou pode ter mandado o foco para outro lugar (ex.: titulo do painel)
+      const active = document.activeElement;
+      if (opener?.isConnected && (!active || active === document.body || dialog.contains(active))) opener.focus();
     };
     // abre uma unica vez por montagem
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -50,6 +57,7 @@ export function ModalDialog({ labelledBy, describedBy, variant, role, onClose, o
 
   return (
     <dialog
+      id={id}
       ref={ref}
       className={CLASS[variant]}
       role={role}

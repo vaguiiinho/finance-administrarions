@@ -1,5 +1,21 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Browser, type Page } from "@playwright/test";
+import { expect, test } from "./auth-support";
+import { signInAsAna } from "./legacy-auth";
 import { BG, ENTRIES_URL, PAGE_BG_REGION, audit, bodyBackground, htmlTheme, setScenario, setThemeCookie, themeToggle } from "./support";
+
+/** Cookies de sessao de "ana" (D10) para contextos criados na mao, inclusive os sem JavaScript (que nao conseguem usar o formulario). */
+async function sessionCookies(browser: Browser) {
+  const context = await browser.newContext();
+  await signInAsAna(await context.newPage());
+  const cookies = (await context.cookies()).filter((c) => /fa_session/.test(c.name));
+  await context.close();
+  return cookies;
+}
+
+// ADR 0005 D10: o stub nao aceita requisicao sem Bearer; as telas protegidas pedem sessao (usuaria comum "ana").
+test.beforeEach(async ({ page }) => {
+  await signInAsAna(page);
+});
 
 test.beforeEach(async () => {
   await setScenario("default");
@@ -63,6 +79,7 @@ test.describe("CA80 - preferencia persistida", () => {
   test("claro salvo + sistema escuro: recarregar, outra rota e novo contexto mantem o claro", async ({ browser }) => {
     const context = await browser.newContext({ colorScheme: "dark" });
     await setThemeCookie(context, "light");
+    await context.addCookies(await sessionCookies(browser));
     const page = await context.newPage();
     await page.goto(ENTRIES_URL);
     expect(await bodyBackground(page)).toBe(BG.light);
@@ -97,6 +114,7 @@ test.describe("CA81 - sem flash de tema errado", () => {
   test("sem JavaScript: <html data-theme> e fundo ja vem corretos do servidor", async ({ browser }) => {
     const context = await browser.newContext({ javaScriptEnabled: false, colorScheme: "light" });
     await setThemeCookie(context, "dark");
+    await context.addCookies(await sessionCookies(browser));
     const page = await context.newPage();
     await page.goto(ENTRIES_URL);
     expect(await htmlTheme(page)).toBe("dark");
@@ -107,6 +125,7 @@ test.describe("CA81 - sem flash de tema errado", () => {
   test("tela de loading (rede lenta): cor do body no primeiro DOMContentLoaded ja e a final", async ({ browser }) => {
     const context = await browser.newContext({ colorScheme: "light" });
     await setThemeCookie(context, "dark");
+    await context.addCookies(await sessionCookies(browser));
     const page = await context.newPage();
     const first: string[] = [];
     await page.addInitScript(() => {
@@ -123,9 +142,11 @@ test.describe("CA81 - sem flash de tema errado", () => {
   });
 
   test("pagina de erro (API 500) ja nasce no tema da preferencia", async ({ browser }) => {
+    const cookies = await sessionCookies(browser); // o login precisa da API: antes do cenario de falha
     await setScenario("error500");
     const context = await browser.newContext({ colorScheme: "light" });
     await setThemeCookie(context, "dark");
+    await context.addCookies(cookies);
     const page = await context.newPage();
     await page.goto(ENTRIES_URL);
     expect(await htmlTheme(page)).toBe("dark");

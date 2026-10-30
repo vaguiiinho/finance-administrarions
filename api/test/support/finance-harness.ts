@@ -6,7 +6,7 @@ import {
   InMemoryFinanceUnitOfWork,
 } from '../fakes/in-memory-repositories.js';
 import { InMemoryCardReadModel, InMemoryEntryReadModel } from '../fakes/in-memory-read-models.js';
-import { NOW } from './builders.js';
+import { NOW, asDefaultOwner } from './builders.js';
 import { CreateCard } from '@finance/application/use-cases/cards/create-card.js';
 import { UpdateCard } from '@finance/application/use-cases/cards/update-card.js';
 import { CreateEntry } from '@finance/application/use-cases/entries/create-entry.js';
@@ -16,7 +16,8 @@ import { PayInvoice } from '@finance/application/use-cases/invoices/pay-invoice.
 import { EntryPaymentService } from '@finance/domain/payment/entry-payment.service.js';
 
 /**
- * Composicao dos use cases de escrita com fakes em memoria.
+ * Composicao dos use cases de escrita com fakes em memoria, como o USUARIO PADRAO (`asDefaultOwner`): estes testes
+ * cobrem as regras de um usuario so; o isolamento entre donos esta em owner-isolation.spec.ts (owned-harness).
  * CONTRATO ASSUMIDO: construtores posicionais na ordem da tabela 5.2 do ADR
  * (dependencias na ordem listada) e metodo `execute(input)`. Se a ordem diferir,
  * ajuste APENAS este arquivo.
@@ -43,12 +44,12 @@ export function buildHarness(now: Date = NOW) {
     catalog,
     entryReadModel,
     cardReadModel,
-    createCard: new CreateCard(cards, ids, clock, publisher),
-    updateCard: new UpdateCard(cards, clock, publisher),
-    createEntry: new CreateEntry(entries, cards, catalog, ids, clock, publisher),
-    markEntryAsPaid: new MarkEntryAsPaid(uow, entryReadModel, clock, publisher),
-    payBatch: new PayEntriesInBatch(uow, paymentService, clock, publisher),
-    payInvoice: new PayInvoice(uow, paymentService, clock, publisher),
+    createCard: asDefaultOwner(new CreateCard(cards, ids, clock, publisher)),
+    updateCard: asDefaultOwner(new UpdateCard(cards, clock, publisher)),
+    createEntry: asDefaultOwner(new CreateEntry(entries, cards, catalog, ids, clock, publisher)),
+    markEntryAsPaid: asDefaultOwner(new MarkEntryAsPaid(uow, entryReadModel, clock, publisher)),
+    payBatch: asDefaultOwner(new PayEntriesInBatch(uow, paymentService, clock, publisher)),
+    payInvoice: asDefaultOwner(new PayInvoice(uow, paymentService, clock, publisher)),
   };
 }
 

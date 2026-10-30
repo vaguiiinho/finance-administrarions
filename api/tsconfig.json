@@ -31,6 +31,9 @@
       ],
       "@finance/*": [
         "./src/modules/finance/*"
+      ],
+      "@identity/*": [
+        "./src/modules/identity/*"
       ]
     }
   }

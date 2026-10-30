@@ -1,6 +1,13 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./auth-support";
+import { signInAsAna } from "./legacy-auth";
 import { BG, ENTRIES_URL, MONTH, PAGE_BG_REGION, PAGE_BG_TOKENS, audit, auditPageGradient, bodyBackground, gotoReady, setScenario, setThemeCookie, themeToggle } from "./support";
 import { luminanceOf, resolveTokens } from "./tokens";
+
+// ADR 0005 D10: o stub nao aceita requisicao sem Bearer; as telas protegidas pedem sessao (usuaria comum "ana").
+test.beforeEach(async ({ page }) => {
+  await signInAsAna(page);
+});
 
 /**
  * Fase B (ADR 0003 9.2): fundo em gradiente aplicado, design rev. 6: Lavanda -> azul-gelo no claro,
@@ -152,10 +159,8 @@ test.describe("CA16 - faixas opacas", () => {
         expect(await bar.evaluate((el) => getComputedStyle(el).backgroundColor), "cor base opaca da janela").toBe(BG[theme]);
 
         if (viewport.width < 640) {
-          const row = page.getByRole("navigation", { name: "Principal (mobile)" }).locator("xpath=..");
-          const row2 = await row.evaluate((el) => ({ color: getComputedStyle(el).backgroundColor, image: getComputedStyle(el).backgroundImage }));
-          expect(row2.color).toBe("rgba(0, 0, 0, 0)");
-          expect(row2.image).toBe("none");
+          // design 17 (DL1): a 2a linha de links da navbar deixou de existir; a navegacao esta no drawer/menu lateral
+          await expect(page.getByRole("navigation", { name: "Principal (mobile)" })).toHaveCount(0);
           const tablist = await page.locator(".tablist").first().evaluate((el) => getComputedStyle(el).backgroundColor);
           expect(tablist).toBe("rgba(0, 0, 0, 0)");
         }

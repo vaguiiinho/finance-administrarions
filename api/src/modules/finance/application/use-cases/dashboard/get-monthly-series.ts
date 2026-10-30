@@ -3,6 +3,7 @@ import type { ReferenceMonth } from '../../../domain/billing/reference-month.js'
 import type { FinancialTotals } from '../../../domain/totals/financial-totals.js';
 import { toFinancialTotals } from '../../mappers/totals.mapper.js';
 import type { DashboardReadModel } from '../../ports/dashboard-read-model.js';
+import { requireOwnerId } from '../../queries/owner.js';
 import { parseRequiredMonth, throwIfInvalid } from '../../queries/query-params.js';
 
 const MONTHS = 12;
@@ -16,14 +17,15 @@ export interface MonthlySeriesResult {
 export class GetMonthlySeries {
   constructor(private readonly dashboard: DashboardReadModel) {}
 
-  async execute(input: { month: string }): Promise<MonthlySeriesResult> {
+  async execute(input: { ownerId: string; month: string }): Promise<MonthlySeriesResult> {
+    const ownerId = requireOwnerId(input.ownerId);
     const violations: FieldViolation[] = [];
     const to = parseRequiredMonth(input.month, 'month', violations);
     throwIfInvalid(violations);
     if (!to) throw new InvariantViolationError('mês validado ausente.');
 
     const from = to.minusMonths(MONTHS - 1);
-    const rows = await this.dashboard.monthlySeries(from, to);
+    const rows = await this.dashboard.monthlySeries(ownerId, from, to);
     if (rows.length !== MONTHS) {
       throw new InvariantViolationError(`A série deve ter ${MONTHS} pontos, recebeu ${rows.length}.`);
     }

@@ -1,12 +1,13 @@
 import { Controller, Get, Inject } from '@nestjs/common';
-import { ListCategories } from '../../application/use-cases/entries/list-categories.js';
+import { CurrentOwnerId } from '@shared/presentation/auth/current-principal.decorators.js';
+import { FinanceReadHandlers } from './finance-read-handlers.js';
 
 @Controller('categories')
 export class CategoriesController {
-  constructor(@Inject(ListCategories) private readonly listCategories: ListCategories) {}
+  constructor(@Inject(FinanceReadHandlers) private readonly reads: FinanceReadHandlers) {}
 
   @Get()
-  list() {
-    return this.listCategories.execute({});
+  list(@CurrentOwnerId() ownerId: string) {
+    return this.reads.categories(ownerId);
   }
 }

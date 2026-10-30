@@ -1,5 +1,5 @@
 import { err, ok, type Result } from '@shared/domain/result.js';
-import { codePointLength, normalizeText } from '../../text.js';
+import { codePointLength, normalizeText } from '@shared/domain/text.js';
 
 export type DescriptionViolation = 'REQUIRED' | 'TOO_LONG';
 

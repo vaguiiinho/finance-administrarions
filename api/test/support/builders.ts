@@ -6,6 +6,11 @@ import { EntryId } from '@finance/domain/entry/value-objects/entry-id.js';
 import { Card } from '@finance/domain/card/card.js';
 import { Entry } from '@finance/domain/entry/entry.js';
 import { NewEntryInput, type RawEntryInput } from '@finance/domain/entry/new-entry-input.js';
+import { OwnerId } from '@finance/domain/owner/owner-id.js';
+
+/** Dono padrao dos testes de finance de usuario unico (os testes com dois donos usam owned-builders). */
+export const DEFAULT_OWNER_ID_VALUE = '0a000000-0000-7000-8000-000000000001';
+export const DEFAULT_OWNER: OwnerId = unwrap<OwnerId>(OwnerId.create(DEFAULT_OWNER_ID_VALUE));
 
 /** Instante fixo usado como "agora" nos testes (2026-10-05T13:00:00Z, CA07). */
 export const NOW = new Date('2026-10-05T13:00:00.000Z');
@@ -40,6 +45,7 @@ export function newCard(
   now: Date = NOW,
 ): Card {
   return Card.create({
+    ownerId: DEFAULT_OWNER,
     id: cardId(n),
     name: props.name ?? `Cartao ${n}`,
     closingDay: props.closingDay ?? 25,
@@ -49,12 +55,13 @@ export function newCard(
 }
 
 export function pixExpense(n: number, overrides: Partial<RawEntryInput> = {}, now: Date = NOW): Entry {
-  return Entry.create({ id: entryId(n), input: NewEntryInput.parse(rawEntry(overrides)), card: null, now });
+  return Entry.create({ id: entryId(n), ownerId: DEFAULT_OWNER, input: NewEntryInput.parse(rawEntry(overrides)), card: null, now });
 }
 
 export function income(n: number, overrides: Partial<RawEntryInput> = {}, now: Date = NOW): Entry {
   return Entry.create({
     id: entryId(n),
+    ownerId: DEFAULT_OWNER,
     input: NewEntryInput.parse(
       rawEntry({ type: 'INCOME', description: 'Salario', category: 'Salario', amount: '5000.00', ...overrides }),
     ),
@@ -71,6 +78,7 @@ export function cardExpense(
 ): Entry {
   return Entry.create({
     id: entryId(n),
+    ownerId: DEFAULT_OWNER,
     input: NewEntryInput.parse(
       rawEntry({ paymentMethod: 'CARD', cardId: card.id.value, date: '2026-10-10', amount: '100.00', ...overrides }),
     ),
@@ -105,4 +113,23 @@ export async function rejected(promise: Promise<unknown>): Promise<Error & { cod
     return e as never;
   }
   throw new Error('Esperava rejeicao, mas resolveu');
+}
+
+type AnyUseCase = { execute(input: never): unknown };
+type WithoutOwner<I> = I extends { ownerId: string } ? Omit<I, 'ownerId'> & { ownerId?: string } : I;
+
+/**
+ * Use case de finance como o USUARIO PADRAO dos testes de dono unico (ADR 0005 5.5): injeta `ownerId` no input,
+ * a mesma coisa que o controller faz com o principal. Testes de isolamento passam `ownerId` explicito.
+ */
+export function asDefaultOwner<U extends AnyUseCase>(useCase: U) {
+  return {
+    execute: (input: WithoutOwner<Parameters<U['execute']>[0]>): ReturnType<U['execute']> =>
+      (useCase.execute as (i: unknown) => ReturnType<U['execute']>)({ ownerId: DEFAULT_OWNER_ID_VALUE, ...(input as object) }),
+  };
+}
+
+/** `new UseCase(...deps)` ja como o usuario padrao. */
+export function ownedUseCase<C extends new (...args: never[]) => AnyUseCase>(UseCase: C, ...args: ConstructorParameters<C>) {
+  return asDefaultOwner(new UseCase(...args) as InstanceType<C>);
 }

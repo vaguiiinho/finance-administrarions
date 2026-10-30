@@ -1,4 +1,4 @@
-import { cardUuid, date, money, newCard, rejected } from '@test/support/builders.js';
+import { cardUuid, date, money, newCard, rejected, ownedUseCase } from '@test/support/builders.js';
 import { unwrap } from '@test/support/result.js';
 import { ReferenceMonth } from '@finance/domain/billing/reference-month.js';
 import { InMemoryCardReadModel } from '@test/fakes/in-memory-read-models.js';
@@ -21,8 +21,8 @@ const row = (over: Record<string, unknown> = {}) => ({
 
 describe('ListInvoices', () => {
   it('CA43: mapeia cada fatura com datas, contagens e ExpenseTotals', async () => {
-    const invoices = { listByMonth: vi.fn(async (_month: unknown) => [row(), row({ card: { id: cardUuid(2), name: 'B' }, entryCount: 1, pendingCount: 1, paid: money('0'), pending: money('60.00'), closingDate: date('2026-11-03'), dueDate: date('2026-11-10') })]), listEntries: vi.fn() };
-    const result = await new ListInvoices(invoices as never).execute({ month: '2026-11' });
+    const invoices = { listByMonth: vi.fn(async (_owner: unknown, _month: unknown) => [row(), row({ card: { id: cardUuid(2), name: 'B' }, entryCount: 1, pendingCount: 1, paid: money('0'), pending: money('60.00'), closingDate: date('2026-11-03'), dueDate: date('2026-11-10') })]), listEntries: vi.fn() };
+    const result = await ownedUseCase(ListInvoices, invoices as never).execute({ month: '2026-11' });
     expect(result.month.toString()).toBe('2026-11');
     expect(result.items).toHaveLength(2);
     const [a, b] = result.items;
@@ -36,25 +36,25 @@ describe('ListInvoices', () => {
     expect(a.totals.pending.toString()).toBe('100.00');
     expect(b.totals.total.toString()).toBe('60.00');
     expect(b.card.name).toBe('B'); // ordem do read model preservada
-    expect(String(invoices.listByMonth.mock.calls[0][0])).toBe('2026-11');
+    expect(String(invoices.listByMonth.mock.calls[0][1])).toBe('2026-11');
   });
 
   it('CA45: fatura paga mantem pendingCount 0 e pendente 0.00', async () => {
     const invoices = { listByMonth: vi.fn(async () => [row({ pendingCount: 0, pending: money('0'), paid: money('140.00') })]), listEntries: vi.fn() };
-    const [item] = (await new ListInvoices(invoices as never).execute({ month: '2026-11' })).items;
+    const [item] = (await ownedUseCase(ListInvoices, invoices as never).execute({ month: '2026-11' })).items;
     expect(item.pendingCount).toBe(0);
     expect(item.totals.pending.toString()).toBe('0.00');
   });
 
   it('CA44: nenhuma fatura -> lista vazia', async () => {
     const invoices = { listByMonth: vi.fn(async () => []), listEntries: vi.fn() };
-    expect((await new ListInvoices(invoices as never).execute({ month: '2026-11' })).items).toEqual([]);
+    expect((await ownedUseCase(ListInvoices, invoices as never).execute({ month: '2026-11' })).items).toEqual([]);
   });
 
   it('mes obrigatorio/valido -> 400', async () => {
     const invoices = { listByMonth: vi.fn(), listEntries: vi.fn() };
     for (const month of [undefined, '2026-13']) {
-      const error = await rejected(new ListInvoices(invoices as never).execute({ month } as never));
+      const error = await rejected(ownedUseCase(ListInvoices, invoices as never).execute({ month } as never));
       expect(error).toMatchObject({ code: 'VALIDATION_ERROR' });
     }
     expect(invoices.listByMonth).not.toHaveBeenCalled();
@@ -65,15 +65,15 @@ describe('ListInvoiceEntries (pedido (b) do design)', () => {
   function setup(items: unknown[] = []) {
     const cards = new InMemoryCardRepository();
     cards.seed(newCard(1, { name: 'Nubank' }));
-    const invoices = { listByMonth: vi.fn(), listEntries: vi.fn(async (_key: unknown) => items) };
-    return { cards, invoices, useCase: new ListInvoiceEntries(new InMemoryCardReadModel(cards), invoices as never) };
+    const invoices = { listByMonth: vi.fn(), listEntries: vi.fn(async (_owner: unknown, _key: unknown) => items) };
+    return { cards, invoices, useCase: ownedUseCase(ListInvoiceEntries, new InMemoryCardReadModel(cards), invoices as never) };
   }
 
   it('busca por (cartao, mes) e devolve card, referenceMonth e itens', async () => {
     const items = [{ id: 'x' }, { id: 'y' }];
     const { invoices, useCase } = setup(items);
     const result = await useCase.execute({ cardId: cardUuid(1), referenceMonth: '2026-11' });
-    const key = invoices.listEntries.mock.calls[0][0] as any;
+    const key = invoices.listEntries.mock.calls[0][1] as any;
     expect(key.cardId.value).toBe(cardUuid(1));
     expect(key.referenceMonth.toString()).toBe('2026-11');
     expect(result.card).toEqual({ id: cardUuid(1), name: 'Nubank' });

@@ -1,6 +1,13 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./auth-support";
+import { signInAsAna } from "./legacy-auth";
 import { BG, ENTRIES_URL, MONTH, audit, bodyBackground, gotoReady, htmlTheme, setScenario, setThemeCookie, showChartTooltip, themeToggle } from "./support";
 import { resolveTokens } from "./tokens";
+
+// ADR 0005 D10: o stub nao aceita requisicao sem Bearer; as telas protegidas pedem sessao (usuaria comum "ana").
+test.beforeEach(async ({ page }) => {
+  await signInAsAna(page);
+});
 
 /**
  * CA86 / CAF09 (design 13.3): graficos e controles nativos apos alternar o tema.

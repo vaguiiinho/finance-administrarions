@@ -5,6 +5,7 @@ import { EntryNotFoundError } from '../../errors/application-errors.js';
 import type { EntryReadModel } from '../../ports/entry-read-model.js';
 import type { FinanceUnitOfWork } from '../../ports/finance-unit-of-work.js';
 import type { EntryView } from '../../ports/views.js';
+import { requireOwnerId } from '../../queries/owner.js';
 import { parseEntryId, throwIfInvalid } from '../../queries/query-params.js';
 
 export class MarkEntryAsPaid {
@@ -16,7 +17,8 @@ export class MarkEntryAsPaid {
   ) {}
 
   /** Precedência: 400 > 404 > 422 (receita). Idempotente para despesa já paga. */
-  async execute(input: { id: string }): Promise<EntryView> {
+  async execute(input: { ownerId: string; id: string }): Promise<EntryView> {
+    const ownerId = requireOwnerId(input.ownerId);
     const violations: FieldViolation[] = [];
     const id = parseEntryId(input.id, 'id', violations);
     throwIfInvalid(violations);
@@ -24,7 +26,7 @@ export class MarkEntryAsPaid {
 
     const now = this.clock.now();
     const events = await this.uow.run(async ({ entries }) => {
-      const [entry] = await entries.findByIdsForUpdate([id]);
+      const [entry] = await entries.findByIdsForUpdate(ownerId, [id]);
       if (!entry) throw new EntryNotFoundError(id.value);
       if (entry.markAsPaid(now)) await entries.saveAll([entry]);
       return entry.pullEvents();
@@ -32,7 +34,7 @@ export class MarkEntryAsPaid {
 
     if (events.length > 0) await this.publisher.publish(events);
 
-    const view = await this.entryReadModel.findById(id);
+    const view = await this.entryReadModel.findById(ownerId, id);
     if (!view) throw new EntryNotFoundError(id.value);
     return view;
   }

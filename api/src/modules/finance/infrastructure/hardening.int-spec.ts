@@ -1,8 +1,8 @@
 import type pg from 'pg';
 import { buildInfra } from '@test/support/infra.js';
-import { createPool, insertEntry, resetDb } from '@test/support/db.js';
+import { createPool, insertEntry, resetDb } from '@test/support/default-owner-db.js';
 import { Prisma } from '@shared/infrastructure/prisma/generated/client.js';
-import { cardId, newCard, pixExpense, cardExpense, rejected } from '@test/support/builders.js';
+import { DEFAULT_OWNER, cardId, newCard, pixExpense, cardExpense, rejected } from '@test/support/builders.js';
 import { CardNameTakenError } from '@finance/domain/card/errors/card-errors.js';
 
 let pool: pg.Pool;
@@ -19,17 +19,17 @@ describe('sessao do Prisma independe do DateStyle/fuso do banco', () => {
     const infra = await buildInfra();
     try {
       await insertEntry(pool, { n: 1, date: '2026-03-04' });
-      const view = await infra.readModels.entries.findById({ value: '00000000-0000-7000-8000-000000000000' } as never);
+      const view = await infra.readModels.entries.findById(DEFAULT_OWNER, { value: '00000000-0000-7000-8000-000000000000' } as never);
       expect(view).toBeNull();
       const entry = pixExpense(5, { date: '2026-03-04' });
       await infra.entries.insert(entry);
-      const [found] = await infra.uow.run((s) => s.entries.findByIdsForUpdate([entry.id]));
+      const [found] = await infra.uow.run((s) => s.entries.findByIdsForUpdate(DEFAULT_OWNER, [entry.id]));
       expect(found.toSnapshot()).toEqual(entry.toSnapshot());
       const card = newCard(1);
       await infra.cards.insert(card);
       const ce = cardExpense(6, card, { date: '2026-10-11' });
       await infra.entries.insert(ce);
-      const [loaded] = await infra.uow.run((s) => s.entries.findByIdsForUpdate([ce.id]));
+      const [loaded] = await infra.uow.run((s) => s.entries.findByIdsForUpdate(DEFAULT_OWNER, [ce.id]));
       expect(loaded.toSnapshot()).toEqual(ce.toSnapshot());
     } finally {
       await infra.close();

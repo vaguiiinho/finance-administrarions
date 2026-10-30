@@ -5,7 +5,7 @@ import { Prisma } from '@shared/infrastructure/prisma/generated/client.js';
  * mês de referência como 'YYYY-MM'. Alias da tabela: `e`.
  */
 export const ENTRY_RECORD_COLUMNS = Prisma.raw(`
-  e.id::text AS id, e.type::text AS type, e.description, e.category,
+  e.id::text AS id, e.user_id::text AS user_id, e.type::text AS type, e.description, e.category,
   e."date"::text AS date, e.amount::text AS amount,
   e.payment_method::text AS payment_method, e.card_id::text AS card_id,
   e.closing_date::text AS closing_date, e.due_date::text AS due_date,

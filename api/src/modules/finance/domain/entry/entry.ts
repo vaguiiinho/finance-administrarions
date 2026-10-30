@@ -7,6 +7,7 @@ import { InvoiceDates } from '../billing/invoice-dates.js';
 import { ReferenceMonth } from '../billing/reference-month.js';
 import type { CardBillingInfo } from '../card/card-billing-info.js';
 import type { CardId } from '../card/value-objects/card-id.js';
+import type { OwnerId } from '../owner/owner-id.js';
 import { IncomeNotPayableError } from './errors/entry-errors.js';
 import { EntryCreated, EntryPaid, type EntryDomainEvent } from './events/entry-events.js';
 import type { NewEntryInput } from './new-entry-input.js';
@@ -19,6 +20,7 @@ import type { PaymentMethod } from './value-objects/payment-method.js';
 
 export interface EntrySnapshot {
   id: EntryId;
+  ownerId: OwnerId;
   type: EntryType;
   description: Description;
   category: Category;
@@ -84,13 +86,14 @@ export class Entry extends AggregateRoot<EntryDomainEvent> {
    * PIX: referenceMonth = mês da data. O status inicial depende só de tipo, forma e `paid` (B8, B11).
    * `card` é obrigatório se e somente se a forma é CARD e deve ter o mesmo id (senão: erro de programação).
    */
-  static create(props: { id: EntryId; input: NewEntryInput; card: CardBillingInfo | null; now: Date }): Entry {
-    const { id, input, card, now } = props;
+  static create(props: { id: EntryId; ownerId: OwnerId; input: NewEntryInput; card: CardBillingInfo | null; now: Date }): Entry {
+    const { id, ownerId, input, card, now } = props;
     let invoiceDates: InvoiceDates | null = null;
     if (input.paymentMethod === 'CARD') {
       if (!card || !input.cardId || !card.cardId.equals(input.cardId)) {
         fail('Lançamento no cartão exige o snapshot do mesmo cartão.');
       }
+      if (!card.ownerId.equals(ownerId)) fail('Cartão de outro dono (RF24).');
       invoiceDates = calculateInvoiceDates(input.date, card.closingDay, card.dueDay);
     } else if (card !== null) {
       fail('Lançamento sem cartão não aceita snapshot de cartão.');
@@ -99,6 +102,7 @@ export class Entry extends AggregateRoot<EntryDomainEvent> {
     const status = initialStatus(input);
     const entry = new Entry({
       id,
+      ownerId,
       type: input.type,
       description: input.description,
       category: input.category,
@@ -149,6 +153,10 @@ export class Entry extends AggregateRoot<EntryDomainEvent> {
     return this.state.id;
   }
 
+  get ownerId(): OwnerId {
+    return this.state.ownerId;
+  }
+
   get type(): EntryType {
     return this.state.type;
   }
@@ -181,6 +189,7 @@ export class Entry extends AggregateRoot<EntryDomainEvent> {
     const s = this.state;
     return new EntryCreated(
       s.id.value,
+      s.ownerId.value,
       s.type,
       s.amount.toString(),
       s.date.toString(),

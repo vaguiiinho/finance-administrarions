@@ -366,7 +366,7 @@ describe("marcacao - superficies opacas continuam opacas (RF05, CA05)", () => {
   });
 
   it("a pilula 'Sem lancamentos de...' do grafico e o link 'Pular para o conteudo' continuam opacos", () => {
-    const pill = lineWith("app/(app)/dashboard/_components/monthly-chart.tsx", "pointer-events-none absolute inset-x-0 top-1/2");
+    const pill = lineWith("features/dashboard/_components/monthly-chart.tsx", "pointer-events-none absolute inset-x-0 top-1/2");
     expect(pill).toMatch(/bg-surface\b/);
     expect(GLASS_CLASS.test(pill)).toBe(false);
     expect(lineWith("components/app-header.tsx", 'href="#conteudo"')).toMatch(/focus:bg-surface\b/);
@@ -374,16 +374,15 @@ describe("marcacao - superficies opacas continuam opacas (RF05, CA05)", () => {
 });
 
 describe("marcacao - superficies de vidro (RF01-RF04, B1, B4)", () => {
-  it("a navbar usa glass-bar (vidro de barra), sem bg-surface; a 2a linha mobile segue sem fundo", () => {
+  it("a navbar usa glass-bar (vidro de barra), sem bg-surface; nao ha mais a 2a linha de links no mobile (design 17, DL1)", () => {
     const nav = lineWith("components/app-header.tsx", "data-navbar");
     expect(nav).toMatch(/(?<![\w-])glass-bar(?![\w-])/);
     expect(nav).not.toMatch(SURFACE_UTILITY);
     const second = src("components/app-header.tsx").split("\n").find((l) => l.includes("sm:hidden") && l.includes("border-b"));
-    expect(second).toBeDefined();
-    expect(second).not.toMatch(/\bbg-/);
+    expect(second).toBeUndefined();
   });
 
-  it.each(["app/(app)/entries/_components/expenses-list.tsx", "app/(app)/entries/_components/income-panel.tsx"])("%s: thead em glass-bar, linhas sem fundo proprio, EntryItem em glass-flat, tabela em contêiner glass-flat", (file) => {
+  it.each(["features/entries/_components/expenses-list.tsx", "features/entries/_components/income-panel.tsx"])("%s: thead em glass-bar, linhas sem fundo proprio, EntryItem em glass-flat, tabela em contêiner glass-flat", (file) => {
     const thead = lineWith(file, "<thead");
     expect(thead).toMatch(/(?<![\w-])glass-bar(?![\w-])/);
     expect(thead).not.toMatch(SURFACE_UTILITY);
@@ -396,7 +395,7 @@ describe("marcacao - superficies de vidro (RF01-RF04, B1, B4)", () => {
   });
 
   it("expenses-list: toolbar de selecao em glass, barra de lote mobile em glass-bar, item selecionado com bg-card-2", () => {
-    const file = "app/(app)/entries/_components/expenses-list.tsx";
+    const file = "features/entries/_components/expenses-list.tsx";
     const toolbar = lineWith(file, "hidden min-h-12");
     expect(toolbar).toMatch(/(?<![\w-])glass(?![\w-])/);
     expect(toolbar).not.toMatch(SURFACE_UTILITY);
@@ -407,7 +406,7 @@ describe("marcacao - superficies de vidro (RF01-RF04, B1, B4)", () => {
   });
 
   it("invoice-block: bloco em glass com border-border-strong; totais do mobile sem fundo (sem vidro sobre vidro); alerta interno sem bg-surface", () => {
-    const file = "app/(app)/entries/_components/invoice-block.tsx";
+    const file = "features/entries/_components/invoice-block.tsx";
     const block = lineWith(file, 'role="group"');
     expect(block).toMatch(/(?<![\w-])glass(?![\w-])/);
     expect(block).toMatch(/border-border-strong/);
@@ -417,7 +416,7 @@ describe("marcacao - superficies de vidro (RF01-RF04, B1, B4)", () => {
   });
 
   it("tab-subtotal: vidro da variante 2 (glass + bg-card-2), sem bg-surface-2", () => {
-    const line = lineWith("app/(app)/entries/_components/tab-subtotal.tsx", 'data-testid="subtotal"');
+    const line = lineWith("features/entries/_components/tab-subtotal.tsx", 'data-testid="subtotal"');
     expect(line).toMatch(/(?<![\w-])glass(?![\w-])/);
     expect(line).toMatch(/bg-card-2/);
     expect(line).not.toMatch(SURFACE_UTILITY);
@@ -431,14 +430,14 @@ describe("marcacao - superficies de vidro (RF01-RF04, B1, B4)", () => {
 });
 
 describe("marcacao - graficos (TQ8, R6)", () => {
-  it.each(["app/(app)/dashboard/_components/monthly-chart.tsx", "app/(app)/dashboard/_components/category-donut.tsx"])("%s usa var(--chart-sep) e nenhum var(--surface) como separador", (file) => {
+  it.each(["features/dashboard/_components/monthly-chart.tsx", "features/dashboard/_components/category-donut.tsx"])("%s usa var(--chart-sep) e nenhum var(--surface) como separador", (file) => {
     const text = src(file);
     expect(text).not.toMatch(/var\(--surface\)/);
     expect(text).toContain("var(--chart-sep)");
   });
 
   it("monthly-chart: colunas sticky da tabela do grafico em bg-bar (sem desfoque), nao bg-surface", () => {
-    const text = src("app/(app)/dashboard/_components/monthly-chart.tsx");
+    const text = src("features/dashboard/_components/monthly-chart.tsx");
     const sticky = text.split("\n").filter((l) => l.includes("<th") && l.includes("sticky left-0"));
     expect(sticky.length).toBeGreaterThanOrEqual(2);
     for (const l of sticky) {

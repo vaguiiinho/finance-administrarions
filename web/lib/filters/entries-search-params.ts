@@ -87,8 +87,8 @@ export function serializeEntriesState(state: EntriesState): string {
 }
 
 /** Href da tela para um estado (a aba Despesas explicita `tab=expenses` nao e necessaria). */
-export function entriesHref(state: EntriesState): string {
-  return `/entries?${serializeEntriesState(state)}`;
+export function entriesHref(state: EntriesState, basePath: "" | "/demo" = ""): string {
+  return `${basePath}/entries?${serializeEntriesState(state)}`;
 }
 
 export function changeTab(state: EntriesState, tab: EntriesTab): EntriesState {

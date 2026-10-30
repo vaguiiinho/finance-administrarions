@@ -621,6 +621,18 @@ body::before {
       border-left: 0;
     }
   }
+  /* Drawer de navegacao (design 17.6): espelho da .drawer-right, opaco; a faixa de 56px de scrim mostra que da para tocar fora */
+  .drawer-left {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: auto;
+    width: min(296px, 100vw - 56px);
+    height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+    border-right: 1px solid var(--border-strong);
+    background: var(--surface);
+  }
   .drawer-sheet {
     position: fixed;
     inset: auto 0 0 0;
@@ -642,10 +654,18 @@ body::before {
     .drawer-right[open] {
       animation: drawer-in 200ms ease-out;
     }
+    .drawer-left[open] {
+      animation: drawer-left-in 200ms ease-out;
+    }
   }
   @keyframes drawer-in {
     from {
       transform: translateX(24px);
+    }
+  }
+  @keyframes drawer-left-in {
+    from {
+      transform: translateX(-24px);
     }
   }
 }

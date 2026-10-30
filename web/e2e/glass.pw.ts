@@ -1,6 +1,13 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { type Locator, type Page } from "@playwright/test";
+import { expect, test } from "./auth-support";
+import { signInAsAna } from "./legacy-auth";
 import { BG, ENTRIES_URL, MONTH, PAGE_BG_REGION, audit, auditPageGradient, bodyBackground, emulateReducedTransparency, glassStackingProblems, gotoReady, htmlTheme, setScenario, setThemeCookie, showChartTooltip, themeToggle } from "./support";
 import { resolveTokens } from "./tokens";
+
+// ADR 0005 D10: o stub nao aceita requisicao sem Bearer; as telas protegidas pedem sessao (usuaria comum "ana").
+test.beforeEach(async ({ page }) => {
+  await signInAsAna(page);
+});
 
 /**
  * Vidro fosco (spec CA01-CA13, CA02, CA07, CA19; ADR 0004 9.3). Os papeis (`--card-bg`, `--bar-bg`, `--field-bg`, `--card-border`,

@@ -13,15 +13,28 @@ function AlertIcon() {
   );
 }
 
-/** Banner de erro persistente (404/422 do lote, erro do drawer): borda `--danger`, icone e texto `--text`. */
-export function InlineAlert({ children, tone = "danger", role = "alert", actions }: { children: ReactNode; tone?: "danger" | "info"; role?: "alert" | "status"; actions?: ReactNode }) {
-  const border = tone === "danger" ? "border-danger border-l-danger" : "border-border-strong border-l-accent";
-  const icon = tone === "danger" ? "text-danger-text" : "text-accent";
+function ClockIcon() {
   return (
-    <div role={role} className={`flex items-start gap-3 glass rounded-lg border border-l-[3px] p-3 text-text ${border}`}>
-      <span className={icon}>
-        <AlertIcon />
-      </span>
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mt-0.5 shrink-0">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4l3 2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+const TONES = {
+  danger: { border: "border-danger border-l-danger", icon: "text-danger-text" },
+  info: { border: "border-border-strong border-l-accent", icon: "text-accent" },
+  // aviso (429, auto-rebaixamento): borda `--warning` (3:1) e icone `--warning-text`
+  warning: { border: "border-warning border-l-warning", icon: "text-warning-text" },
+} as const;
+
+/** Banner persistente (erro do drawer, 429, sessao expirada...): borda do tom, icone e texto `--text`. */
+export function InlineAlert({ children, tone = "danger", role = "alert", actions, id }: { children: ReactNode; tone?: "danger" | "info" | "warning"; role?: "alert" | "status"; actions?: ReactNode; id?: string }) {
+  const { border, icon } = TONES[tone];
+  return (
+    <div id={id} role={role} className={`flex items-start gap-3 glass rounded-lg border border-l-[3px] p-3 text-text ${border}`}>
+      <span className={icon}>{tone === "warning" ? <ClockIcon /> : <AlertIcon />}</span>
       <div className="flex min-w-0 flex-1 flex-col gap-2 text-sm">{children}</div>
       {actions}
     </div>

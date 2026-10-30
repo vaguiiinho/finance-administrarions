@@ -1,5 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./auth-support";
+import { signInAsAna } from "./legacy-auth";
 import { ENTRIES_URL, setScenario, setThemeCookie, gotoReady } from "./support";
+
+// ADR 0005 D10: o stub nao aceita requisicao sem Bearer; as telas protegidas pedem sessao (usuaria comum "ana").
+test.beforeEach(async ({ page }) => {
+  await signInAsAna(page);
+});
 
 /** F1 no navegador (design 3.9.1/3.9.2): o foco no envio invalido nao abre a lista, e a mensagem de erro fica visivel. */
 test.beforeEach(async ({ context }) => {

@@ -1,8 +1,9 @@
-import { startE2eApp, type E2eApp } from '../support/e2e-app.js';
+import { type E2eApp } from '../support/e2e-app.js';
+import { startFinanceE2e } from '../support/finance-e2e.js';
 
 let e: E2eApp;
 beforeAll(async () => {
-  e = await startE2eApp();
+  e = await startFinanceE2e();
 });
 afterAll(() => e.close());
 beforeEach(() => e.reset());

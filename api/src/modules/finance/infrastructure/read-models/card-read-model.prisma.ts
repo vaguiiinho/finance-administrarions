@@ -1,6 +1,7 @@
 import { Prisma } from '@shared/infrastructure/prisma/generated/client.js';
 import type { PrismaExecutor } from '@shared/infrastructure/prisma/prisma-executor.js';
 import type { CardReadModel, CardView } from '../../application/ports/card-read-model.js';
+import type { OwnerId } from '../../domain/owner/owner-id.js';
 import type { CardId } from '../../domain/card/value-objects/card-id.js';
 
 interface CardRecord {
@@ -24,18 +25,18 @@ const toView = (r: CardRecord): CardView => ({
 export class PrismaCardReadModel implements CardReadModel {
   constructor(private readonly prisma: PrismaExecutor) {}
 
-  async listAll(): Promise<CardView[]> {
+  async listAll(ownerId: OwnerId): Promise<CardView[]> {
     const rows = await this.prisma.$queryRaw<CardRecord[]>(Prisma.sql`
       SELECT id::text AS id, name, closing_day::int AS closing_day, due_day::int AS due_day, created_at, updated_at
-      FROM cards
+      FROM cards WHERE user_id = ${ownerId.value}::uuid
       ORDER BY name_key COLLATE "und-x-icu", id`);
     return rows.map(toView);
   }
 
-  async findById(id: CardId): Promise<CardView | null> {
+  async findById(ownerId: OwnerId, id: CardId): Promise<CardView | null> {
     const rows = await this.prisma.$queryRaw<CardRecord[]>(Prisma.sql`
       SELECT id::text AS id, name, closing_day::int AS closing_day, due_day::int AS due_day, created_at, updated_at
-      FROM cards WHERE id = ${id.value}::uuid`);
+      FROM cards WHERE user_id = ${ownerId.value}::uuid AND id = ${id.value}::uuid`);
     return rows.length > 0 ? toView(rows[0]!) : null;
   }
 }

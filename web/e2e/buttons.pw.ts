@@ -1,7 +1,14 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { type Locator, type Page } from "@playwright/test";
+import { expect, test } from "./auth-support";
+import { anaAuthorization, signInAsAna } from "./legacy-auth";
 import { evaluateButton, snapshotOf, type ButtonState } from "./contrast";
 import { forcePseudoState, type ForcedPseudo } from "./pseudo-state";
 import { ENTRIES_URL, MONTH, STUB_URL, gotoReady, releaseMutations, setScenario, setThemeCookie, themeToggle } from "./support";
+
+// ADR 0005 D10: o stub nao aceita requisicao sem Bearer; as telas protegidas pedem sessao (usuaria comum "ana").
+test.beforeEach(async ({ page }) => {
+  await signInAsAna(page);
+});
 
 /**
  * CA83 / CAF07 (design 13.3, ADR 0002 T2): botoes em TODOS os estados x 2 temas, medidos no navegador.
@@ -187,7 +194,7 @@ async function submitPadaria(page: Page): Promise<Locator> {
 
 /** Quantos lancamentos "Padaria" existem no stub (independe da UI). */
 async function countPadaria(): Promise<number> {
-  const res = await fetch(`${STUB_URL}/api/entries/expenses?month=${MONTH}&pageSize=100`);
+  const res = await fetch(`${STUB_URL}/api/entries/expenses?month=${MONTH}&pageSize=100`, { headers: await anaAuthorization() });
   const data = (await res.json()) as { items: { description: string }[] };
   return data.items.filter((e) => e.description === "Padaria").length;
 }

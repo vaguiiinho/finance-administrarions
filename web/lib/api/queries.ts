@@ -1,12 +1,6 @@
 import "server-only";
-import { cache } from "react";
-import { listCards, listCategories, getSummary } from "./endpoints";
+import { unstable_rethrow } from "next/navigation";
 import { ApiError } from "./http";
-
-/** Leituras deduplicadas dentro da mesma renderizacao (resumo, painel, drawer e filtros compartilham C2/E6/S1). */
-export const getSummaryCached = cache(getSummary);
-export const listCardsCached = cache(listCards);
-export const listCategoriesCached = cache(listCategories);
 
 export type Settled<T> = { ok: true; data: T } | { ok: false };
 
@@ -14,7 +8,9 @@ export type Settled<T> = { ok: true; data: T } | { ok: false };
 export async function settle<T>(promise: Promise<T>): Promise<Settled<T>> {
   try {
     return { ok: true, data: await promise };
-  } catch {
+  } catch (error) {
+    // redirect()/notFound() dos readers (401, 403) precisam chegar ao Next: nao sao falhas "auxiliares"
+    unstable_rethrow(error);
     return { ok: false };
   }
 }

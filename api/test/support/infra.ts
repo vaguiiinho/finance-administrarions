@@ -17,10 +17,11 @@ import { PayEntriesInBatch } from '@finance/application/use-cases/entries/pay-en
 import { PayInvoice } from '@finance/application/use-cases/invoices/pay-invoice.js';
 import { MarkEntryAsPaid } from '@finance/application/use-cases/entries/mark-entry-as-paid.js';
 import { FixedClock, SequentialIdGenerator, SpyEventPublisher } from '../fakes/simple-fakes.js';
-import { NOW } from './builders.js';
+import { NOW, asDefaultOwner } from './builders.js';
 
 /**
- * Monta a infraestrutura REAL sobre o Postgres do container.
+ * Monta a infraestrutura REAL sobre o Postgres do container. Os use cases saem como o USUARIO PADRAO (`asDefaultOwner`);
+ * testes com dois donos passam `ownerId` explicito.
  * CONTRATOS ASSUMIDOS (ajuste so aqui se diferirem):
  *  - `new PrismaService()` le `process.env.DATABASE_URL` e monta o PrismaPg internamente; `$connect()`/`$disconnect()`.
  *  - repositorios/UoW/read models recebem o PrismaService no construtor.
@@ -57,11 +58,12 @@ export async function buildInfra(clock: FixedClock = new FixedClock(NOW)) {
       dashboard: new PrismaDashboardReadModel(prisma),
     },
     useCases: {
-      createCard: new CreateCard(cards, ids, clock, publisher),
-      createEntry: new CreateEntry(entries, cards, catalog, ids, clock, publisher),
-      markEntryAsPaid: (c: FixedClock = clock) => new MarkEntryAsPaid(uow, new PrismaEntryReadModel(prisma), c, publisher),
-      payBatch: (c: FixedClock = clock, u = uow) => new PayEntriesInBatch(u, paymentService, c, publisher),
-      payInvoice: (c: FixedClock = clock, u = uow) => new PayInvoice(u, paymentService, c, publisher),
+      createCard: asDefaultOwner(new CreateCard(cards, ids, clock, publisher)),
+      createEntry: asDefaultOwner(new CreateEntry(entries, cards, catalog, ids, clock, publisher)),
+      markEntryAsPaid: (c: FixedClock = clock) =>
+        asDefaultOwner(new MarkEntryAsPaid(uow, new PrismaEntryReadModel(prisma), c, publisher)),
+      payBatch: (c: FixedClock = clock, u = uow) => asDefaultOwner(new PayEntriesInBatch(u, paymentService, c, publisher)),
+      payInvoice: (c: FixedClock = clock, u = uow) => asDefaultOwner(new PayInvoice(u, paymentService, c, publisher)),
     },
     close: () => prisma.$disconnect(),
   };
