@@ -196,7 +196,7 @@ describe("Drawer - validacao, erros e sucesso", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     const toast = await screen.findByText(/Lançamento criado na fatura de nov\/26 do Nubank, vence 05\/11\/2026\./);
     expect(toast).toHaveTextContent("Ela está em novembro de 2026.");
-    expect(screen.getByRole("link", { name: "Ver novembro" })).toHaveAttribute("href", "/entries?month=2026-11");
+    expect(screen.getByRole("link", { name: "Ver novembro" })).toHaveAttribute("href", "/entries?month=2026-11&d_status=ALL"); // CA41: "Ver <mes>" abre Despesas em Todos
   });
 });
 

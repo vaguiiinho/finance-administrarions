@@ -6,9 +6,12 @@ import { FinanceReadHandlers } from './finance-read-handlers.js';
 import {
   expensesQuerySchema,
   incomesQuerySchema,
+  invoicesQuerySchema,
   monthQuerySchema,
+  noQuerySchema,
   type ExpensesQuery,
   type IncomesQuery,
+  type InvoicesQuery,
   type MonthQuery,
 } from './schemas/query.schemas.js';
 
@@ -20,6 +23,11 @@ import {
 @Controller('demo')
 export class DemoController {
   constructor(@Inject(FinanceReadHandlers) private readonly reads: FinanceReadHandlers) {}
+
+  @Get('entries/initial-month')
+  initialMonth(@Query(new ZodValidationPipe(noQuerySchema)) _query: object) {
+    return this.reads.initialMonth(DEMO_USER_ID);
+  }
 
   @Get('entries/expenses')
   expenses(@Query(new ZodValidationPipe(expensesQuerySchema)) query: ExpensesQuery) {
@@ -42,7 +50,7 @@ export class DemoController {
   }
 
   @Get('invoices')
-  invoices(@Query(new ZodValidationPipe(monthQuerySchema)) query: MonthQuery) {
+  invoices(@Query(new ZodValidationPipe(invoicesQuerySchema)) query: InvoicesQuery) {
     return this.reads.invoices(DEMO_USER_ID, query);
   }
 

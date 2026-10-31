@@ -98,7 +98,7 @@ for (const theme of THEMES) {
     test("desabilitado: Pagar fatura (fatura paga), Marcar como pago (sem selecao), Salvar com painel de cartao aberto, seta do grafico na ponta, segmento Cartao com Receita", async ({ context, page }) => {
       await setScenario("default");
       await setThemeCookie(context, theme);
-      await gotoReady(page, `${ENTRIES_URL}&tab=invoices`);
+      await gotoReady(page, `${ENTRIES_URL}&tab=invoices&f_status=ALL`);
       const block = page.getByRole("group", { name: /Nubank/ });
       await block.getByRole("button", { name: "Pagar fatura" }).click();
       await page.getByRole("alertdialog").getByRole("button", { name: /Confirmar|Pagar fatura/ }).click();
@@ -129,7 +129,7 @@ for (const theme of THEMES) {
       await setThemeCookie(context, theme);
       try {
         await setScenario("default", { holdMutations: true });
-        await gotoReady(page, ENTRIES_URL);
+        await gotoReady(page, `${ENTRIES_URL}&d_status=ALL`);
         await openDrawer(page);
         const dialog = page.getByRole("dialog");
         const save = await submitPadaria(page);
@@ -153,7 +153,7 @@ for (const theme of THEMES) {
         await releaseMutations();
 
         await setScenario("default", { holdMutations: true });
-        await gotoReady(page, `${ENTRIES_URL}&tab=invoices`);
+        await gotoReady(page, `${ENTRIES_URL}&tab=invoices&f_status=ALL`);
         await page.getByRole("group", { name: /Nubank/ }).getByRole("button", { name: "Pagar fatura" }).click();
         const payInvoice = page.getByRole("alertdialog").getByRole("button", { name: /Confirmar|Pagar fatura|Pagando/ });
         await payInvoice.click();
@@ -228,7 +228,7 @@ test.describe("carregando com movimento reduzido", () => {
       await page.emulateMedia({ reducedMotion: "reduce" });
       try {
         await setScenario("default", { holdMutations: true });
-        await gotoReady(page, ENTRIES_URL);
+        await gotoReady(page, `${ENTRIES_URL}&d_status=ALL`);
         await openDrawer(page);
         const save = await submitPadaria(page);
         const spinner = save.locator(".spinner");

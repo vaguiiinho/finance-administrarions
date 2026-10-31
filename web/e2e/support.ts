@@ -6,7 +6,7 @@ import { samplesFromTokenColors } from "../lib/theme/gradient";
 import { classifyChain, expandUnders, worstOverLayers, type ChainLayer } from "../lib/theme/glass";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-export const STUB_URL = "http://127.0.0.1:4010";
+export const STUB_URL = `http://127.0.0.1:${process.env.PW_STUB_PORT ?? 4010}`;
 export const MONTH = "2026-11";
 export const ENTRIES_URL = `/entries?month=${MONTH}`;
 
@@ -27,6 +27,13 @@ export interface ScenarioOptions {
   delayMs?: number;
   holdMutations?: boolean;
   holdQueries?: boolean;
+  /** ADR 0007 T5, cenarios `custom`/`initial-month-*`: "agora" do stub (ISO). Padrao: relogio real. */
+  now?: string;
+  /** Cenario `custom`: dados do proprio teste (ver `e2e/entries-data.ts`). */
+  cards?: unknown[];
+  entries?: unknown[];
+  /** Cenario `custom`: dados da demo (`/api/demo/*`). Padrao: dataset de exemplo do stub. */
+  demo?: { cards: unknown[]; entries: unknown[] };
 }
 
 export async function setScenario(name: string, options: ScenarioOptions = {}) {
@@ -40,7 +47,7 @@ export async function releaseMutations() {
   if (!res.ok) throw new Error("falha ao liberar requisicoes seguradas");
 }
 
-export async function setThemeCookie(context: BrowserContext, theme: "light" | "dark", baseURL = "http://localhost:3100") {
+export async function setThemeCookie(context: BrowserContext, theme: "light" | "dark", baseURL = `http://localhost:${process.env.PW_WEB_PORT ?? 3100}`) {
   await context.addCookies([{ name: "theme", value: theme, url: baseURL }]);
 }
 

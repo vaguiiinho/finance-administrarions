@@ -119,7 +119,7 @@ export function RecentBadge({ id }: { id: string }) {
 export function EntryRow({ id, className = "", children }: { id: string; className?: string; children: ReactNode }) {
   const recent = useIsRecent(id);
   return (
-    <tr data-recent={recent || undefined} className={`${className} ${recent ? "row-highlight" : ""}`.trim()}>
+    <tr data-entry-id={id} tabIndex={-1} data-recent={recent || undefined} className={`${className} ${recent ? "row-highlight" : ""}`.trim()}>
       {children}
     </tr>
   );
@@ -129,7 +129,7 @@ export function EntryRow({ id, className = "", children }: { id: string; classNa
 export function EntryItem({ id, className = "", children, ...rest }: { id: string; className?: string; children: ReactNode } & React.LiHTMLAttributes<HTMLLIElement>) {
   const recent = useIsRecent(id);
   return (
-    <li data-recent={recent || undefined} className={`${className} ${recent ? "row-highlight" : ""}`.trim()} {...rest}>
+    <li data-entry-id={id} tabIndex={-1} data-recent={recent || undefined} className={`${className} ${recent ? "row-highlight" : ""}`.trim()} {...rest}>
       {children}
     </li>
   );

@@ -5,6 +5,35 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+### Listagem de lançamentos: mês inicial e status padrão orientados a pendências (ADR 0007)
+
+#### Added
+
+- API: `GET /api/entries/initial-month` e `GET /api/demo/entries/initial-month` devolvem `{ currentMonth, month, advance }` (`NONE`, `NEXT_PENDING`, `NO_PENDING_AHEAD`). Regra pura `resolveInitialMonth` no domínio, caso de uso `GetInitialEntriesMonth` e `PendingOverviewReadModel` (uma única consulta). Sem query: parâmetro informado gera 400 `UNKNOWN_FIELD`.
+- API: `status=PENDING|PAID` opcional em `GET /api/invoices` e `GET /api/demo/invoices`, filtrado no SQL com `HAVING`. O filtro seleciona a fatura inteira (totais e contagens continuam sobre todas as despesas). `ALL` e outros valores geram 400 `INVALID_VALUE`.
+- Web: `/entries` e `/demo/entries` sem `month` resolvem o mês inicial pela API e redirecionam (`replace`). Falha ou timeout de 1,5 s abre o mês atual, sem aviso.
+- Web: aviso dispensável de avanço de mês (`MonthAdvanceNotice`), com o sinal `adv` e `adv_from` removido da URL ao montar.
+- Web: filtro de status "Todos / Pendente / Pago" na aba Faturas (`f_status`), escondido para quem não tem cartão; `d_status` e `f_status` aceitam `PENDING`, `PAID` e `ALL`. Linha "Status: ..." abaixo de `md` nas abas Despesas e Faturas.
+- Web: atalho de fatura paga "Ver despesas do cartão na aba Despesas", que abre `d_status=ALL`.
+- Testes: unitários do domínio e do caso de uso, integração dos read models, e2e da API (`initial-month.e2e-spec.ts`), fixture `api/test/fixtures/initial-month.cases.json`, e2e Playwright `web/e2e/initial-month.pw.ts`, cenários `custom`, `initial-month-error` e `initial-month-slow` no stub e cenários de desempenho `IM1`, `IM2` e `I1 status=...` em `rnf06.perf-spec.ts`.
+- Variáveis de teste `PW_WEB_PORT` e `PW_STUB_PORT` em `web/playwright.config.ts` (portas do web e do stub no Playwright; padrões 3100 e 4010).
+
+#### Changed
+
+- Despesas e Faturas abrem em "Pendente". `PENDING` é omitido da URL, `ALL` nunca é enviado à API e valor inválido vale "Pendente".
+- "Limpar filtros" leva a "Todos" e fica visível sob o padrão "Pendente"; o contador "Filtros (n)" conta o padrão.
+- Toasts pós-criação oferecem "Limpar filtros" quando o item não aparece (despesa PIX paga sob "Pendente"; compra no cartão sob "Pago" em Faturas), e "Ver <mês>" abre com "Todos".
+- Foco após pagamento: sob "Pendente", a fatura ou a despesa individual paga sai da lista e o foco vai para o `h2` do painel; sob "Todos", o comportamento anterior é mantido.
+- `ListInvoices` e `InvoiceReadModel.listByMonth` recebem `{ month, status? }`. Rotas públicas de demo: de 9 para 10.
+- Docs: `docs/api/finance.md` (rotas novas, `status`, diagramas); ADR 0005 com notas de atualização (10 rotas de demo; `proxy.ts` em `/login`); notas "Superado" na spec e no design de origem (`lancamentos-financeiros.md`: CA61, RF19 a RF21, "Mês selecionado", seções 3.1, 3.3, 3.5, 3.6, 3.7, 3.9.2, 3.10, 3.12 e D6); ADR 0007 marcado como Aceito.
+
+#### Notes
+
+- Sem mudança de schema, migration ou dados; sem índice novo (a última migration segue `20261029000002_finance_ownership`).
+- Divergência em relação ao ADR 0007 (seção 15): `parseExpenseStatus` não foi renomeado para `parsePaymentStatusFilter`; `ListInvoices` usa o alias `parseInvoiceStatus`, que delega a ele.
+- O avanço de mês não tem limite de distância (risco R3 aceito): uma data digitada errada pode definir a abertura até a pendência ser paga.
+- Execução e medições (p95 e `EXPLAIN` de `IM1`, `IM2` e `I1`) registradas em `docs/runs/listagem-mes-e-status-padrao.md`.
+
 ### Superfícies em vidro fosco e resumo do mês sem card externo (ADR 0004, design rev. 7)
 
 #### Added

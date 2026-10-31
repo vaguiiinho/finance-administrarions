@@ -4,6 +4,7 @@ import { GetMonthlySeries } from '../../application/use-cases/dashboard/get-mont
 import { ListCategories } from '../../application/use-cases/entries/list-categories.js';
 import { ListExpenses } from '../../application/use-cases/entries/list-expenses.js';
 import { ListIncomes } from '../../application/use-cases/entries/list-incomes.js';
+import { GetInitialEntriesMonth } from '../../application/use-cases/entries/get-initial-entries-month.js';
 import { ListCards } from '../../application/use-cases/cards/list-cards.js';
 import { ListInvoiceEntries } from '../../application/use-cases/invoices/list-invoice-entries.js';
 import { ListInvoices } from '../../application/use-cases/invoices/list-invoices.js';
@@ -11,7 +12,7 @@ import { GetMonthlySummary } from '../../application/use-cases/summary/get-month
 import { presentCard } from './presenters/card.presenter.js';
 import { presentEntry } from './presenters/entry.presenter.js';
 import { presentExpenseTotals, presentPagination, presentTotals } from './presenters/totals.presenter.js';
-import type { ExpensesQuery, IncomesQuery, MonthQuery } from './schemas/query.schemas.js';
+import type { ExpensesQuery, IncomesQuery, InvoicesQuery, MonthQuery } from './schemas/query.schemas.js';
 
 /**
  * Leituras do finance montadas uma só vez: os controllers protegidos passam o dono do principal e as rotas públicas
@@ -29,7 +30,13 @@ export class FinanceReadHandlers {
     @Inject(GetMonthlySummary) private readonly getMonthlySummary: GetMonthlySummary,
     @Inject(GetMonthlySeries) private readonly getMonthlySeries: GetMonthlySeries,
     @Inject(GetCategoryDistribution) private readonly getCategoryDistribution: GetCategoryDistribution,
+    @Inject(GetInitialEntriesMonth) private readonly getInitialEntriesMonth: GetInitialEntriesMonth,
   ) {}
+
+  async initialMonth(ownerId: string) {
+    const result = await this.getInitialEntriesMonth.execute({ ownerId });
+    return { currentMonth: result.currentMonth.toString(), month: result.month.toString(), advance: result.advance };
+  }
 
   async expenses(ownerId: string, query: ExpensesQuery) {
     const result = await this.listExpenses.execute({ ownerId, ...query });
@@ -60,7 +67,7 @@ export class FinanceReadHandlers {
     return { items: items.map(presentCard) };
   }
 
-  async invoices(ownerId: string, query: MonthQuery) {
+  async invoices(ownerId: string, query: InvoicesQuery) {
     const result = await this.listInvoices.execute({ ownerId, ...query });
     return {
       month: result.month.toString(),

@@ -22,6 +22,10 @@ interface Scenario {
   name: ScenarioName;
   /** Devolve method + path da amostra `i` (I3 usa uma fatura diferente por amostra) */
   request: (i: number) => { method: 'GET' | 'POST'; path: string };
+  /** Prepara relogio/massa antes do aquecimento (cenarios IM1 e IM2, ADR 0007 secao 8). */
+  setup?: () => Promise<void>;
+  /** Corpo esperado da primeira amostra (confere que o cenario exercita o caso pretendido). */
+  expectBody?: unknown;
 }
 
 interface Result {
@@ -165,6 +169,12 @@ async function explain(queries: CapturedQuery[]): Promise<PlanSummary[]> {
 }
 
 async function measure(scenario: Scenario): Promise<Result> {
+  await scenario.setup?.();
+  if (scenario.expectBody !== undefined) {
+    const r = scenario.request(0);
+    const res = await fetch(`${base}${r.path}`, { method: r.method, headers: auth() });
+    expect(await res.json(), scenario.name).toEqual(scenario.expectBody);
+  }
   for (let i = 0; i < WARMUP; i++) {
     const r = scenario.request(i);
     await timed(r.method, `${base}${r.path}`);
@@ -194,6 +204,7 @@ async function measure(scenario: Scenario): Promise<Result> {
   return result;
 }
 
+const first = () => seed.months[0];
 const month = () => seed.months[seed.months.length - 2]; // mes "cheio" (nao e a ponta da serie)
 const q = (params: Record<string, string | number>) => new URLSearchParams(Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))).toString();
 
@@ -210,12 +221,17 @@ const SCENARIO_NAMES = [
   'E2 cardId=pix',
   'E3 receitas',
   'I1 faturas do mes',
+  'I1 faturas status=PENDING',
+  'I1 faturas status=PAID',
   'I2 maior fatura',
   'I3 pagar fatura',
   'D2 serie mensal',
   'D3 distribuicao por categoria',
   'E6 categorias',
   'C2 cartoes',
+  // IM1 e IM2 por ultimo: IM2 altera a massa (todas as despesas PAID exceto as do ultimo mes) e o relogio.
+  'IM1 mes inicial, pendencia em M',
+  'IM2 mes inicial, pior caso',
 ] as const;
 type ScenarioName = (typeof SCENARIO_NAMES)[number];
 
@@ -236,6 +252,8 @@ const scenarios = (): Scenario[] => {
     get('E2 cardId=pix', `/api/entries/expenses?${q({ month: m, cardId: 'pix' })}`),
     get('E3 receitas', `/api/entries/incomes?${q({ month: m })}`),
     get('I1 faturas do mes', `/api/invoices?${q({ month: m })}`),
+    get('I1 faturas status=PENDING', `/api/invoices?${q({ month: m, status: 'PENDING' })}`),
+    get('I1 faturas status=PAID', `/api/invoices?${q({ month: m, status: 'PAID' })}`),
     get('I2 maior fatura', `/api/cards/${seed.biggestInvoice.cardId}/invoices/${seed.biggestInvoice.referenceMonth}/entries`),
     {
       // I3 nao usa rollback: cada amostra paga uma fatura pendente diferente (ADR 0002 T4)
@@ -249,6 +267,29 @@ const scenarios = (): Scenario[] => {
     get('D3 distribuicao por categoria', `/api/dashboard/category-distribution?${q({ month: m })}`),
     get('E6 categorias', '/api/categories'),
     get('C2 cartoes', '/api/cards'),
+    {
+      // M = mes "cheio" da massa (cerca de 50% das despesas pendentes): a primeira pendencia esta em M.
+      ...get('IM1 mes inicial, pendencia em M', '/api/entries/initial-month'),
+      setup: async () => {
+        ctx.clock.set(new Date(`${m}-15T15:00:00.000Z`));
+      },
+      expectBody: { currentMonth: m, month: m, advance: 'NONE' },
+    },
+    {
+      // Pior caso: M no primeiro mes da massa e so o ultimo mes com pendencia; a faixa percorre todos os meses pagos.
+      ...get('IM2 mes inicial, pior caso', '/api/entries/initial-month'),
+      setup: async () => {
+        const first = seed.months[0];
+        const last = seed.months[seed.months.length - 1];
+        await ctx.pool.query(
+          `UPDATE entries SET status = 'PAID', paid_at = COALESCE(paid_at, now()) WHERE type = 'EXPENSE' AND status = 'PENDING' AND reference_month < $1::date`,
+          [`${last}-01`],
+        );
+        await ctx.pool.query(`ANALYZE entries`);
+        ctx.clock.set(new Date(`${first}-15T15:00:00.000Z`));
+      },
+      expectBody: { currentMonth: first(), month: seed.months[seed.months.length - 1], advance: 'NEXT_PENDING' },
+    },
   ];
 };
 

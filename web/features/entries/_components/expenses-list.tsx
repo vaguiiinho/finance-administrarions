@@ -17,11 +17,16 @@ import type { ActionError, EntryDto, PayEntriesResult } from "@/lib/api/types";
 import { payEntries, payEntry } from "@/app/(protected)/entries/actions";
 import { EntryItem, EntryRow, RecentBadge } from "./entry-drawer-context";
 import { PayConfirmDialog } from "./pay-confirm-dialog";
+import { useFocusAfterClose } from "./use-focus-after-close";
+import { focusTargetAfterPay } from "@/lib/entries/focus-target";
+import type { StatusFilter } from "@/lib/filters/entries-search-params";
 
 interface ExpensesListProps {
   items: EntryDto[];
-  /** Id do h2 do painel (foco apos pagar em lote) */
+  /** Id do h2 do painel (foco apos pagar) */
   panelTitleId: string;
+  /** Filtro de status vigente: sob "Todos" a linha paga permanece (foco na propria linha/card); nos demais ela sai (foco no h2). */
+  statusFilter?: StatusFilter;
 }
 
 type Banner = { kind: "missing" | "income"; labels: string[] } | null;
@@ -38,13 +43,19 @@ function InvoiceChip({ entry }: { entry: EntryDto }) {
   );
 }
 
+/** Linha da tabela (>= md) ou card (< md) da despesa: o que estiver visivel; no DOM os dois coexistem. */
+function visibleEntryTarget(id: string): HTMLElement | null {
+  const all = [...document.querySelectorAll<HTMLElement>("[data-entry-id]")].filter((el) => el.dataset.entryId === id);
+  return all.find((el) => el.offsetParent !== null) ?? all[0] ?? null;
+}
+
 const checkboxLabel = (e: EntryDto) => (e.status === "PENDING" ? `Selecionar ${e.description}, ${formatBRL(e.amount)}, ${formatCivilDate(e.date)}` : `${e.description} já pago`);
 
 /**
  * Lista da aba Despesas (RF20): tabela em >= md e cards em < md (mesmo estado de selecao), selecao so de pendentes
  * (P12), pagamento individual/lote com confirmacao (D2) e banners de 404/422 do lote (3.10).
  */
-export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
+export function ExpensesList({ items, panelTitleId, statusFilter = "ALL" }: ExpensesListProps) {
   // Na demo (so visualizacao) nada de escrita existe no DOM: sem checkbox, sem "Pagar", sem barra de lote (RF31, CA38)
   const { readOnly } = useAppMode();
   const uid = useId();
@@ -58,6 +69,7 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
   useAuthRedirect(authError);
   const [banner, setBanner] = useState<Banner>(null);
   const lastTrigger = useRef<HTMLElement | null>(null);
+  const focusAfterClose = useFocusAfterClose(confirm !== null);
 
   const pending = useMemo(() => items.filter((e) => e.status === "PENDING"), [items]);
   // derivado: o que foi pago por fora (revalidacao) sai da selecao sozinho
@@ -98,8 +110,16 @@ export function ExpensesList({ items, panelTitleId }: ExpensesListProps) {
       setSelectedIds(new Set());
       setBanner(null);
       toast.push({ kind: "success", message: paidFeedback(counts, single ? confirm[0].description : undefined) });
-      if (single) lastTrigger.current?.focus();
-      else document.getElementById(panelTitleId)?.focus();
+      // so depois de o AlertDialog fechar (design 6.1/6.2, C3); em lote o foco segue no h2 do painel (RF24)
+      const toPanel = !single || focusTargetAfterPay(statusFilter) === "panel";
+      // Sob "Todos" a linha permanece como paga, mas o gatilho "Marcar como pago" some: o foco vai para a propria linha/card
+      // (alvo estavel, tabIndex -1), localizado pelo id depois do fechamento do dialogo (design 6.2)
+      const paidId = confirm[0].id;
+      // se a linha ja nao existe quando o dialogo fecha (ex.: revalidacao a removeu), o foco cai no h2 do painel
+      focusAfterClose(() => {
+        const target = toPanel ? null : visibleEntryTarget(paidId);
+        (target ?? document.getElementById(panelTitleId))?.focus();
+      });
       return;
     }
     const { error: apiError } = result;

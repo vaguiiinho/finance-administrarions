@@ -36,7 +36,7 @@ const base: EntryDto = {
 
 async function createAndWait(tab: "expenses" | "income", response: EntryDto, income = false, params: Record<string, string> = {}) {
   createEntry.mockResolvedValue({ ok: true, data: response });
-  const state = parseEntriesSearchParams({ month: "2026-10", tab, ...params }, new Date("2026-10-24T13:00:00.000Z"));
+  const state = parseEntriesSearchParams({ month: "2026-10", tab, d_status: "ALL", ...params }, new Date("2026-10-24T13:00:00.000Z"));
   render(
     <AllProviders>
       <EntryDrawerProvider>

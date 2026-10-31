@@ -66,7 +66,8 @@ test("CA53: o mes selecionado usa o mes de referencia (compra de 10/10 no cartao
 });
 
 test("CA70: selecionar pendentes, 'Marcar como pago' e confirmar -> pagas, selecao limpa", async ({ page }) => {
-  await gotoReady(page, ENTRIES_URL); // checkbox marcado antes da hidratacao e perdido
+  // ADR 0007: o padrao agora e "Pendente" (as linhas pagas saem da lista); este teste confere o selo "Pago" nas linhas, entao usa "Todos"
+  await gotoReady(page, `${ENTRIES_URL}&d_status=ALL`); // checkbox marcado antes da hidratacao e perdido
   await page.getByRole("checkbox", { name: /Mercado/ }).check();
   await page.getByRole("checkbox", { name: /Internet/ }).check();
   await page.getByRole("button", { name: "Marcar como pago" }).click();
@@ -81,7 +82,7 @@ test("CA70: selecionar pendentes, 'Marcar como pago' e confirmar -> pagas, selec
 });
 
 test("CA71: pagas sem checkbox ativo; aba Receitas sem checkbox nem 'Marcar como pago'", async ({ page }) => {
-  await page.goto(ENTRIES_URL);
+  await page.goto(`${ENTRIES_URL}&d_status=ALL`); // ADR 0007: a despesa paga (Aluguel) so aparece fora do padrao "Pendente"
   await expect(page.getByRole("checkbox", { name: /Aluguel/ })).toBeDisabled();
   await tab(page, "Receitas").click();
   await expect(page.getByRole("checkbox")).toHaveCount(0);
@@ -89,7 +90,7 @@ test("CA71: pagas sem checkbox ativo; aba Receitas sem checkbox nem 'Marcar como
 });
 
 test("CA72: aba Faturas - expandir, 'Pagar fatura' com confirmacao (2 lancamentos, R$ 150,00) e bloco quitado", async ({ page }) => {
-  await page.goto(`${ENTRIES_URL}&tab=invoices`);
+  await page.goto(`${ENTRIES_URL}&tab=invoices&f_status=ALL`); // ADR 0007: sob "Pendente" o bloco quitado sai da lista (CA55); "Todos" o mantem (CA56)
   const block = page.getByRole("group", { name: /Nubank/ });
   await expect(block).toContainText("Fecha 25/10/2026");
   await expect(block).toContainText("Vence 05/11/2026");

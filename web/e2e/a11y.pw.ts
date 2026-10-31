@@ -281,7 +281,7 @@ const SCREENS: ScreenDef[] = [
   {
     name: "lancamentos / linha recem-criada (destaque e selo Novo)",
     scenario: "default",
-    url: ENTRIES_URL,
+    url: `${ENTRIES_URL}&d_status=ALL`, // "Todos": a despesa recem-criada (paga) nao aparece sob o padrao Pendente
     prepare: async (page) => {
       await page.getByRole("button", { name: /Novo lançamento/ }).click();
       const dialog = page.getByRole("dialog");

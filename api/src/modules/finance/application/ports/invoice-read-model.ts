@@ -18,9 +18,17 @@ export interface InvoiceRow {
   pending: Money;
 }
 
+export type InvoiceStatusFilter = 'PENDING' | 'PAID';
+
+export interface InvoiceListCriteria {
+  month: ReferenceMonth;
+  /** PENDING: pendingCount > 0; PAID: pendingCount = 0. Seleciona a fatura inteira (totais não mudam). */
+  status?: InvoiceStatusFilter;
+}
+
 export interface InvoiceReadModel {
   /** Uma linha por cartão com >= 1 despesa no mês; ordem dueDate asc, nome do cartão, id. */
-  listByMonth(ownerId: OwnerId, month: ReferenceMonth): Promise<InvoiceRow[]>;
+  listByMonth(ownerId: OwnerId, criteria: InvoiceListCriteria): Promise<InvoiceRow[]>;
   /** Todas as despesas de UMA fatura, sem paginação, date DESC, created_at DESC, id DESC. */
   listEntries(ownerId: OwnerId, key: InvoiceKey): Promise<EntryView[]>;
 }

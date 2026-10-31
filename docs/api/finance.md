@@ -5,7 +5,7 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 ## Convenções
 
 - **Prefixo:** todas as rotas ficam sob `/api` (`configureApp`). A porta vem de `PORT` (padrão 3000; o web espera 3001, ver README).
-- **Formato:** JSON (`Content-Type: application/json`). Não há autenticação.
+- **Formato:** JSON (`Content-Type: application/json`). Todas as rotas, exceto as públicas `/api/demo/*` (somente leitura, dono fixo `DEMO_USER_ID`), exigem sessão válida; sem ela, 401 `UNAUTHENTICATED`, e com troca de senha pendente, 403 `PASSWORD_CHANGE_REQUIRED`. O dono dos dados é sempre o do principal (ou o usuário demo nas rotas `/api/demo/*`, que têm o mesmo contrato de resposta).
 - **Dinheiro:** string decimal com 2 casas (`"1234.56"`); saldos podem ser negativos (`"-150.00"`). Nunca número JSON.
 - **Datas:** `date`, `closingDate`, `dueDate` são datas civis `YYYY-MM-DD`; `referenceMonth` e `month` são `YYYY-MM`; instantes (`paidAt`, `createdAt`, `updatedAt`) são ISO 8601 em UTC.
 - **IDs:** UUID (gerados em v7). Aceita-se qualquer UUID bem formado; bem formado e inexistente resulta em 404, mal formado em 400.
@@ -18,6 +18,7 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 | Método | Rota | Descrição | Sucesso |
 |---|---|---|---|
 | POST | `/api/entries` | Cria lançamento (receita ou despesa) | 201 |
+| GET | `/api/entries/initial-month` | Mês inicial sugerido para a listagem de lançamentos (sem query) | 200 |
 | GET | `/api/entries/expenses` | Despesas de um mês de referência, com filtros, paginação e subtotal | 200 |
 | GET | `/api/entries/incomes` | Receitas de um mês de referência, com filtro de categoria, paginação e subtotal | 200 |
 | POST | `/api/entries/:id/pay` | Marca uma despesa como paga (idempotente) | 200 |
@@ -26,7 +27,7 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 | POST | `/api/cards` | Cria cartão | 201 |
 | GET | `/api/cards` | Lista cartões | 200 |
 | PUT | `/api/cards/:id` | Substitui nome e dias do cartão | 200 |
-| GET | `/api/invoices?month=` | Faturas cujo mês de referência é `month` | 200 |
+| GET | `/api/invoices?month=[&status=]` | Faturas cujo mês de referência é `month`, opcionalmente só pendentes ou só pagas | 200 |
 | GET | `/api/cards/:cardId/invoices/:referenceMonth/entries` | Despesas de uma fatura | 200 |
 | POST | `/api/cards/:cardId/invoices/:referenceMonth/pay` | Paga as despesas pendentes da fatura | 200 |
 | GET | `/api/summary?month=` | Resumo do mês (receitas, despesas, saldos) | 200 |
@@ -126,6 +127,37 @@ POST /api/entries
 
 Erros: 400 `VALIDATION_ERROR`; 404 `CARD_NOT_FOUND` (cartão inexistente; só depois de passar a validação 400).
 
+### GET /api/entries/initial-month
+
+Rota pública equivalente: `GET /api/demo/entries/initial-month` (dono = usuário demo). Não aceita query: qualquer parâmetro gera 400 `VALIDATION_ERROR` com `UNKNOWN_FIELD`. Uma única consulta ao banco.
+
+Regra (ADR 0007): `M` é o mês corrente em America/Sao_Paulo. Considera-se pendência uma despesa `PENDING` (PIX ou cartão) com mês de referência >= `M`; pendências anteriores a `M` não interferem.
+
+| Situação | `month` | `advance` |
+|---|---|---|
+| Há pendência em `M` | `M` | `NONE` |
+| Primeira pendência em mês > `M` | esse mês | `NEXT_PENDING` |
+| Sem pendência e com cartão | `M+1` | `NO_PENDING_AHEAD` |
+| Sem pendência e sem cartão | `M` | `NONE` |
+
+```json
+{ "currentMonth": "2026-10", "month": "2026-12", "advance": "NEXT_PENDING" }
+```
+
+O avanço não tem limite de distância (risco aceito: uma data digitada errada pode definir a abertura até a pendência ser paga). Erros: 400 (query informada), 401, 403 (rota protegida) e 500.
+
+Exemplo de erro (parâmetro de query informado):
+
+```http
+GET /api/entries/initial-month?month=2026-10
+```
+
+```json
+{ "code": "VALIDATION_ERROR", "message": "...", "details": { "fields": [{ "field": "month", "code": "UNKNOWN_FIELD", "message": "Campo não reconhecido." }] } }
+```
+
+Não há 404: a rota não recebe id, e a ausência de pendência é um resultado válido. O fluxo está em "Diagramas".
+
 ### GET /api/entries/expenses
 
 Query (estrita): `month` (obrigatório, `YYYY-MM`), `status` (`PENDING` | `PAID`), `category` (case-insensitive), `cardId` (UUID de cartão ou `pix` para despesas sem cartão), `page` (1 a 1.000.000, padrão 1), `pageSize` (1 a 100, padrão 20). Filtros combinam com AND. `cardId` de cartão inexistente não gera 404: apenas devolve lista vazia.
@@ -197,7 +229,7 @@ Erros: 400 `VALIDATION_ERROR` (nome `REQUIRED`/`TOO_LONG`; dias `NOT_INTEGER`/`O
 
 `{ "items": [ Card ] }`.
 
-### GET /api/invoices?month=YYYY-MM
+### GET /api/invoices?month=YYYY-MM[&status=PENDING|PAID]
 
 Uma fatura por cartão que tenha despesas com aquele mês de referência (mês do vencimento). Ordenada por vencimento, nome do cartão e id. As datas exibidas são a maior `closingDate` e a maior `dueDate` entre as despesas da fatura (caso o cartão tenha sido editado no meio do ciclo).
 
@@ -214,6 +246,12 @@ Uma fatura por cartão que tenha despesas com aquele mês de referência (mês d
     "totals": { "total": "600.00", "paid": "100.00", "pending": "500.00" }
   }]
 }
+```
+
+`status` é opcional (também em `GET /api/demo/invoices`). `PENDING` retorna só faturas com `pendingCount > 0`; `PAID`, só as com `pendingCount = 0`. O filtro seleciona a fatura inteira: `entryCount`, `pendingCount` e `totals` continuam sobre todas as despesas dela. Sem `status`, a resposta é a de sempre (todas). `ALL`, minúsculas ou qualquer outro valor geram 400 `VALIDATION_ERROR` com `fields: [{ field: "status", code: "INVALID_VALUE" }]`: "todas" é a ausência do parâmetro. A tela (web) usa `ALL` só na própria URL (`f_status`, `d_status`) e nunca o envia à API.
+
+```http
+GET /api/invoices?month=2026-11&status=PENDING
 ```
 
 ### GET /api/cards/:cardId/invoices/:referenceMonth/entries
@@ -435,6 +473,43 @@ sequenceDiagram
   UC-->>Cli: 200 { paidIds, alreadyPaidIds }
 ```
 
+### Mês inicial da listagem (`GET /api/entries/initial-month`)
+
+Regra pura `resolveInitialMonth` (domínio), alimentada por uma única consulta (`PendingOverviewReadModel`: menor mês de referência >= `M` com despesa pendente, mais a existência de cartão).
+
+```mermaid
+flowchart TD
+  A[GET initial-month] --> B["M = mês atual em America/Sao_Paulo (BusinessCalendar)"]
+  B --> C["overviewFrom(dono, M): firstPendingMonth e hasCard (1 consulta)"]
+  C --> D{firstPendingMonth}
+  D -- "= M" --> E["month = M, advance = NONE"]
+  D -- "> M" --> F["month = firstPendingMonth, advance = NEXT_PENDING"]
+  D -- "nenhum" --> G{hasCard}
+  G -- sim --> H["month = M+1, advance = NO_PENDING_AHEAD"]
+  G -- não --> E
+```
+
+### Abertura de `/entries` sem `month` (web)
+
+```mermaid
+sequenceDiagram
+  participant U as Navegador
+  participant P as Página /entries (Next.js)
+  participant A as API
+  U->>P: GET /entries (sem month)
+  P->>A: GET /api/entries/initial-month (timeout 1,5 s)
+  alt sucesso
+    A-->>P: { currentMonth, month, advance }
+    P-->>U: redirect (replace) /entries?month=...[&adv=...&adv_from=...]
+  else falha, timeout ou 5xx
+    P-->>U: redirect (replace) /entries?month=M do web, sem aviso
+  end
+  U->>P: GET /entries?month=...
+  Note over U: o aviso lê adv e adv_from, mostra o banner e remove os dois parâmetros da URL
+```
+
+Em `/demo/entries` o fluxo é o mesmo, com `GET /api/demo/entries/initial-month`. Sessão expirada (401 ou 403) nas rotas protegidas continua levando ao login.
+
 ## Divergências em relação ao ADR
 
-Ver "Notas de implementação" em `docs/adr/0001-lancamentos-financeiros.md`. As que afetam o contrato HTTP: validação de UUID e `YYYY-MM` nos use cases (mesmo código `VALIDATION_ERROR` e mesmos campos), teto `page` 1.000.000, faixa de anos 1900-9998 com `OUT_OF_RANGE` e `URIError` de path convertido em `VALIDATION_ERROR`.
+Ver "Notas de implementação" em `docs/adr/0001-lancamentos-financeiros.md`. Para o mês inicial e o filtro de faturas: seção 15 de `docs/adr/0007-listagem-mes-e-status-padrao.md` (`parseInvoiceStatus` é um alias de `parseExpenseStatus`; nenhuma divergência de contrato). As que afetam o contrato HTTP: validação de UUID e `YYYY-MM` nos use cases (mesmo código `VALIDATION_ERROR` e mesmos campos), teto `page` 1.000.000, faixa de anos 1900-9998 com `OUT_OF_RANGE` e `URIError` de path convertido em `VALIDATION_ERROR`.

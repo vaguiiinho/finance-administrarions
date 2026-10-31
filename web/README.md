@@ -15,9 +15,21 @@ API_URL=http://127.0.0.1:3001 npm run dev    # ver .env.example; a API deve roda
 
 | Rota | Conteúdo |
 |---|---|
-| `/entries` | Resumo do mês e abas Despesas, Faturas e Receitas; drawer "Novo lançamento" |
+| `/entries` | Resumo do mês e abas Despesas, Faturas e Receitas; drawer "Novo lançamento". Sem `month` na URL, resolve o mês inicial pela API e redireciona (ver abaixo) |
+| `/demo/entries` | Mesma tela, somente leitura, com a rota demo da API |
 | `/cards` | Cartões (criar e editar) |
 | `/dashboard` | Série de 12 meses e distribuição por categoria (Recharts) |
+
+### Estado de `/entries` na URL
+
+| Parâmetro | Valores | Observação |
+|---|---|---|
+| `month` | `YYYY-MM` | Ausente: `redirectToInitialMonth` consulta `GET /entries/initial-month` (timeout de 1,5 s) e redireciona com `replace`, mantendo os demais parâmetros. Falha ou timeout: `month` = mês atual em America/Sao_Paulo, sem aviso |
+| `adv`, `adv_from` | `NEXT_PENDING` ou `NO_PENDING_AHEAD`; `YYYY-MM` | Sinal do aviso de avanço de mês. O cliente o remove da URL ao montar; valor inválido é ignorado |
+| `d_status` | `PENDING` (padrão, omitido), `PAID`, `ALL` | Status de Despesas. `ALL` não é enviado à API |
+| `f_status` | `PENDING` (padrão, omitido), `PAID`, `ALL` | Status de Faturas, independente de `d_status`. `ALL` não é enviado à API |
+
+Valor inválido de status vale `PENDING`. A regra do mês inicial mora na API; o web só monta as URLs (`lib/filters/initial-month.ts`). Ver `../docs/adr/0007-listagem-mes-e-status-padrao.md`.
 
 ## Testes
 
@@ -42,6 +54,23 @@ Sem root (WSL, Ubuntu 24.04):
 npm run pw:deps          # uma vez: instala o Chromium e extrai as libs ausentes (libnss3, libnspr4, libasound2t64...) via apt-get download + dpkg -x
 npm run test:e2e:local   # roda a suíte com LD_LIBRARY_PATH apontando para as libs extraídas
 ```
+
+Variáveis de ambiente da execução (lidas em `playwright.config.ts`, `e2e/support.ts` e `e2e/auth-login.pw.ts`; não afetam o código de produção):
+
+| Variável | Padrão | Efeito |
+|---|---|---|
+| `PW_WEB_PORT` | `3100` | Porta do `next start` e do `baseURL` do Playwright. Útil para rodar ao lado de servidores já ativos |
+| `PW_STUB_PORT` | `4010` | Porta do stub da API (`e2e/stub-api`), repassada como `API_URL` ao web |
+| `PW_DEPS_DIR` | ver abaixo | Local das bibliotecas extraídas por `pw:deps` |
+
+Para rodar um comando do Playwright com as bibliotecas de `pw:deps` no `LD_LIBRARY_PATH` (por exemplo, um arquivo ou um teste específico):
+
+```bash
+bash scripts/pw-deps.sh run npx playwright test e2e/initial-month.pw.ts
+PW_WEB_PORT=3200 PW_STUB_PORT=4020 bash scripts/pw-deps.sh run npx playwright test
+```
+
+O stub aceita `POST /__scenario` com `now` e dados próprios (cenário `custom`), usados para o mês inicial; os cenários `initial-month-error` e `initial-month-slow` simulam falha e lentidão da leitura (`e2e/stub-api/server.mjs`).
 
 As libs ficam em `${PW_DEPS_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/finance-pw-deps}`, fora do repositório; defina `PW_DEPS_DIR` para mudar o local. Nada é escrito em `~/.bashrc`. Se o `pw:deps` falhar por dependência transitiva, use a imagem oficial `mcr.microsoft.com/playwright:v<versão de @playwright/test>-noble` com o repositório montado e `--network host` (ADR 0002, T1). Com root: `npx playwright install --with-deps chromium` e `npm run test:e2e`.
 

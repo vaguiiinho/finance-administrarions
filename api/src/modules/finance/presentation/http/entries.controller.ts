@@ -15,6 +15,7 @@ import {
 import {
   expensesQuerySchema,
   incomesQuerySchema,
+  noQuerySchema,
   type ExpensesQuery,
   type IncomesQuery,
 } from './schemas/query.schemas.js';
@@ -32,6 +33,12 @@ export class EntriesController {
   async create(@CurrentOwnerId() ownerId: string, @Body(new ZodValidationPipe(createEntryBodySchema)) body: CreateEntryBody) {
     const view = await this.createEntry.execute({ ...body, ownerId, cardId: body.cardId ?? null, paid: body.paid });
     return presentEntry(view);
+  }
+
+  // Declarada antes das rotas com parâmetro de caminho; sem query (UNKNOWN_FIELD).
+  @Get('initial-month')
+  initialMonth(@CurrentOwnerId() ownerId: string, @Query(new ZodValidationPipe(noQuerySchema)) _query: object) {
+    return this.reads.initialMonth(ownerId);
   }
 
   @Get('expenses')

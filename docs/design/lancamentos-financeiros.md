@@ -5,6 +5,7 @@
 - **Design system:** `docs/design/design-system.md` (breakpoints sm 640 / md 768 / lg 1024 / xl 1280)
 - **Tokens:** `web/app/styles/tokens.css`, cada token declarado uma única vez com `light-dark(<claro>, <escuro>)`. O caminho no `design-system.md` foi corrigido e a tabela de tokens da seção 1.2 foi copiada para lá.
 - **Autor:** ui-designer
+- **Superação parcial (2026-10-30):** as seções 3.1, 3.3 (mês padrão), 3.5, 3.6, 3.7, 3.9.2, 3.10 e 3.12 e a decisão D6 deixam de valer como escritas para `/entries` e `/demo/entries`, nos pontos indicados por uma nota "Superado" em cada uma. Valem `docs/design/listagem-mes-e-status-padrao.md` (seção 12, C10), `docs/specs/listagem-mes-e-status-padrao.md` (rev. 3) e `docs/adr/0007-listagem-mes-e-status-padrao.md`.
 - **Status:** Implementado (rev. 3) + revisão 4 de fechamento; desvio 2 da seção 12 aprovado (B1 da spec de fechamento, 2026-10-25). Revisão 5 (paleta suavizada) aprovada pelo usuário em 2026-10-25; valores ainda a aplicar em `tokens.css` pelo frontend-dev.
 
 ### Histórico
@@ -30,7 +31,7 @@ Este documento define estrutura visual, hierarquia, componentes, estados e inter
 | D3 | Barras do dashboard: despesas empilhadas (pago na base, pendente em cima) + receitas ao lado + duas linhas de saldo (DR3) | Aprovada | Compara receita x despesa; a linha em relação ao zero responde "o saldo foi positivo?". |
 | D4 | Donut com até 5 categorias + "Outras"; a tabela alternativa lista todas | Aprovada | Mais de 6 cores categóricas perdem distinção e contraste. |
 | D5 | **Tema claro e escuro** com botão sol/lua na navbar; valores próprios por tema (P28) | Decisão do usuário (mantida) | Spec D5/RF27. Seções 1 e 2.2. |
-| D6 | Filtros aplicam ao mudar (>= `md`) e pelo botão "Aplicar" na folha de filtros (< `md`, só aba Despesas) | Mantida | No mobile, cada mudança é uma navegação; aplicar em lote evita várias. |
+| D6 | Filtros aplicam ao mudar (>= `md`) e pelo botão "Aplicar" na folha de filtros (< `md`, só aba Despesas; *superado: a aba Faturas também tem filtro de status e folha, ver design `listagem-mes-e-status-padrao.md`, DL5*) | Mantida | No mobile, cada mudança é uma navegação; aplicar em lote evita várias. |
 | D7 | Primitivos próprios; modal/drawer/folha sobre `<dialog>` nativo com `showModal()` | Mantida | Foco preso, `Esc` e fundo inerte nativos. |
 | D8 | Toast próprio com regiões `aria-live` | Mantida | |
 | D9 | Navbar com links Lançamentos, Dashboard, Cartões + alternador de tema; sem tab bar inferior | Mantida | Rodapé do mobile fica livre para a barra de seleção em lote. Abaixo de `sm`, duas linhas (2.1). |
@@ -394,6 +395,8 @@ Observações:
 
 ### 3.1 Hierarquia de informação
 
+> **Superado em parte (2026-10-30):** o mês inicial do seletor (CA61) é resolvido pela regra de pendências, e pode exibir antes do cabeçalho o aviso de avanço de mês. Na aba Faturas, o painel ganha o filtro de status. Ver `docs/design/listagem-mes-e-status-padrao.md`, seções 1 e 4.
+
 1. **Cabeçalho comum** (igual em todas as abas, D16):
    1. "Lançamentos" (`h1`) + **"+ Novo lançamento"** (ação principal).
    2. **Seletor de mês** (padrão: mês atual em SP, CA61).
@@ -500,6 +503,8 @@ Racional: primeiro "em que mês estou e como ele está" (resumo), depois "o que 
 
 ### 3.3 Cabeçalho comum
 
+> **Superado em parte (2026-10-30):** "Padrão: mês atual em America/Sao_Paulo (CA61)" vale como mês M do dashboard e de links com `month` explícito. Em `/entries` e `/demo/entries` sem `month`, o mês é o resolvido pela API (regra de mês inicial). Ver `docs/design/listagem-mes-e-status-padrao.md`, seções 4 e 9.
+
 **Seletor de mês (`MonthPicker`)**
 - Anterior/próximo (44x44, "Mês anterior"/"Próximo mês") + botão central com o mês por extenso que abre uma grade de 12 meses com navegação de ano; mês corrente marcado com ponto `--accent` na grade.
 - Padrão: mês atual em America/Sao_Paulo (CA61). "Mês atual" (terciário) só quando o selecionado não é o corrente.
@@ -530,6 +535,8 @@ Racional: primeiro "em que mês estou e como ele está" (resumo), depois "o que 
 
 ### 3.5 Estado na URL (D19)
 
+> **Superado em parte (2026-10-30):** a aba Faturas tem filtro de status em `f_status` (`PENDING`, `PAID`, `ALL`), independente de `d_status`; `d_status` também aceita `ALL`. `PENDING` é o padrão e não é escrito na URL. Ver `docs/design/listagem-mes-e-status-padrao.md`, seção 3.1, e ADR 0007, seção 7.1.
+
 Conceitos guardados na URL (nomes finais de parâmetros a cargo do frontend/ADR; sugestão entre parênteses):
 - Mês selecionado (`month=YYYY-MM`) e aba ativa (`tab=expenses|invoices|income`; ausente = Despesas).
 - Filtros da aba Despesas, com prefixo próprio: status, categoria, cartão (um cartão ou "PIX") (ex.: `d_status`, `d_category`, `d_card`).
@@ -539,6 +546,8 @@ Conceitos guardados na URL (nomes finais de parâmetros a cargo do frontend/ADR;
 - Voltar/avançar do navegador restaura mês, aba, filtros e página.
 
 ### 3.6 Aba Despesas (RF20)
+
+> **Superado em parte (2026-10-30):** (a) sem status na URL vale "Pendente", e não "Todos"; (b) "Limpar filtros" leva a "Todos" e fica visível também sob o padrão "Pendente", e não só "quando algo difere do padrão"; (c) o contador "Filtros (n)" conta o "Pendente" padrão; (d) abaixo de `md` aparece "Status: <status ativo>" fora da folha. O texto "Abaixo de 400px, na folha, vira select" não é implementado no código. Ver `docs/design/listagem-mes-e-status-padrao.md`, seções 3 e 5.1.
 
 **Filtros**
 
@@ -601,6 +610,8 @@ Conceitos guardados na URL (nomes finais de parâmetros a cargo do frontend/ADR;
 - Não há "Pagar fatura" nesta aba.
 
 ### 3.7 Aba Faturas (RF21, D17)
+
+> **Superado em parte (2026-10-30):** (a) "um bloco por cartão com despesa no mês" passa a respeitar o filtro de status (padrão "Pendente"); (b) o atalho do bloco para a aba Despesas, no caso de fatura **paga**, tem o rótulo "Ver despesas do cartão na aba Despesas" e abre com `d_status=ALL`; fatura com pendência mantém rótulo e status vigente; (c) após pagar sob filtro que retira o bloco, o foco vai para o `h2` do painel. Ver `docs/design/listagem-mes-e-status-padrao.md`, seções 5.2, 6.1 e 9 (DL11).
 
 **Estrutura**
 - Título do painel: "Faturas de outubro de 2026" + contagem "3 faturas" `--text-muted`.
@@ -774,6 +785,8 @@ Foco após sucesso: `h3` do bloco (`tabindex="-1"`).
 
 #### 3.9.2 Validação, envio e sucesso
 
+> **Superado em parte (2026-10-30):** o toast pós-criação passa a ter ação "Limpar filtros" também na aba Faturas (compra no cartão sob o filtro "Pago") e, em Despesas, quando o item criado não aparece sob o filtro "Pendente" (despesa PIX paga). "Ver <mês>" abre com status "Todos". Ver `docs/design/listagem-mes-e-status-padrao.md`, seção 7.
+
 - Validação por campo no blur após a primeira interação; contador e limite do valor ao digitar.
 - No envio: valida tudo, mantém aberto, foco no primeiro inválido; resumo `role="alert"` com 2+ erros (CA74).
 - 400: detalhes por campo mapeados (tipo, descrição, categoria, data, valor, forma, cartão, indicador de pagamento); sem campo conhecido -> resumo do topo do drawer.
@@ -845,6 +858,8 @@ Comportamento:
 
 ### 3.10 Confirmação de pagamento (individual e lote, aba Despesas)
 
+> **Superado em parte (2026-10-30):** sob o filtro "Pendente", a despesa paga individualmente sai da lista e o foco vai para o `h2` do painel, e não para "a mesma linha". Sob "Todos", a linha permanece. Ver `docs/design/listagem-mes-e-status-padrao.md`, seção 6.2.
+
 Título ("Marcar 3 despesas como pagas?" / "Marcar "Aluguel" como pago?"), total, até 5 itens + "e mais n", aviso `--warning-text`, foco em "Cancelar".
 
 | Resposta | Comportamento |
@@ -863,6 +878,8 @@ Banner (`InlineAlert`): `--surface`, borda 1px `--danger` + esquerda 3px, ícone
 "Mostrando 21-40 de 135 despesas" (ou receitas), números com reticências, página atual `--primary-strong` + `--primary-border` + `--on-primary` com `aria-current="page"`, controles 44x44, versão compacta < `md`, links reais, limpa seleção, oculta com 1 página, tamanho 20. Ao mudar de página, o foco vai para o `h2` do painel e a página rola até a faixa de abas.
 
 ### 3.12 Estados da tela de lançamentos
+
+> **Superado em parte (2026-10-30):** os estados vazios de Despesas e Faturas passam a depender do status (vazio com filtros e vazio sem filtros), e a abertura sem `month` mostra o `loading.tsx` enquanto o mês inicial é resolvido. O texto sobre "seletor real no skeleton" não é o que o código faz. Ver `docs/design/listagem-mes-e-status-padrao.md`, seções 5 e 8.
 
 O resumo e o painel da aba são regiões independentes: cada uma tem seu skeleton, atualização e erro (RF24).
 

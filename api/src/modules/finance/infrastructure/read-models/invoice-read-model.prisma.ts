@@ -3,10 +3,9 @@ import type { PrismaExecutor } from '@shared/infrastructure/prisma/prisma-execut
 import { unwrapPersisted } from '@shared/domain/unwrap.js';
 import { CalendarDate } from '@shared/domain/value-objects/calendar-date.js';
 import { Money } from '@shared/domain/value-objects/money.js';
-import type { InvoiceReadModel, InvoiceRow } from '../../application/ports/invoice-read-model.js';
+import type { InvoiceListCriteria, InvoiceReadModel, InvoiceRow } from '../../application/ports/invoice-read-model.js';
 import type { EntryView } from '../../application/ports/views.js';
 import type { InvoiceKey } from '../../domain/billing/invoice-key.js';
-import type { ReferenceMonth } from '../../domain/billing/reference-month.js';
 import { ReferenceMonth as ReferenceMonthValue } from '../../domain/billing/reference-month.js';
 import type { OwnerId } from '../../domain/owner/owner-id.js';
 import { EntryMapper, type EntryViewRecord } from '../mappers/entry.mapper.js';
@@ -28,7 +27,13 @@ export class PrismaInvoiceReadModel implements InvoiceReadModel {
   constructor(private readonly prisma: PrismaExecutor) {}
 
   /** B9: maiores closing_date/due_date entre as despesas; ordem por esse vencimento, nome do cartão, id. */
-  async listByMonth(ownerId: OwnerId, month: ReferenceMonth): Promise<InvoiceRow[]> {
+  async listByMonth(ownerId: OwnerId, { month, status }: InvoiceListCriteria): Promise<InvoiceRow[]> {
+    const having =
+      status === 'PENDING'
+        ? Prisma.sql`HAVING COUNT(*) FILTER (WHERE e.status = 'PENDING') > 0`
+        : status === 'PAID'
+          ? Prisma.sql`HAVING COUNT(*) FILTER (WHERE e.status = 'PENDING') = 0`
+          : Prisma.empty;
     const rows = await this.prisma.$queryRaw<InvoiceRecord[]>(Prisma.sql`
       SELECT c.id::text AS card_id, c.name AS card_name,
              to_char(e.reference_month, 'YYYY-MM')                                               AS reference_month,
@@ -41,6 +46,7 @@ export class PrismaInvoiceReadModel implements InvoiceReadModel {
       FROM entries e JOIN cards c ON c.id = e.card_id
       WHERE e.user_id = ${ownerId.value}::uuid AND e.reference_month = ${monthStart(month)}::date AND e.type = 'EXPENSE' AND e.payment_method = 'CARD'
       GROUP BY c.id, c.name, c.name_key, e.reference_month
+      ${having}
       ORDER BY MAX(e.due_date), c.name_key COLLATE "und-x-icu", c.id`);
 
     return rows.map((r) => ({

@@ -44,13 +44,14 @@ const ITEMS = [
 const table = () => within(screen.getByRole("table", { hidden: true }));
 const rowCheckbox = (name: RegExp) => table().getByRole("checkbox", { name, hidden: true });
 
-const setup = (items = ITEMS) =>
+// `statusFilter`: PROP PROPOSTA PELO TESTER (ADR 0007 6.2 / design 6.2): o filtro de status vigente da aba, para decidir o foco.
+const setup = (items = ITEMS, statusFilter?: "ALL" | "PENDING" | "PAID") =>
   render(
     <AllProviders>
       <h2 id="panel-title" tabIndex={-1}>
         Despesas
       </h2>
-      <ExpensesList items={items} panelTitleId="panel-title" />
+      <ExpensesList items={items} panelTitleId="panel-title" {...(statusFilter ? { statusFilter } : {})} />
     </AllProviders>,
   );
 
@@ -218,5 +219,83 @@ describe("ExpensesList - Server Action que rejeita (falha de transporte)", () =>
     await waitFor(() => expect(dialog.getByRole("alert")).toHaveTextContent("Não foi possível marcar como pago"));
     expect(dialog.getByRole("button", { name: "Marcar como pago" })).not.toHaveAttribute("aria-busy");
     expect(dialog.getByRole("button", { name: "Cancelar" })).not.toHaveAttribute("aria-disabled");
+  });
+});
+
+describe("ExpensesList - foco depois do pagamento individual (RF24, CA61, design 6.2)", () => {
+  const payOne = async (name = "Internet") => {
+    await userEvent.click(table().getByRole("button", { name: `Marcar ${name} como pago`, hidden: true }));
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Marcar como pago" }));
+  };
+
+  it("CA61: sob 'Pendente' a linha sai da lista, entao o foco vai para o h2 do painel (depois de o modal fechar)", async () => {
+    payEntry.mockResolvedValue({ ok: true, data: { ...ITEMS[1], status: "PAID" } });
+    setup(ITEMS, "PENDING");
+    await payOne();
+    expect(await screen.findByText('"Internet" marcado como pago.')).toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Despesas" })).toHaveFocus();
+  });
+
+  it("CA61: tambem quando a despesa paga era a ULTIMA da lista", async () => {
+    payEntry.mockResolvedValue({ ok: true, data: { ...ITEMS[1], status: "PAID" } });
+    setup([ITEMS[1]], "PENDING");
+    await payOne();
+    await screen.findByText('"Internet" marcado como pago.');
+    expect(screen.getByRole("heading", { name: "Despesas" })).toHaveFocus();
+  });
+
+  it("sob 'Todos' a linha permanece como paga e o foco vai para a PROPRIA linha (alvo estavel: o gatilho some na revalidacao, design 6.2)", async () => {
+    payEntry.mockResolvedValue({ ok: true, data: { ...ITEMS[1], status: "PAID" } });
+    const view = setup(ITEMS, "ALL");
+    await payOne();
+    await screen.findByText('"Internet" marcado como pago.');
+    expect(screen.getByRole("heading", { name: "Despesas" })).not.toHaveFocus();
+    const row = table().getByRole("row", { name: /Internet/, hidden: true });
+    expect(row).toHaveFocus();
+    expect(row).toHaveAttribute("tabindex", "-1");
+    // a revalidacao marca a despesa como paga: o gatilho desaparece e o foco continua na linha (nao cai em body)
+    view.rerender(
+      <AllProviders>
+        <h2 id="panel-title" tabIndex={-1}>
+          Despesas
+        </h2>
+        <ExpensesList items={ITEMS.map((e) => (e.id === ITEMS[1].id ? { ...e, status: "PAID" as const } : e))} panelTitleId="panel-title" statusFilter="ALL" />
+      </AllProviders>,
+    );
+    expect(table().queryByRole("button", { name: "Marcar Internet como pago", hidden: true })).not.toBeInTheDocument();
+    expect(table().getByRole("row", { name: /Internet/, hidden: true })).toHaveFocus();
+  });
+
+  it("sob 'Todos', se a linha ja nao existe quando o dialogo fecha, o foco cai no h2 do painel (nao no gatilho)", async () => {
+    let resolvePay!: (v: unknown) => void;
+    payEntry.mockReturnValue(new Promise((r) => (resolvePay = r)));
+    const view = setup(ITEMS, "ALL");
+    await userEvent.click(table().getByRole("button", { name: "Marcar Internet como pago", hidden: true }));
+    await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Marcar como pago" }));
+    view.rerender(
+      <AllProviders>
+        <h2 id="panel-title" tabIndex={-1}>
+          Despesas
+        </h2>
+        <ExpensesList items={ITEMS.filter((e) => e.id !== ITEMS[1].id)} panelTitleId="panel-title" statusFilter="ALL" />
+      </AllProviders>,
+    );
+    resolvePay({ ok: true, data: { ...ITEMS[1], status: "PAID" } });
+    await screen.findByText('"Internet" marcado como pago.');
+    expect(screen.getByRole("heading", { name: "Despesas" })).toHaveFocus();
+  });
+
+  it("pagamento em LOTE mantem o foco atual: h2 do painel, em qualquer filtro (RF24)", async () => {
+    for (const status of ["PENDING", "ALL"] as const) {
+      payEntries.mockResolvedValue({ ok: true, data: { paidIds: ["e1", "e2"], alreadyPaidIds: [] } });
+      const view = setup(ITEMS, status);
+      await userEvent.click(table().getByRole("checkbox", { name: /Selecionar Internet/, hidden: true }));
+      await userEvent.click(screen.getAllByRole("button", { name: /Marcar como pago \(1\)/ })[0]);
+      await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: /Marcar como pago/ }));
+      await screen.findByText(/marcadas como pagas/);
+      expect(screen.getByRole("heading", { name: "Despesas" })).toHaveFocus();
+      view.unmount();
+    }
   });
 });

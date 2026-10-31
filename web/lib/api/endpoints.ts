@@ -1,5 +1,6 @@
 import "server-only";
-import { apiGet, apiPost, apiPut } from "./http";
+import type { InitialMonthDecision } from "@/lib/filters/initial-month";
+import { apiGet, apiPost, apiPut, request } from "./http";
 import type {
   CardDto,
   CardPayload,
@@ -21,7 +22,15 @@ export const listCards = () => apiGet<{ items: CardDto[] }>("/cards");
 export const createCardRequest = (payload: CardPayload) => apiPost<CardDto>("/cards", payload);
 export const updateCardRequest = (id: string, payload: CardPayload) => apiPut<CardDto>(`/cards/${encodeURIComponent(id)}`, payload);
 export const listCategories = () => apiGet<{ items: string[] }>("/categories");
-export const listInvoices = (month: string) => apiGet<{ month: string; items: InvoiceDto[] }>("/invoices", { month });
+/** `status` ausente = todas as faturas; `ALL` nunca chega a API (ADR 0007 6.2). */
+export interface InvoiceQuery {
+  month: string;
+  status?: "PENDING" | "PAID";
+}
+export const listInvoices = (query: InvoiceQuery) => apiGet<{ month: string; items: InvoiceDto[] }>("/invoices", { month: query.month, status: query.status });
+/** Mes inicial (ADR 0007 6.1): so essa leitura tem timeout, para uma API travada nao prender o skeleton. */
+export const INITIAL_MONTH_TIMEOUT_MS = 1500;
+export const getInitialMonth = () => request<InitialMonthDecision>("GET", "/entries/initial-month", { timeoutMs: INITIAL_MONTH_TIMEOUT_MS });
 export const listInvoiceEntries = (cardId: string, referenceMonth: string) =>
   apiGet<{ card: { id: string; name: string }; referenceMonth: string; items: EntryDto[] }>(`/cards/${encodeURIComponent(cardId)}/invoices/${encodeURIComponent(referenceMonth)}/entries`);
 export const payInvoiceRequest = (cardId: string, referenceMonth: string) =>

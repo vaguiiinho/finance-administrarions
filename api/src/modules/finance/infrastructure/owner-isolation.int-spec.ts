@@ -204,13 +204,20 @@ describe('Read models com dono (CA29, CA37, RNF06)', () => {
 
   it('faturas: listByMonth e listEntries so do dono; cartao de outro dono -> vazio', async () => {
     await seedBoth();
-    const a = await rm.invoices.listByMonth(A, MONTH);
+    const a = await rm.invoices.listByMonth(A, { month: MONTH });
     expect(a).toHaveLength(1);
     expect(a[0].card.name).toBe('Nubank');
-    expect((await rm.invoices.listByMonth(B, MONTH))[0].card.name).toBe('Itau');
+    expect((await rm.invoices.listByMonth(B, { month: MONTH }))[0].card.name).toBe('Itau');
     const own = await rm.invoices.listEntries(A, { cardId: cardId(1), referenceMonth: MONTH });
     expect(own.map((e: { id: string }) => e.id)).toEqual([entryUuid(3)]);
     expect(await rm.invoices.listEntries(A, { cardId: cardId(2), referenceMonth: MONTH })).toEqual([]);
+  });
+
+  it('faturas com status: o filtro tambem respeita o dono (CA23/RNF04)', async () => {
+    await seedBoth(); // Ana: fatura pendente (Nubank); Bruno: fatura pendente (Itau)
+    expect((await rm.invoices.listByMonth(A, { month: MONTH, status: 'PENDING' })).map((r: { card: { name: string } }) => r.card.name)).toEqual(['Nubank']);
+    expect(await rm.invoices.listByMonth(A, { month: MONTH, status: 'PAID' })).toEqual([]);
+    expect((await rm.invoices.listByMonth(B, { month: MONTH, status: 'PENDING' })).map((r: { card: { name: string } }) => r.card.name)).toEqual(['Itau']);
   });
 
   it('categorias: listDistinct so do dono', async () => {

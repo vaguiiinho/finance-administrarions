@@ -102,6 +102,11 @@ export function parseExpenseStatus(raw: string | undefined, violations: FieldVio
   return undefined;
 }
 
+/** Filtro de fatura: só PENDING e PAID; `ALL` é rejeitado de propósito (ausência = todas; ADR 0007 6.2). */
+export function parseInvoiceStatus(raw: string | undefined, violations: FieldViolation[]): 'PENDING' | 'PAID' | undefined {
+  return parseExpenseStatus(raw, violations);
+}
+
 export function parseExpenseCardFilter(raw: string | undefined, violations: FieldViolation[]): ExpenseCardFilter {
   if (raw === undefined) return { kind: 'any' };
   if (raw === 'pix') return { kind: 'pix' };

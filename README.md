@@ -15,6 +15,14 @@ Aplicação de finanças pessoais com `api` (NestJS 12, Prisma 7, PostgreSQL) e 
 
 Telas: `/entries` (abas Despesas, Faturas, Receitas), `/cards`, `/dashboard`. A raiz `/` redireciona para `/entries`.
 
+### Mês inicial e status padrão de `/entries`
+
+- **Mês inicial.** Abrir `/entries` (ou `/demo/entries`) sem `month` consulta a API (`GET /api/entries/initial-month`, demo: `GET /api/demo/entries/initial-month`) e redireciona para `?month=YYYY-MM`. Com `M` = mês atual em America/Sao_Paulo: pendência em `M` (fatura ou PIX) abre `M`; senão, abre o primeiro mês futuro com pendência; sem nenhuma pendência, abre `M+1` se houver cartão e `M` se não houver. Pendências de meses anteriores não contam. Um `month` na URL nunca é alterado. Falha ou timeout de 1,5 s da consulta abre `M`, sem aviso. Quando o mês avança, um aviso dispensável explica o motivo.
+- **Status padrão.** As abas Despesas e Faturas abrem em "Pendente". `d_status` (Despesas) e `f_status` (Faturas) aceitam `PENDING`, `PAID` e `ALL`; `PENDING` é omitido da URL e `ALL` ("Todos") nunca é enviado à API. Valor inválido vale "Pendente". "Limpar filtros" leva a "Todos". Receitas não têm filtro de status.
+- **Faturas.** `GET /api/invoices` aceita `status=PENDING|PAID`; o filtro seleciona a fatura inteira e sem `status` a resposta não muda. Para uma fatura paga, o atalho do bloco é "Ver despesas do cartão na aba Despesas" e abre `d_status=ALL`.
+
+Decisão e divergências: [`docs/adr/0007-listagem-mes-e-status-padrao.md`](docs/adr/0007-listagem-mes-e-status-padrao.md).
+
 ## Estrutura
 
 | Pasta | Conteúdo |
@@ -83,7 +91,7 @@ API_URL=http://127.0.0.1:3001 npm run dev    # ver web/.env.example
 | `npm run test:e2e` | Mesma suíte, para máquinas com as bibliotecas no sistema |
 | `npm run lint` | ESLint |
 
-O Playwright sobe sozinho o stub (porta 4010) e um **build de produção** do web (`next build && next start`, porta 3100); não usa a API real nem o banco, e não deve rodar com um `next dev` ativo no mesmo diretório. Detalhes em [`web/README.md`](web/README.md). Medição de desempenho (opt-in): `cd api && npm run perf:rnf06`.
+O Playwright sobe sozinho o stub (porta 4010) e um **build de produção** do web (`next build && next start`, porta 3100); não usa a API real nem o banco, e não deve rodar com um `next dev` ativo no mesmo diretório. As portas podem ser trocadas com `PW_WEB_PORT` e `PW_STUB_PORT` (variáveis só da execução dos testes, lidas em `web/playwright.config.ts`). Para rodar um comando do Playwright direto com as bibliotecas de `pw:deps` (sem root): `cd web && bash scripts/pw-deps.sh run npx playwright test`. Detalhes em [`web/README.md`](web/README.md). Medição de desempenho (opt-in): `cd api && npm run perf:rnf06`.
 
 ## Regras de negócio resumidas
 
@@ -103,5 +111,6 @@ Detalhes, diagramas (camadas, aggregates, pagamento em lote) e exemplos de paylo
 - API: [`docs/api/finance.md`](docs/api/finance.md)
 - ADR: [`docs/adr/0001-lancamentos-financeiros.md`](docs/adr/0001-lancamentos-financeiros.md)
 - Fundo em gradiente nos temas claro e escuro: [`docs/adr/0003-fundo-gradiente-temas.md`](docs/adr/0003-fundo-gradiente-temas.md), [`docs/specs/fundo-gradiente-temas.md`](docs/specs/fundo-gradiente-temas.md) e [`docs/design/fundo-gradiente-temas.md`](docs/design/fundo-gradiente-temas.md)
+- Mês inicial e status padrão da listagem de lançamentos: [`docs/adr/0007-listagem-mes-e-status-padrao.md`](docs/adr/0007-listagem-mes-e-status-padrao.md), [`docs/specs/listagem-mes-e-status-padrao.md`](docs/specs/listagem-mes-e-status-padrao.md) e [`docs/design/listagem-mes-e-status-padrao.md`](docs/design/listagem-mes-e-status-padrao.md)
 - Design: [`docs/design/lancamentos-financeiros.md`](docs/design/lancamentos-financeiros.md) e [`docs/design/design-system.md`](docs/design/design-system.md)
 - Histórico de mudanças: [`CHANGELOG.md`](CHANGELOG.md)

@@ -1,0 +1,236 @@
+[
+  {
+    "ca": "CA01",
+    "name": "pendencia (fatura) em M: fica em M",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-10",
+    "hasCard": true,
+    "month": "2026-10",
+    "advance": "NONE"
+  },
+  {
+    "ca": "CA02",
+    "name": "sem pendencia e com cartao: M+1",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": null,
+    "hasCard": true,
+    "month": "2026-11",
+    "advance": "NO_PENDING_AHEAD"
+  },
+  {
+    "ca": "CA03",
+    "name": "um cartao pago e outro pendente em M: fica em M",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-10",
+    "hasCard": true,
+    "month": "2026-10",
+    "advance": "NONE"
+  },
+  {
+    "ca": "CA04",
+    "name": "pendencias em M (Azul) e M+1 (Roxo): o menor mes de referencia e M",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-10",
+    "hasCard": true,
+    "month": "2026-10",
+    "advance": "NONE"
+  },
+  {
+    "ca": "CA05",
+    "name": "fatura em aberto conta: fica em M",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-10",
+    "hasCard": true,
+    "month": "2026-10",
+    "advance": "NONE"
+  },
+  {
+    "ca": "CA06",
+    "name": "avanca direto ate a proxima pendencia (M+2)",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-12",
+    "hasCard": true,
+    "month": "2026-12",
+    "advance": "NEXT_PENDING"
+  },
+  {
+    "ca": "CA07",
+    "name": "primeiro mes com pendencia (M+1)",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-11",
+    "hasCard": true,
+    "month": "2026-11",
+    "advance": "NEXT_PENDING"
+  },
+  {
+    "ca": "CA08",
+    "name": "cartao sem nenhuma despesa: M+1",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": null,
+    "hasCard": true,
+    "month": "2026-11",
+    "advance": "NO_PENDING_AHEAD"
+  },
+  {
+    "ca": "CA09",
+    "name": "PIX pendente em M impede o avanco",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-10",
+    "hasCard": true,
+    "month": "2026-10",
+    "advance": "NONE"
+  },
+  {
+    "ca": "CA10",
+    "name": "PIX pendente futuro conta como proxima pendencia",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-12",
+    "hasCard": true,
+    "month": "2026-12",
+    "advance": "NEXT_PENDING"
+  },
+  {
+    "ca": "CA11",
+    "name": "sem cartao e sem pendencia: fica em M",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": null,
+    "hasCard": false,
+    "month": "2026-10",
+    "advance": "NONE"
+  },
+  {
+    "ca": "CA12",
+    "name": "sem cartao com PIX pendente em M",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-10",
+    "hasCard": false,
+    "month": "2026-10",
+    "advance": "NONE"
+  },
+  {
+    "ca": "CA13",
+    "name": "sem cartao com PIX pendente futuro avanca",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-12",
+    "hasCard": false,
+    "month": "2026-12",
+    "advance": "NEXT_PENDING"
+  },
+  {
+    "ca": "CA14",
+    "name": "pendencia de mes anterior nao interfere (o read model ja filtra a partir de M)",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": null,
+    "hasCard": true,
+    "month": "2026-11",
+    "advance": "NO_PENDING_AHEAD"
+  },
+  {
+    "ca": "CA15",
+    "name": "virada de ano com a proxima pendencia",
+    "currentMonth": "2026-12",
+    "firstPendingMonth": "2027-01",
+    "hasCard": true,
+    "month": "2027-01",
+    "advance": "NEXT_PENDING"
+  },
+  {
+    "ca": "CA16",
+    "name": "virada de ano com salto de varios meses",
+    "currentMonth": "2026-11",
+    "firstPendingMonth": "2027-02",
+    "hasCard": true,
+    "month": "2027-02",
+    "advance": "NEXT_PENDING"
+  },
+  {
+    "ca": "CA17",
+    "name": "virada de ano sem pendencia: janeiro",
+    "currentMonth": "2026-12",
+    "firstPendingMonth": null,
+    "hasCard": true,
+    "month": "2027-01",
+    "advance": "NO_PENDING_AHEAD"
+  },
+  {
+    "ca": "CA18",
+    "name": "23:30 de 31/10 em SP (M=2026-10) com pendencia em M",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-10",
+    "hasCard": true,
+    "month": "2026-10",
+    "advance": "NONE"
+  },
+  {
+    "ca": "CA18",
+    "name": "23:30 de 31/10 em SP (M=2026-10) sem pendencia",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": null,
+    "hasCard": true,
+    "month": "2026-11",
+    "advance": "NO_PENDING_AHEAD"
+  },
+  {
+    "ca": "CA19",
+    "name": "00:30 de 01/11 em SP (M=2026-11) com pendencia em M",
+    "currentMonth": "2026-11",
+    "firstPendingMonth": "2026-11",
+    "hasCard": true,
+    "month": "2026-11",
+    "advance": "NONE"
+  },
+  {
+    "ca": "CA19",
+    "name": "00:30 de 01/11 em SP (M=2026-11) com pendencia so em outubro (filtrada pelo read model)",
+    "currentMonth": "2026-11",
+    "firstPendingMonth": null,
+    "hasCard": true,
+    "month": "2026-12",
+    "advance": "NO_PENDING_AHEAD"
+  },
+  {
+    "ca": "CA20",
+    "name": "23:30 de 31/12 em SP (M=2026-12) com pendencia em M",
+    "currentMonth": "2026-12",
+    "firstPendingMonth": "2026-12",
+    "hasCard": true,
+    "month": "2026-12",
+    "advance": "NONE"
+  },
+  {
+    "ca": "CA20",
+    "name": "23:30 de 31/12 em SP (M=2026-12) sem pendencia",
+    "currentMonth": "2026-12",
+    "firstPendingMonth": null,
+    "hasCard": true,
+    "month": "2027-01",
+    "advance": "NO_PENDING_AHEAD"
+  },
+  {
+    "ca": "CA21",
+    "name": "mudanca de fechamento nao e retroativa: a fatura segue em M",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2026-10",
+    "hasCard": true,
+    "month": "2026-10",
+    "advance": "NONE"
+  },
+  {
+    "ca": "borda",
+    "name": "salto muito longo (R3, sem limite)",
+    "currentMonth": "2026-10",
+    "firstPendingMonth": "2036-03",
+    "hasCard": true,
+    "month": "2036-03",
+    "advance": "NEXT_PENDING"
+  },
+  {
+    "ca": "borda",
+    "name": "sem cartao, sem pendencia, em dezembro: fica em M",
+    "currentMonth": "2026-12",
+    "firstPendingMonth": null,
+    "hasCard": false,
+    "month": "2026-12",
+    "advance": "NONE"
+  }
+]

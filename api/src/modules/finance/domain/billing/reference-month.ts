@@ -40,6 +40,11 @@ export class ReferenceMonth {
     return new ReferenceMonth(this.month.minusMonths(n));
   }
 
+  /** Mês seguinte (ADR 0007 seção 3). */
+  next(): ReferenceMonth {
+    return new ReferenceMonth(this.month.next());
+  }
+
   compare(other: ReferenceMonth): -1 | 0 | 1 {
     return this.month.compare(other.month);
   }

@@ -7,6 +7,7 @@ import { DASHBOARD_READ_MODEL } from '../application/ports/dashboard-read-model.
 import { ENTRY_READ_MODEL } from '../application/ports/entry-read-model.js';
 import { FINANCE_UNIT_OF_WORK } from '../application/ports/finance-unit-of-work.js';
 import { INVOICE_READ_MODEL } from '../application/ports/invoice-read-model.js';
+import { PENDING_OVERVIEW_READ_MODEL } from '../application/ports/pending-overview-read-model.js';
 import { MONTHLY_SUMMARY_READ_MODEL } from '../application/ports/monthly-summary-read-model.js';
 import { CARD_REPOSITORY } from '../domain/card/card.repository.js';
 import { CATEGORY_CATALOG } from '../domain/entry/category-catalog.js';
@@ -19,6 +20,7 @@ import { PrismaDashboardReadModel } from './read-models/dashboard-read-model.pri
 import { PrismaEntryReadModel } from './read-models/entry-read-model.prisma.js';
 import { PrismaInvoiceReadModel } from './read-models/invoice-read-model.prisma.js';
 import { PrismaMonthlySummaryReadModel } from './read-models/monthly-summary-read-model.prisma.js';
+import { PrismaPendingOverviewReadModel } from './read-models/pending-overview-read-model.prisma.js';
 import { PrismaCardRepository } from './repositories/prisma-card.repository.js';
 import { PrismaCategoryCatalog } from './repositories/prisma-category-catalog.js';
 import { PrismaEntryRepository } from './repositories/prisma-entry.repository.js';
@@ -41,5 +43,6 @@ export const FINANCE_INFRASTRUCTURE_PROVIDERS: Provider[] = [
   fromPrisma(CARD_READ_MODEL, (prisma) => new PrismaCardReadModel(prisma)),
   fromPrisma(CATEGORY_READ_MODEL, (prisma) => new PrismaCategoryReadModel(prisma)),
   fromPrisma(DASHBOARD_READ_MODEL, (prisma) => new PrismaDashboardReadModel(prisma)),
+  fromPrisma(PENDING_OVERVIEW_READ_MODEL, (prisma) => new PrismaPendingOverviewReadModel(prisma)),
   fromPrisma(DEMO_DATASET_STORE, (prisma) => new PrismaDemoDatasetStore(prisma)),
 ];

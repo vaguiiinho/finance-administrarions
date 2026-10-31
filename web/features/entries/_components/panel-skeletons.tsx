@@ -24,6 +24,7 @@ export function InvoicesPanelSkeleton() {
   return (
     <div aria-busy="true" className="flex flex-col gap-4">
       <span className="sr-only">Carregando faturas</span>
+      <Skeleton className="h-11 w-full max-w-md" />
       {[0, 1].map((i) => (
         <Skeleton key={i} className="h-44 w-full rounded-xl" />
       ))}

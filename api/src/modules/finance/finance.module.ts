@@ -9,6 +9,7 @@ import { DASHBOARD_READ_MODEL, type DashboardReadModel } from './application/por
 import { ENTRY_READ_MODEL, type EntryReadModel } from './application/ports/entry-read-model.js';
 import { FINANCE_UNIT_OF_WORK, type FinanceUnitOfWork } from './application/ports/finance-unit-of-work.js';
 import { INVOICE_READ_MODEL, type InvoiceReadModel } from './application/ports/invoice-read-model.js';
+import { PENDING_OVERVIEW_READ_MODEL, type PendingOverviewReadModel } from './application/ports/pending-overview-read-model.js';
 import {
   MONTHLY_SUMMARY_READ_MODEL,
   type MonthlySummaryReadModel,
@@ -22,6 +23,7 @@ import { GetCategoryDistribution } from './application/use-cases/dashboard/get-c
 import { GetMonthlySeries } from './application/use-cases/dashboard/get-monthly-series.js';
 import { CreateEntry } from './application/use-cases/entries/create-entry.js';
 import { ListCategories } from './application/use-cases/entries/list-categories.js';
+import { GetInitialEntriesMonth } from './application/use-cases/entries/get-initial-entries-month.js';
 import { ListExpenses } from './application/use-cases/entries/list-expenses.js';
 import { ListIncomes } from './application/use-cases/entries/list-incomes.js';
 import { MarkEntryAsPaid } from './application/use-cases/entries/mark-entry-as-paid.js';
@@ -105,6 +107,11 @@ const USE_CASE_PROVIDERS: Provider[] = [
   },
   { provide: ListExpenses, useFactory: (entries: EntryReadModel) => new ListExpenses(entries), inject: [ENTRY_READ_MODEL] },
   { provide: ListIncomes, useFactory: (entries: EntryReadModel) => new ListIncomes(entries), inject: [ENTRY_READ_MODEL] },
+  {
+    provide: GetInitialEntriesMonth,
+    useFactory: (overview: PendingOverviewReadModel, calendar: BusinessCalendar) => new GetInitialEntriesMonth(overview, calendar),
+    inject: [PENDING_OVERVIEW_READ_MODEL, BUSINESS_CALENDAR],
+  },
   {
     provide: ListInvoices,
     useFactory: (invoices: InvoiceReadModel) => new ListInvoices(invoices),

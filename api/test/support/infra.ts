@@ -10,6 +10,7 @@ import { PrismaInvoiceReadModel } from '@finance/infrastructure/read-models/invo
 import { PrismaCardReadModel } from '@finance/infrastructure/read-models/card-read-model.prisma.js';
 import { PrismaCategoryReadModel } from '@finance/infrastructure/read-models/category-read-model.prisma.js';
 import { PrismaDashboardReadModel } from '@finance/infrastructure/read-models/dashboard-read-model.prisma.js';
+import { PrismaPendingOverviewReadModel } from '@finance/infrastructure/read-models/pending-overview-read-model.prisma.js';
 import { EntryPaymentService } from '@finance/domain/payment/entry-payment.service.js';
 import { CreateCard } from '@finance/application/use-cases/cards/create-card.js';
 import { CreateEntry } from '@finance/application/use-cases/entries/create-entry.js';
@@ -56,6 +57,7 @@ export async function buildInfra(clock: FixedClock = new FixedClock(NOW)) {
       cards: new PrismaCardReadModel(prisma),
       categories: new PrismaCategoryReadModel(prisma),
       dashboard: new PrismaDashboardReadModel(prisma),
+      pendingOverview: new PrismaPendingOverviewReadModel(prisma),
     },
     useCases: {
       createCard: asDefaultOwner(new CreateCard(cards, ids, clock, publisher)),

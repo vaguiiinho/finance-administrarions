@@ -293,6 +293,65 @@ describe('I1 GET /api/invoices e I2 GET /api/cards/:cardId/invoices/:month/entri
     expect((await get('/api/invoices', q as Record<string, string>)).status).toBe(400);
   });
 
+  describe('I1 com status (ADR 0007 6.2, CA45, CA47)', () => {
+    /** Azul parcial (1 PAGO + 1 PENDENTE), Roxo toda paga, Verde toda pendente - todas na fatura 2026-11. */
+    async function seedBase() {
+      await insertCard(e.pool, { n: 1, name: 'Azul', closingDay: 10, dueDay: 17 });
+      await insertCard(e.pool, { n: 2, name: 'Roxo', closingDay: 25, dueDay: 5 });
+      await insertCard(e.pool, { n: 3, name: 'Verde', closingDay: 25, dueDay: 20 });
+      await insertEntry(e.pool, cardEntry(1, 1, { date: '2026-10-04', closing: '2026-10-10', due: '2026-11-17', amount: '100.00', status: 'PAID' }));
+      await insertEntry(e.pool, cardEntry(2, 1, { date: '2026-10-05', closing: '2026-10-10', due: '2026-11-17', amount: '60.00' }));
+      await insertEntry(e.pool, cardEntry(3, 2, { ...NOV, amount: '70.00', status: 'PAID' }));
+      await insertEntry(e.pool, cardEntry(4, 3, { date: '2026-10-11', closing: '2026-10-25', due: '2026-11-20', amount: '30.00' }));
+    }
+    const namesOf = (res: { body: any }) => (res.body.items as { card: { name: string } }[]).map((i) => i.card.name);
+
+    it('sem status: as tres faturas, em ordem de vencimento (resposta inalterada)', async () => {
+      await seedBase();
+      expect(namesOf(await get('/api/invoices', { month: '2026-11' }))).toEqual(['Roxo', 'Azul', 'Verde']);
+    });
+
+    it('status=PENDING: so as com pendencia, inclusive a parcial, com totais da fatura inteira', async () => {
+      await seedBase();
+      const res = await get('/api/invoices', { month: '2026-11', status: 'PENDING' });
+      expect(res.status).toBe(200);
+      expect(res.body.month).toBe('2026-11');
+      expect(namesOf(res)).toEqual(['Azul', 'Verde']);
+      expect(res.body.items[0]).toMatchObject({ entryCount: 2, pendingCount: 1, totals: { total: '160.00', paid: '100.00', pending: '60.00' } });
+    });
+
+    it('status=PAID: so as faturas quitadas', async () => {
+      await seedBase();
+      const res = await get('/api/invoices', { month: '2026-11', status: 'PAID' });
+      expect(namesOf(res)).toEqual(['Roxo']);
+      expect(res.body.items[0].pendingCount).toBe(0);
+    });
+
+    it('status=PENDING em mes sem faturas -> items []', async () => {
+      await seedBase();
+      expect((await get('/api/invoices', { month: '2027-06', status: 'PENDING' })).body).toEqual({ month: '2027-06', items: [] });
+    });
+
+    it.each([['ALL'], ['pending'], ['paid'], ['RECEIVED'], ['']])('status=%j -> 400 VALIDATION_ERROR/INVALID_VALUE no campo status (ALL e rejeitado de proposito)', async (status) => {
+      await seedBase();
+      const res = await get('/api/invoices', { month: '2026-11', status });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe('VALIDATION_ERROR');
+      expect(fieldsOf(res)[0]).toMatchObject({ field: 'status', code: 'INVALID_VALUE' });
+    });
+
+    it('status repetido -> 400; status sem month -> 400', async () => {
+      expect((await get('/api/invoices', { month: '2026-11', status: ['PENDING', 'PAID'] })).status).toBe(400);
+      expect((await get('/api/invoices', { status: 'PENDING' })).status).toBe(400);
+    });
+
+    it('outros resumos continuam estritos: /api/summary rejeita status (UNKNOWN_FIELD)', async () => {
+      const res = await get('/api/summary', { month: '2026-11', status: 'PENDING' });
+      expect(res.status).toBe(400);
+      expect(fieldsOf(res)[0]).toMatchObject({ code: 'UNKNOWN_FIELD' });
+    });
+  });
+
   it('I2/DR7: todas as despesas do bloco, sem paginacao, data desc, so do cartao e do mes', async () => {
     await insertCard(e.pool, { n: 1, name: 'Nubank' });
     await insertCard(e.pool, { n: 2, name: 'Outro' });

@@ -30,7 +30,7 @@ const TONES = {
 } as const;
 
 /** Banner persistente (erro do drawer, 429, sessao expirada...): borda do tom, icone e texto `--text`. */
-export function InlineAlert({ children, tone = "danger", role = "alert", actions, id }: { children: ReactNode; tone?: "danger" | "info" | "warning"; role?: "alert" | "status"; actions?: ReactNode; id?: string }) {
+export function InlineAlert({ children, tone = "danger", role = "alert", actions, id }: { children: ReactNode; tone?: "danger" | "info" | "warning"; role?: "alert" | "status" | "note"; actions?: ReactNode; id?: string }) {
   const { border, icon } = TONES[tone];
   return (
     <div id={id} role={role} className={`flex items-start gap-3 glass rounded-lg border border-l-[3px] p-3 text-text ${border}`}>

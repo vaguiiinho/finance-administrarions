@@ -13,10 +13,13 @@ import { useToast } from "@/components/ui/toast";
 import { NavLink } from "@/components/navigation";
 import { formatCivilDate, monthLongPtBR } from "@/lib/dates/format";
 import { countLabel, invoicePaidFeedback } from "@/lib/entries/feedback";
+import { focusTargetAfterPay } from "@/lib/entries/focus-target";
 import { changeFilter, changeTab, entriesHref, type EntriesState } from "@/lib/filters/entries-search-params";
 import type { ActionError, ActionResult, EntryDto, InvoiceDto } from "@/lib/api/types";
 import { loadInvoiceEntries, payInvoice } from "@/app/(protected)/entries/actions";
 import { loadDemoInvoiceEntries } from "@/app/(public)/demo/actions";
+import { PANEL_TITLE_ID } from "./panel-ids";
+import { useFocusAfterClose } from "./use-focus-after-close";
 
 /** Leitura sob demanda da lista da fatura: protegida (sessao) ou demo (reader publico), mesmo formato de resultado. */
 async function loadDemoEntries(cardId: string, referenceMonth: string): Promise<ActionResult<EntryDto[]>> {
@@ -49,6 +52,12 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
   useAuthRedirect(authError);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const payButtonRef = useRef<HTMLButtonElement>(null);
+  const focusAfterClose = useFocusAfterClose(confirmOpen);
+  // Decisao pelo FILTRO, nao pelo ref (a revalidacao pode ter desmontado o bloco): ADR 0007 7.5
+  const focusAfterPay = () => {
+    const target = focusTargetAfterPay(state.invoices.status);
+    focusAfterClose(() => (target === "panel" ? document.getElementById(PANEL_TITLE_ID) : headingRef.current)?.focus());
+  };
 
   const monthLong = monthLongPtBR(invoice.referenceMonth);
   const fullyPaid = invoice.pendingCount === 0;
@@ -89,7 +98,7 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
     if (result.ok) {
       setConfirmOpen(false);
       toast.push({ kind: result.data.paidCount === 0 ? "info" : "success", message: invoicePaidFeedback(invoice, result.data) });
-      headingRef.current?.focus();
+      focusAfterPay();
       return;
     }
     if (result.error.code === "SESSION_EXPIRED" || result.error.code === "PASSWORD_CHANGE_REQUIRED") {
@@ -99,12 +108,15 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
     if (result.error.status === 404) {
       setConfirmOpen(false);
       toast.push({ kind: "error", message: "Este cartão não foi encontrado. Nada foi alterado." });
+      if (focusTargetAfterPay(state.invoices.status) === "panel") focusAfterClose(() => document.getElementById(PANEL_TITLE_ID)?.focus());
       return;
     }
     setError("Não foi possível pagar a fatura. Nenhuma despesa foi alterada. Tente novamente.");
   };
 
-  const expensesHref = entriesHref(changeFilter(changeTab({ ...state, month: invoice.referenceMonth }, "expenses"), { d_card: invoice.card.id }), basePath);
+  // Fatura paga: Despesas abre em "Todos" (DL11), senao cairia em lista vazia sob "Pendente". Fatura com pendencia (inclusive
+  // parcial) preserva o status vigente (RF19, CA58). Mes da fatura e cartao nos dois casos; f_status nao muda.
+  const expensesHref = entriesHref(changeFilter(changeTab({ ...state, month: invoice.referenceMonth }, "expenses"), { d_card: invoice.card.id, ...(fullyPaid ? { d_status: "ALL" as const } : {}) }), basePath);
   const payLabel = fullyPaid ? (
     <p id={paidNoteId} className="flex items-center gap-1.5 text-sm font-medium text-success-text">
       <Icon name="check" />
@@ -183,7 +195,7 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
           {`Ver ${countLabel(invoice.entryCount, "despesa", "despesas")}`}
         </Button>
         <div id={listId} hidden={!expanded} className="mt-2">
-          {expanded ? <InvoiceEntries list={view} cardName={invoice.card.name} onRetry={() => void fetchList()} expensesHref={expensesHref} readOnly={readOnly} /> : null}
+          {expanded ? <InvoiceEntries list={view} cardName={invoice.card.name} onRetry={() => void fetchList()} expensesHref={expensesHref} shortcutLabel={readOnly || fullyPaid ? "Ver despesas do cartão na aba Despesas" : "Pagar despesas individualmente na aba Despesas"} /> : null}
         </div>
       </div>
 
@@ -212,7 +224,7 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
   );
 }
 
-function InvoiceEntries({ list, cardName, onRetry, expensesHref, readOnly }: { list: ListState; cardName: string; onRetry: () => void; expensesHref: string; readOnly: boolean }) {
+function InvoiceEntries({ list, cardName, onRetry, expensesHref, shortcutLabel }: { list: ListState; cardName: string; onRetry: () => void; expensesHref: string; shortcutLabel: string }) {
   if (list.status === "loading" || list.status === "idle") {
     return (
       <div aria-busy="true" className="flex flex-col gap-2">
@@ -263,7 +275,7 @@ function InvoiceEntries({ list, cardName, onRetry, expensesHref, readOnly }: { l
         ))}
       </ul>
       <NavLink href={expensesHref} className="btn btn-tertiary self-start">
-        {readOnly ? "Ver despesas do cartão na aba Despesas" : "Pagar despesas individualmente na aba Despesas"}
+        {shortcutLabel}
       </NavLink>
     </div>
   );

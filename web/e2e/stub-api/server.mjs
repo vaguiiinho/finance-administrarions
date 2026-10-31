@@ -7,6 +7,7 @@
 // `holdMutations` segura POST/PUT e `holdQueries` segura GET em /api/* ate `POST /__release` (estados deterministicos). Rotas: tabela ROUTES { method, pattern, handler }.
 import { createServer } from "node:http";
 import { calculateInvoiceDates } from "./invoice-dates.mjs";
+import { resolveInitialMonth } from "./initial-month.mjs";
 
 const PORT = Number(process.env.STUB_API_PORT ?? 4010);
 const uuid = (p, n) => `${p}0000000-0000-7000-8000-${String(n).padStart(12, "0")}`;
@@ -56,6 +57,12 @@ const SCENARIOS = {
   batch404: { failMode: "batch404" },
   batch422: { failMode: "batch422" },
   "card-conflict": { failMode: "card-conflict" },
+  // ADR 0007: cenarios do mes inicial / status padrao. `custom` recebe os dados do proprio teste em `POST /__scenario`
+  // ({ now?, cards?, entries?, demo?: { cards, entries } }); `initial-month-error` so derruba GET .../entries/initial-month (500);
+  // `initial-month-slow` atrasa so essa leitura (o web aborta em 1,5 s e cai em M).
+  custom: { failMode: null, custom: true },
+  "initial-month-error": { failMode: "initial-month", custom: true },
+  "initial-month-slow": { failMode: null, custom: true, initialMonthDelayMs: 2600 },
 };
 
 function seed(name, options = {}) {
@@ -65,7 +72,10 @@ function seed(name, options = {}) {
     expiredSession: Boolean(config.expiredSession), rateLimited: Boolean(config.rateLimited), usersError: Boolean(config.usersError), emptyDemo: Boolean(config.empty),
     // usuarios e sessoes encerradas (inativar/redefinir/sair): trocar de cenario restaura tudo
     users: SEED_USERS(), revoked: new Set(),
+    // ADR 0007 T5: "agora" do stub por cenario (padrao: relogio real); so afeta o que a API decide (mes inicial, demo)
+    now: options.now ? new Date(options.now) : null, initialMonthDelayMs: config.initialMonthDelayMs ?? 0, customDemo: options.demo ?? null,
   };
+  if (config.custom) return { cards: options.cards ?? [], entries: options.entries ?? [], ...extra };
   if (config.empty) return { cards: [], entries: [], ...extra };
   if (config.short) {
     return {
@@ -131,6 +141,10 @@ const invoicesOf = (month, data = state) => {
     return { card: { id: c.id, name: c.name }, referenceMonth: month, closingDate: maxOf(list, "closingDate"), dueDate: maxOf(list, "dueDate"), entryCount: list.length, pendingCount: list.filter((e) => e.status === "PENDING").length, totals: expTotals(list) };
   }).filter(Boolean);
 };
+
+// Mes civil de America/Sao_Paulo no "agora" do stub (RNF03: nunca UTC).
+const spMonth = (date) => { const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit" }).formatToParts(date).map((x) => [x.type, x.value])); return `${p.year}-${p.month}`; };
+const stubNow = () => state.now ?? new Date();
 
 const PAID_AT = "2026-11-02T13:00:00.000Z";
 const cardConflict = () => ({ fields: [{ field: "name", code: "NAME_TAKEN", message: "Já existe um cartão com esse nome." }] });
@@ -223,7 +237,8 @@ const monthShift = (ym, delta) => { const [y, m] = ym.split("-").map(Number); co
 function buildDemo() {
   const demoCard = { id: uuid("d", 1), name: "Cartão Demo", closingDay: 25, dueDay: 5, createdAt: "2026-10-01T12:00:00.000Z", updatedAt: "2026-10-01T12:00:00.000Z" };
   if (state.emptyDemo) return { cards: [], entries: [] };
-  const now = new Date().toISOString().slice(0, 7);
+  if (state.customDemo) return { cards: state.customDemo.cards ?? [], entries: state.customDemo.entries ?? [] };
+  const now = spMonth(stubNow()); // ADR 0007 T5: mes de Sao Paulo (era UTC, incoerente com RNF03 na virada do mes)
   const months = new Set(["2026-09", "2026-10", "2026-11", "2026-12"]);
   for (let d = -12; d <= 1; d++) months.add(monthShift(now, d));
   const entries = [];
@@ -250,7 +265,23 @@ const READS = [
   ["/summary", ({ res, url, data }) => json(res, 200, { month: month(url), totals: totalsOf(month(url), data) })],
   ["/cards", ({ res, data }) => json(res, 200, { items: data.cards })],
   ["/categories", ({ res, data }) => json(res, 200, { items: [...new Set(data.entries.map((e) => e.category))] })],
-  ["/invoices", ({ res, url, data }) => json(res, 200, { month: month(url), items: invoicesOf(month(url), data) })],
+  ["/invoices", ({ res, url, data }) => {
+    // ADR 0007 6.2: `status` aceita so PENDING|PAID. ALL e invalidos -> 400 (expoe vazamento do web)
+    const st = url.searchParams.get("status");
+    if (st !== null && st !== "PENDING" && st !== "PAID") return err(res, 400, "VALIDATION_ERROR", { fields: [{ field: "status", code: "INVALID_VALUE", message: "Valor não permitido." }] });
+    const items = invoicesOf(month(url), data).filter((i) => st === null || (st === "PENDING" ? i.pendingCount > 0 : i.pendingCount === 0))
+      // como a API: ordem de vencimento (desempate pelo nome do cartao)
+      .sort((a, b) => (a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : a.card.name.localeCompare(b.card.name)));
+    return json(res, 200, { month: month(url), items });
+  }],
+  ["/entries/initial-month", async ({ res, data }) => {
+    if (state.failMode === "initial-month") return err(res, 500, "INTERNAL_ERROR");
+    if (state.initialMonthDelayMs > 0) await sleep(state.initialMonthDelayMs);
+    const currentMonth = spMonth(stubNow());
+    const pending = data.entries.filter((e) => e.type === "EXPENSE" && e.status === "PENDING" && e.referenceMonth >= currentMonth).map((e) => e.referenceMonth).sort();
+    const { month: initial, advance } = resolveInitialMonth({ currentMonth, firstPendingMonth: pending[0] ?? null, hasCard: data.cards.length > 0 });
+    return json(res, 200, { currentMonth, month: initial, advance });
+  }],
   ["/entries/expenses", listExpenses],
   ["/entries/incomes", listIncomes],
   ["/cards/([^/]+)/invoices/(\\d{4}-\\d{2})/entries", invoiceEntries],

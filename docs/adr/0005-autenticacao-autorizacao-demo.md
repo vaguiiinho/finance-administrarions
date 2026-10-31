@@ -526,6 +526,8 @@ Ordem do Nest: middleware (body parser) -> guards -> pipes -> handler. Portanto,
 
 Inalterado: 9 rotas `GET /api/demo/*` com `@Public()`, mesmo DTO das protegidas, dono fixo `DEMO_USER_ID`, montadas pelos `finance-read-handlers` compartilhados. Qualquer outro método -> 404 `ROUTE_NOT_FOUND` (CA36).
 
+> **Nota de atualização (ADR 0007, 2026-10-30):** as rotas públicas de demo passaram de 9 para **10** com `GET /api/demo/entries/initial-month` (mesmo contrato de `GET /api/entries/initial-month`, dono `DEMO_USER_ID`, sem rota de escrita). A tabela abaixo e a contagem acima descrevem a decisão original; o inventário vigente está em `api/test/e2e/access-control.e2e-spec.ts` e em `docs/api/finance.md`. `GET /api/demo/invoices` também aceita `status=PENDING|PAID`.
+
 | Demo | Equivalente protegida |
 |---|---|
 | `GET /api/demo/entries/expenses` | `GET /api/entries/expenses` |
@@ -800,6 +802,8 @@ Sai: `(auth)/register/*`, `registerAction`, `demo-invite.tsx`, `WriteAction` com
 
 O proxy só olha a presença do cookie; nível e troca obrigatória são decididos no layout e na API.
 
+> **Nota de atualização (ADR 0007, C6):** a frase acima vale para as rotas protegidas. Em `/login` com cookie, o `proxy.ts` chama `GET /api/auth/me`, como descrito no terceiro item desta lista (ver `web/proxy.ts`). A feature de mês inicial e status padrão não altera o proxy.
+
 ### 9.4 Leituras protegidas: 401, troca obrigatória e nível
 
 - `FinanceReader` protegido e `identity-client`: `UnauthenticatedApiError` -> `redirect(loginUrl(x-fa-url))` com `reason=expired` (PA1); `PasswordChangeRequiredApiError` -> `redirect('/account/password?next=...')`; `ForbiddenApiError` -> `notFound()`.
@@ -989,7 +993,7 @@ Fakes: `InMemoryUserRepository`, `InMemorySessionRepository`, `InMemorySessionPr
 |---|---|---|---|
 | D1 (T1, T2) **aprovada** | Token opaco com sessão no banco (digest HMAC), Bearer do BFF para a API, cookie httpOnly só no web; validade fixa de 24 h | JWT sem estado (não revoga; inativação e redefinição exigiriam denylist); cookie direto na API | Uma consulta por requisição. É também o que viabiliza o T16 e o encerramento imediato de sessões (RNF14). |
 | D2 (T3) | argon2id via `@node-rs/argon2`; limite de 72 | bcrypt; `crypto.scrypt`; `crypto.argon2` (Node >= 24.7) | Dependência nativa com binários prontos. |
-| D3 (T4) | Usuário demo real + `GET /api/demo/*` | fixtures no web; flag `?demo=1` | 9 rotas a mais, mesmo código. |
+| D3 (T4) | Usuário demo real + `GET /api/demo/*` | fixtures no web; flag `?demo=1` | 9 rotas a mais, mesmo código. (Hoje são 10: ver nota na seção 6.5.) |
 | D4 (T5, B5) | Regenerar a demo quando o mês muda | deslocar datas na leitura; cron externo | `demo_datasets` + timer in-process. |
 | D5 (T6) | Contexto `identity` (com a gestão de usuários dentro); `ownerId` explícito em todo use case do finance | gestão em contexto próprio (consistência eventual onde a spec exige efeito imediato); repositórios com escopo por requisição; RLS | Assinaturas mais longas; esquecer o dono vira erro de compilação. RLS como evolução. |
 | D6 (T7) | `user_id` como prefixo dos índices; `(user_id, name_key)`; triggers de mesmo dono; `users` com `kind`, `role`, `status`, `must_change_password` | FK composta (limitação do Prisma); tabela de papéis N:N (dois níveis fixos, P14 da spec descarta permissões finas) | Triggers fora do schema Prisma, com teste dedicado. |

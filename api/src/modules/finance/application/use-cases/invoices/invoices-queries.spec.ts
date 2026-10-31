@@ -36,7 +36,7 @@ describe('ListInvoices', () => {
     expect(a.totals.pending.toString()).toBe('100.00');
     expect(b.totals.total.toString()).toBe('60.00');
     expect(b.card.name).toBe('B'); // ordem do read model preservada
-    expect(String(invoices.listByMonth.mock.calls[0][1])).toBe('2026-11');
+    expect(String((invoices.listByMonth.mock.calls[0][1] as { month: unknown }).month)).toBe('2026-11');
   });
 
   it('CA45: fatura paga mantem pendingCount 0 e pendente 0.00', async () => {
@@ -58,6 +58,48 @@ describe('ListInvoices', () => {
       expect(error).toMatchObject({ code: 'VALIDATION_ERROR' });
     }
     expect(invoices.listByMonth).not.toHaveBeenCalled();
+  });
+});
+
+describe('ListInvoices - filtro por status (ADR 0007 5.3/6.2, CA45, CA47, CA59)', () => {
+  const criteriaOf = (invoices: { listByMonth: ReturnType<typeof vi.fn> }) => invoices.listByMonth.mock.calls[0][1] as { month: { toString(): string }; status?: string };
+
+  it('sem status: o read model recebe so o mes (resposta igual a anterior)', async () => {
+    const invoices = { listByMonth: vi.fn(async () => [row()]), listEntries: vi.fn() };
+    const result = await ownedUseCase(ListInvoices, invoices as never).execute({ month: '2026-11' });
+    expect(result.items).toHaveLength(1);
+    expect(criteriaOf(invoices).month.toString()).toBe('2026-11');
+    expect(criteriaOf(invoices).status).toBeUndefined();
+  });
+
+  it.each(['PENDING', 'PAID'] as const)('status=%s e repassado ao read model junto do mes', async (status) => {
+    const invoices = { listByMonth: vi.fn(async () => []), listEntries: vi.fn() };
+    await ownedUseCase(ListInvoices, invoices as never).execute({ month: '2026-11', status } as never);
+    expect(criteriaOf(invoices)).toMatchObject({ status });
+    expect(criteriaOf(invoices).month.toString()).toBe('2026-11');
+  });
+
+  it('RF18/DR7: o filtro seleciona a fatura inteira - totais e contagens da fatura parcial seguem completos', async () => {
+    const invoices = { listByMonth: vi.fn(async () => [row({ entryCount: 2, pendingCount: 1, paid: money('40.00'), pending: money('100.00') })]), listEntries: vi.fn() };
+    const [item] = (await ownedUseCase(ListInvoices, invoices as never).execute({ month: '2026-11', status: 'PENDING' } as never)).items;
+    expect(item.entryCount).toBe(2);
+    expect(item.pendingCount).toBe(1);
+    expect(item.totals.total.toString()).toBe('140.00');
+    expect(item.totals.paid.toString()).toBe('40.00');
+  });
+
+  it.each([['ALL'], ['pending'], ['paid'], ['RECEIVED'], ['']])('status invalido %j -> 400 VALIDATION_ERROR no campo status, sem consultar o read model', async (status) => {
+    const invoices = { listByMonth: vi.fn(), listEntries: vi.fn() };
+    const error = await rejected(ownedUseCase(ListInvoices, invoices as never).execute({ month: '2026-11', status } as never));
+    expect(error).toMatchObject({ code: 'VALIDATION_ERROR', kind: 'validation' });
+    expect(error.details.fields).toEqual([expect.objectContaining({ field: 'status', code: 'INVALID_VALUE' })]);
+    expect(invoices.listByMonth).not.toHaveBeenCalled();
+  });
+
+  it('mes invalido e status invalido: as duas violacoes voltam juntas', async () => {
+    const invoices = { listByMonth: vi.fn(), listEntries: vi.fn() };
+    const error = await rejected(ownedUseCase(ListInvoices, invoices as never).execute({ month: '2026-13', status: 'ALL' } as never));
+    expect((error.details.fields as { field: string }[]).map((f) => f.field).sort()).toEqual(['month', 'status']);
   });
 });
 

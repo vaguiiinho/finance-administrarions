@@ -102,6 +102,11 @@ body::before {
     outline: var(--focus-ring);
     outline-offset: var(--focus-offset);
   }
+  /* Linha/card focados por codigo (foco apos pagar, design 6.2): o anel externo seria cortado pelo `overflow-clip` do wrapper */
+  tr[data-entry-id]:focus-visible,
+  li[data-entry-id]:focus-visible {
+    outline-offset: -2px;
+  }
 }
 
 /* Regras de elemento em @layer base: utilitarios e classes de componente as sobrescrevem (ADR 0004 5.7). */

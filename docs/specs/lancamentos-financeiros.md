@@ -2,6 +2,8 @@
 
 **Impacto em UI: sim** (telas: Lançamentos com abas Despesas/Faturas/Receitas e drawer de criação, Cartões e Dashboard mensal; alternador de tema claro/escuro na navbar)
 
+> **Superação parcial (2026-10-30):** para a tela `/entries` e `/demo/entries`, o mês padrão (CA61, RF19), o filtro de status e a aba Faturas (RF20, RF21 e os critérios CA44, CA45, CA54 e CA72) e o termo "Mês selecionado" deixam de valer como escritos abaixo. Valem `docs/specs/listagem-mes-e-status-padrao.md` (rev. 3), `docs/adr/0007-listagem-mes-e-status-padrao.md` e `docs/design/listagem-mes-e-status-padrao.md`. O CA61 continua valendo para o dashboard. Cada ponto afetado tem uma nota "Superado" no próprio texto.
+
 **Revisão 3** (2026-10-24). O ADR `docs/adr/0001-lancamentos-financeiros.md` e o design `docs/design/lancamentos-financeiros.md` foram revistos para a revisão 3 e implementados (branch `feature/finance`). O fechamento da feature (Playwright, desempenho, follow-ups de UX) está em `docs/specs/lancamentos-financeiros-fechamento.md` e `docs/adr/0002-lancamentos-financeiros-fechamento.md`.
 
 ### Histórico de revisões
@@ -58,7 +60,7 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 | **Atomicidade do lote** | Ou todas as despesas válidas do lote são pagas, ou nenhum lançamento é alterado. |
 | **Idempotência do lote** | Despesas já PAGO no lote são ignoradas sem erro e sem alteração. |
 | **Money (Valor)** | Valor em R$ com exatamente 2 casas decimais, nunca representado como float. Valor de lançamento é sempre positivo. |
-| **Mês selecionado** | Mês de referência escolhido no seletor de mês da tela de lançamentos ou do dashboard. Padrão: mês atual em America/Sao_Paulo. |
+| **Mês selecionado** | Mês de referência escolhido no seletor de mês da tela de lançamentos ou do dashboard. Padrão: mês atual em America/Sao_Paulo. *(Superado para a tela de lançamentos: sem `month` na URL, o mês é resolvido pela API pela regra do "Mês inicial" de `docs/specs/listagem-mes-e-status-padrao.md`, seção 2 e RF01. O padrão "mês atual" segue valendo para o dashboard.)* |
 | **Resumo do mês** | Receitas, despesas (total/pago/pendente) e saldos realizado/previsto de **todo** o mês selecionado, sem filtros. Exibido no topo da tela de lançamentos e nos cards do dashboard. |
 | **Subtotal da aba** | Totais da aba ativa respeitando os filtros da aba (Despesas: total/pago/pendente; Receitas: total). Não altera o resumo do mês. |
 | **Saldo realizado** | Receitas - despesas pagas. Pode ser negativo. |
@@ -227,12 +229,15 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 ### Web
 
 #### RF19 - Tela de lançamentos: cabeçalho comum
+- *(Superado em parte: o mês inicial de `/entries` não é mais sempre o mês atual; ver RF01 da spec `listagem-mes-e-status-padrao.md`.)*
 - Topo fixo, visível em todas as abas: seletor de mês (padrão: mês atual em America/Sao_Paulo), botão "+ Novo lançamento" e resumo do mês (Receitas; Despesas total/pago/pendente; Saldo realizado e Saldo previsto com indicação textual de positivo/negativo/zerado).
 - O resumo do mês não muda ao trocar de aba, filtrar ou paginar (DR6).
 - Mês selecionado, aba ativa, filtros da aba e página ficam na URL.
 - Abas: Despesas (padrão), Faturas, Receitas.
 
 #### RF20 - Aba Despesas
+> **Superado em parte (2026-10-30):** sem status na URL, o filtro aplicado é "Pendente", e não mais todas as despesas; "Todos" passa a ser uma escolha explícita (`d_status=ALL`). Ver RF09 a RF13 de `docs/specs/listagem-mes-e-status-padrao.md`.
+
 - Todas as despesas do mês de referência selecionado, de todos os cartões e PIX.
 - Tabela (desktop) / cards (mobile): descrição, categoria, data (dd/MM/yyyy), forma de pagamento ("PIX" ou nome do cartão), indicação da fatura quando a compra no cartão tem mês de referência diferente do mês da data (ex.: "Fatura nov/26"), valor (R$ 1.234,56) e status (badge Pendente/Pago).
 - Filtros: status (Pendente/Pago), categoria, cartão (inclui a opção "PIX/sem cartão").
@@ -242,6 +247,8 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 - "Pagar fatura" não fica nesta aba (está na aba Faturas).
 
 #### RF21 - Aba Faturas
+> **Superado em parte (2026-10-30):** a aba Faturas ganhou o filtro de status "Todos / Pendente / Pago" (`f_status`), com "Pendente" por padrão; faturas pagas só aparecem em "Pago" ou "Todos". Há estados vazios com filtro, e o foco após pagar depende do filtro. Ver RF16 a RF22 de `docs/specs/listagem-mes-e-status-padrao.md`.
+
 - Um bloco por cartão com fatura no mês selecionado (RF09, DR5), ordenado por data de vencimento.
 - Cada bloco: nome do cartão, data de fechamento, data de vencimento, total, pago, pendente, botão "Pagar fatura" e lista expansível das despesas (DR7).
 - "Pagar fatura" pede confirmação mostrando cartão, mês de referência, data de vencimento, quantidade e soma pendente; desabilitado quando a fatura não tem pendências.
@@ -563,9 +570,11 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 **CA44 - Cartão sem despesas no mês não aparece**
 - Given os cartões A e B, apenas A com despesas de referência 2026-11
 - When o usuário consulta as faturas de 2026-11
-- Then só a fatura de A é retornada; sem nenhuma fatura no mês, a lista vem vazia e a aba Faturas exibe "Nenhuma fatura neste mês".
+- Then só a fatura de A é retornada; sem nenhuma fatura no mês, a lista vem vazia e a aba Faturas exibe "Nenhuma fatura neste mês". *(Superado em parte: com cartão e filtro "Pendente" ou "Pago" ativo, o vazio é "Nenhuma fatura para os filtros selecionados em <mês>", com "Limpar filtros"; ver RF20 da spec `listagem-mes-e-status-padrao.md`.)*
 
 **CA45 - Fatura paga continua listada**
+> *Superado na tela (2026-10-30):* a API continua devolvendo a fatura paga quando `GET /api/invoices` é chamado sem `status`, mas a aba Faturas abre em "Pendente" e só lista a fatura paga em "Pago" ou "Todos" (CA45 a CA47 da spec `listagem-mes-e-status-padrao.md`).
+
 - Given a fatura de A em 2026-11 com todas as despesas PAGO
 - When o usuário consulta as faturas de 2026-11
 - Then A aparece com pendente R$ 0,00 e, na UI, "Pagar fatura" desabilitado.
@@ -613,6 +622,8 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 - Then a aba Despesas mostra a compra de 10/10 (com "Fatura nov/26"), a aba Receitas mostra a receita de 05/11, a aba Faturas mostra a fatura de C, e a despesa PIX de 20/10 não aparece.
 
 **CA54 - Filtro por status**
+> *Complementado (2026-10-30):* o critério vale para a API (`status=PENDING|PAID`). Na tela, "Pendente" é o filtro padrão da aba Despesas (CA31 a CA36 da spec `listagem-mes-e-status-padrao.md`).
+
 - Given despesas PAGO e PENDENTE no mês
 - When o usuário filtra a aba Despesas por Pendente
 - Then retornam só despesas PENDENTE; o subtotal tem pagas = `"0.00"` e despesas total = pendentes; o resumo do topo não muda.
@@ -650,6 +661,8 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 - Then saldo realizado é R$ 1.000,00 (positivo) e saldo previsto é -R$ 500,00, identificado como negativo por texto/ícone.
 
 **CA61 - Mês padrão**
+> **Superado para `/entries` e `/demo/entries` (2026-10-30):** sem `month` na URL, a tela não abre mais necessariamente no mês atual. Vale a regra de `docs/specs/listagem-mes-e-status-padrao.md` (RF01, CA01 a CA24), em que o mês pode avançar para o primeiro mês com pendência, ou para M+1 com cartão e sem pendência. O critério abaixo continua valendo para o **dashboard** e para o cálculo de M (America/Sao_Paulo).
+
 - Given a data atual 2026-10-31 23:30 em America/Sao_Paulo (2026-11-01 02:30 UTC)
 - When o usuário abre o dashboard ou a tela de lançamentos sem mês na URL
 - Then o mês selecionado é outubro de 2026.
@@ -707,6 +720,8 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 - Then só as despesas PENDENTE são selecionadas; na aba Receitas não há checkbox nem ação "Marcar como pago".
 
 **CA72 - Aba Faturas e pagar fatura na UI**
+> *Complementado (2026-10-30):* com o filtro padrão "Pendente", a fatura paga sai da lista logo após o pagamento, o toast é mantido e o foco vai para o título do painel; sob "Todos", o comportamento abaixo vale (CA55 e CA56 da spec `listagem-mes-e-status-padrao.md`).
+
 - Given em 2026-11 a fatura do cartão C com fechamento 25/10/2026, vencimento 05/11/2026 e 2 despesas PENDENTE somando R$ 150,00
 - When o usuário abre a aba Faturas, expande o bloco de C, aciona "Pagar fatura" e confirma
 - Then o bloco mostra nome, fechamento, vencimento, total, pago e pendente; a lista expandida mostra as despesas da fatura; a confirmação mostra "C", "novembro de 2026", vencimento 05/11/2026, 2 lançamentos e R$ 150,00; após confirmar, o pendente do bloco fica R$ 0,00, o botão fica desabilitado, e resumo e aba Despesas são atualizados com o valor efetivamente pago.

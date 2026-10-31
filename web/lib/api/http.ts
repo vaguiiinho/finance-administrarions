@@ -53,7 +53,7 @@ async function forwardedFor(): Promise<string | null> {
  * `auth: "session"` (padrao) envia `Authorization: Bearer <cookie>`; sem cookie nem chama a API.
  * `auth: "none"` (login, rotas de demo) nunca envia o Bearer.
  */
-export async function request<T>(method: "GET" | "POST" | "PUT", path: string, options: { query?: Query; body?: unknown; auth?: "session" | "none" } = {}): Promise<T> {
+export async function request<T>(method: "GET" | "POST" | "PUT", path: string, options: { query?: Query; body?: unknown; auth?: "session" | "none"; timeoutMs?: number } = {}): Promise<T> {
   const auth = options.auth ?? "session";
   const token = auth === "session" ? await readSessionToken() : undefined;
   if (auth === "session" && !token) throw new UnauthenticatedApiError();
@@ -75,6 +75,8 @@ export async function request<T>(method: "GET" | "POST" | "PUT", path: string, o
       cache: "no-store",
       headers: requestHeaders,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      // Sem timeout por padrao; so a leitura do mes inicial limita a espera (ADR 0007 7.2, RNF02)
+      ...(options.timeoutMs === undefined ? {} : { signal: AbortSignal.timeout(options.timeoutMs) }),
     });
   } catch {
     throw new ApiError(0, "NETWORK_ERROR", "Não foi possível falar com o servidor.", null);

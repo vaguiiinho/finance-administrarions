@@ -55,4 +55,22 @@ describe('ReferenceMonth - faixa de negocio (anos 1900-9998)', () => {
     expect(() => month.minusMonths(11)).not.toThrow();
     expect(() => month.yearMonth.next().next()).not.toThrow();
   });
+
+  describe('next() (ADR 0007 secao 3)', () => {
+    it('avanca um mes dentro do ano', () => {
+      expect(rm('2026-10').next().toString()).toBe('2026-11');
+      expect(rm('2026-01').next().toString()).toBe('2026-02');
+    });
+
+    it('dezembro vira janeiro do ano seguinte', () => {
+      expect(rm('2026-12').next().toString()).toBe('2027-01');
+    });
+
+    it('devolve um ReferenceMonth novo e nao muta o original', () => {
+      const original = rm('2026-12');
+      const next = original.next();
+      expect(next).toBeInstanceOf(ReferenceMonth);
+      expect(original.toString()).toBe('2026-12');
+    });
+  });
 });

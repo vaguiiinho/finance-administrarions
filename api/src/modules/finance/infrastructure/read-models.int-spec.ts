@@ -9,6 +9,10 @@ import { InvoiceKey } from '@finance/domain/billing/invoice-key.js';
 import { FinancialTotals } from '@finance/domain/totals/financial-totals.js';
 import { ExpenseTotals } from '@finance/domain/totals/expense-totals.js';
 import { Money } from '@shared/domain/value-objects/money.js';
+import { OwnerId } from '@finance/domain/owner/owner-id.js';
+import { PrismaPendingOverviewReadModel } from '@finance/infrastructure/read-models/pending-overview-read-model.prisma.js';
+import { insertOwnedCard, insertOwnedEntry, insertUser } from '@test/support/owned-db.js';
+import { userUuid } from '@test/support/identity-builders.js';
 
 let pool: pg.Pool;
 let infra: Infra;
@@ -286,7 +290,7 @@ describe('MonthlySummaryReadModel (S1)', () => {
 });
 
 describe('InvoiceReadModel (I1, I2)', () => {
-  const list = (m: string) => infra.readModels.invoices.listByMonth(DEFAULT_OWNER, rm(m));
+  const list = (m: string, status?: 'PENDING' | 'PAID') => infra.readModels.invoices.listByMonth(DEFAULT_OWNER, { month: rm(m), ...(status ? { status } : {}) });
   const key = (cardN: number, m: string) => ({ cardId: cardId(cardN), referenceMonth: rm(m) }) as unknown as InvoiceKey;
 
   it('CA43: faturas A e B de 2026-11 com datas, contagens, totais e ordem por vencimento', async () => {
@@ -387,6 +391,190 @@ describe('InvoiceReadModel (I1, I2)', () => {
     );
     expect(items.map((i) => i.id)).toEqual(expected.map((r) => r.id));
     expect(await infra.readModels.invoices.listEntries(DEFAULT_OWNER, key(1, '2027-05'))).toEqual([]);
+  });
+});
+
+describe('InvoiceReadModel.listByMonth - filtro por status (ADR 0007 5.4, CA45-CA47, CA59)', () => {
+  const list = (m: string, status?: 'PENDING' | 'PAID') => infra.readModels.invoices.listByMonth(DEFAULT_OWNER, { month: rm(m), ...(status ? { status } : {}) });
+  const names = (rows: { card: { name: string } }[]) => rows.map((r) => r.card.name);
+
+  /** Cenario-base da spec (aqui na fatura 2026-11): Azul parcial (1 PAGO + 1 PENDENTE), Roxo toda paga, Verde toda pendente. */
+  async function seedBase() {
+    await insertCard(pool, { n: 1, name: 'Azul', closingDay: 10, dueDay: 17 });
+    await insertCard(pool, { n: 2, name: 'Roxo', closingDay: 25, dueDay: 5 });
+    await insertCard(pool, { n: 3, name: 'Verde', closingDay: 25, dueDay: 20 });
+    await insertEntry(pool, cardEntry(1, 1, { date: '2026-10-04', closing: '2026-10-10', due: '2026-11-17', amount: '100.00', status: 'PAID' }));
+    await insertEntry(pool, cardEntry(2, 1, { date: '2026-10-05', closing: '2026-10-10', due: '2026-11-17', amount: '60.00' }));
+    await insertEntry(pool, cardEntry(3, 2, { ...NOV, amount: '70.00', status: 'PAID' }));
+    await insertEntry(pool, cardEntry(4, 3, { date: '2026-10-11', closing: '2026-10-25', due: '2026-11-20', amount: '30.00' }));
+  }
+
+  it('CA45: PENDING lista as faturas com ao menos uma despesa pendente, inclusive a parcialmente paga', async () => {
+    await seedBase();
+    expect(names(await list('2026-11', 'PENDING'))).toEqual(['Azul', 'Verde']);
+  });
+
+  it('PAID lista so as faturas com despesas e nenhuma pendente (CA47)', async () => {
+    await seedBase();
+    expect(names(await list('2026-11', 'PAID'))).toEqual(['Roxo']);
+  });
+
+  it('sem status devolve as tres, na mesma ordem de sempre (vencimento, nome, id) - resposta inalterada', async () => {
+    await seedBase();
+    const all = await list('2026-11');
+    expect(names(all)).toEqual(['Roxo', 'Azul', 'Verde']);
+    expect(names(await list('2026-11', 'PENDING'))).toEqual(all.filter((r) => r.pendingCount > 0).map((r) => r.card.name));
+    expect(names(await list('2026-11', 'PAID'))).toEqual(all.filter((r) => r.pendingCount === 0).map((r) => r.card.name));
+  });
+
+  it('RF18/DR7: fatura parcial sob PENDING mantem contagens e totais de TODAS as despesas (nao so as pendentes)', async () => {
+    await seedBase();
+    const azul = (await list('2026-11', 'PENDING')).find((r) => r.card.name === 'Azul')!;
+    expect(azul.entryCount).toBe(2);
+    expect(azul.pendingCount).toBe(1);
+    expect([azul.paid, azul.pending].map(String)).toEqual(['100.00', '60.00']);
+    expect(azul.dueDate.toString()).toBe('2026-11-17');
+  });
+
+  it('PENDING e PAID particionam o conjunto: nenhuma fatura some nem aparece nos dois', async () => {
+    await seedBase();
+    const pending = names(await list('2026-11', 'PENDING'));
+    const paid = names(await list('2026-11', 'PAID'));
+    expect(pending.filter((n) => paid.includes(n))).toEqual([]);
+    expect([...pending, ...paid].sort()).toEqual(names(await list('2026-11')).sort());
+  });
+
+  it('mes sem faturas -> [] em qualquer status; PIX e receitas nunca formam fatura', async () => {
+    await insertEntry(pool, { n: 1, date: '2026-11-10', status: 'PENDING', paidAt: null });
+    for (const status of [undefined, 'PENDING', 'PAID'] as const) expect(await list('2026-11', status)).toEqual([]);
+  });
+
+  it('fatura quitada depois de paga muda de PENDING para PAID (o filtro e sobre o estado atual)', async () => {
+    await seedBase();
+    await pool.query(`UPDATE entries SET status = 'PAID', paid_at = now() WHERE id = $1::uuid`, [entryUuid(2)]);
+    expect(names(await list('2026-11', 'PENDING'))).toEqual(['Verde']);
+    expect(names(await list('2026-11', 'PAID'))).toEqual(['Roxo', 'Azul']);
+  });
+});
+
+describe('PendingOverviewReadModel.overviewFrom (ADR 0007 5.4; CA03, CA09, CA10, CA14, CA21, CA23)', () => {
+  const overview = async (from: string) => {
+    const r = await infra.readModels.pendingOverview.overviewFrom(DEFAULT_OWNER, rm(from));
+    return { first: r.firstPendingMonth?.toString() ?? null, hasCard: r.hasCard };
+  };
+  const pendingPix = (n: number, date: string) => pending(n, { date });
+
+  it('sem nada: nenhuma pendencia e sem cartao', async () => {
+    expect(await overview('2026-10')).toEqual({ first: null, hasCard: false });
+  });
+
+  it('cartao sem despesas: hasCard true e nenhuma pendencia (CA08)', async () => {
+    await insertCard(pool, { n: 1 });
+    expect(await overview('2026-10')).toEqual({ first: null, hasCard: true });
+  });
+
+  it('o ponto de partida e INCLUSIVO: pendencia em M conta (CA01, CA09 - PIX pendente em M)', async () => {
+    await insertCard(pool, { n: 1 });
+    await insertEntry(pool, pendingPix(1, '2026-10-20'));
+    await insertEntry(pool, cardEntry(2, 1, { date: '2026-10-26', closing: '2026-11-25', due: '2026-12-05' }));
+    expect((await overview('2026-10')).first).toBe('2026-10');
+  });
+
+  it('devolve o MENOR mes de referencia pendente a partir de M, de fatura ou de PIX (CA10)', async () => {
+    await insertCard(pool, { n: 1 });
+    await insertEntry(pool, cardEntry(1, 1, { date: '2026-11-12', closing: '2026-11-25', due: '2026-12-05' })); // fatura 2026-12
+    await insertEntry(pool, pendingPix(2, '2027-02-10'));
+    await insertEntry(pool, pendingPix(3, '2026-12-15')); // PIX 2026-12 (empata com a fatura)
+    expect((await overview('2026-10')).first).toBe('2026-12');
+    expect((await overview('2026-12')).first).toBe('2026-12');
+    expect((await overview('2027-01')).first).toBe('2027-02');
+  });
+
+  it('CA14 / PV2: pendencias de meses ANTERIORES a M sao ignoradas (fatura e PIX)', async () => {
+    await insertCard(pool, { n: 1 });
+    await insertEntry(pool, cardEntry(1, 1, { date: '2026-08-12', closing: '2026-08-25', due: '2026-09-05' })); // fatura 2026-09
+    await insertEntry(pool, pendingPix(2, '2026-09-10'));
+    expect(await overview('2026-10')).toEqual({ first: null, hasCard: true });
+  });
+
+  it('despesas PAGAS nao contam', async () => {
+    await insertCard(pool, { n: 1 });
+    await insertEntry(pool, { n: 1, date: '2026-10-10' });
+    await insertEntry(pool, cardEntry(2, 1, { ...NOV, status: 'PAID' }));
+    expect((await overview('2026-10')).first).toBeNull();
+  });
+
+  it('receitas nunca geram pendencia', async () => {
+    await insertEntry(pool, { n: 1, type: 'INCOME', date: '2026-10-10' });
+    await insertEntry(pool, { n: 2, type: 'INCOME', date: '2026-12-10' });
+    expect((await overview('2026-10')).first).toBeNull();
+  });
+
+  it('usa o mes de referencia GRAVADO, nao a data da compra nem o fechamento (CA04)', async () => {
+    await insertCard(pool, { n: 1, closingDay: 25, dueDay: 5 });
+    // compra de 12/10 em cartao que fecha dia 25: ja fechou em 25/10; referencia 2026-11
+    await insertEntry(pool, cardEntry(1, 1, { date: '2026-10-12', closing: '2026-10-25', due: '2026-11-05' }));
+    expect((await overview('2026-10')).first).toBe('2026-11');
+    expect((await overview('2026-11')).first).toBe('2026-11');
+    expect((await overview('2026-12')).first).toBeNull();
+  });
+
+  it('CA21: mudar o fechamento do cartao nao muda a fatura gravada', async () => {
+    await insertCard(pool, { n: 1, closingDay: 25, dueDay: 5 });
+    await insertEntry(pool, cardEntry(1, 1, { date: '2026-09-12', closing: '2026-09-25', due: '2026-10-05' }));
+    await pool.query(`UPDATE cards SET closing_day = 10, due_day = 17`);
+    expect((await overview('2026-10')).first).toBe('2026-10');
+  });
+
+  it('virada de ano: de 2026-12 acha 2027-01', async () => {
+    await insertEntry(pool, pendingPix(1, '2027-01-05'));
+    expect((await overview('2026-12')).first).toBe('2027-01');
+  });
+
+  it('salto longo, sem limite de distancia (R3)', async () => {
+    await insertEntry(pool, pendingPix(1, '2036-03-05'));
+    expect((await overview('2026-10')).first).toBe('2036-03');
+  });
+
+  it('CA23 / RNF04: so o dono conta (pendencias e cartao do outro nao aparecem)', async () => {
+    await insertUser(pool, { n: 2, name: 'Bruno', email: 'bruno@exemplo.com' });
+    const BRUNO_ID = userUuid(2);
+    await insertCard(pool, { n: 1, name: 'Da Ana' });
+    await insertOwnedCard(pool, BRUNO_ID, { n: 2, name: 'Do Bruno' });
+    await insertOwnedEntry(pool, BRUNO_ID, { n: 50, date: '2026-10-10', status: 'PENDING', paidAt: null });
+    await insertOwnedEntry(pool, BRUNO_ID, { n: 51, date: '2026-12-10', status: 'PENDING', paidAt: null });
+    const ana = await overview('2026-10');
+    expect(ana).toEqual({ first: null, hasCard: true });
+    const bruno = await infra.readModels.pendingOverview.overviewFrom(unwrap<OwnerId>(OwnerId.create(BRUNO_ID)), rm('2026-10'));
+    expect(bruno.firstPendingMonth?.toString()).toBe('2026-10');
+    // Bruno sem cartao proprio nao herda o cartao da Ana
+    await pool.query('DELETE FROM entries WHERE user_id = $1::uuid', [BRUNO_ID]);
+    await pool.query('DELETE FROM cards WHERE user_id = $1::uuid', [BRUNO_ID]);
+    expect((await infra.readModels.pendingOverview.overviewFrom(unwrap<OwnerId>(OwnerId.create(BRUNO_ID)), rm('2026-10'))).hasCard).toBe(false);
+  });
+
+  it('RNF01: UMA consulta ao banco, qualquer que seja o numero de cartoes e a distancia ate a pendencia', async () => {
+    for (let n = 1; n <= 20; n++) await insertCard(pool, { n, name: `Cartao ${n}` });
+    for (let n = 1; n <= 20; n++) await insertEntry(pool, cardEntry(n, n, { ...NOV, status: 'PAID' }));
+    await insertEntry(pool, pendingPix(100, '2030-05-10'));
+    let queries = 0;
+    const counting = new Proxy(infra.prisma, {
+      get(target, prop, receiver) {
+        const value = Reflect.get(target, prop, receiver);
+        if (typeof prop === 'string' && ['$queryRaw', '$queryRawUnsafe', '$executeRaw', '$executeRawUnsafe', '$transaction'].includes(prop) && typeof value === 'function') {
+          return (...args: unknown[]) => {
+            queries++;
+            return (value as (...a: unknown[]) => unknown).apply(target, args);
+          };
+        }
+        return value;
+      },
+    });
+    const model = new PrismaPendingOverviewReadModel(counting as never);
+    const result = await model.overviewFrom(DEFAULT_OWNER, rm('2026-10'));
+    expect(result.firstPendingMonth?.toString()).toBe('2030-05');
+    expect(result.hasCard).toBe(true);
+    expect(queries).toBe(1);
   });
 });
 

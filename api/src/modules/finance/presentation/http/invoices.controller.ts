@@ -3,7 +3,7 @@ import { CurrentOwnerId } from '@shared/presentation/auth/current-principal.deco
 import { ZodValidationPipe } from '@shared/presentation/pipes/zod-validation.pipe.js';
 import { PayInvoice } from '../../application/use-cases/invoices/pay-invoice.js';
 import { FinanceReadHandlers } from './finance-read-handlers.js';
-import { monthQuerySchema, type MonthQuery } from './schemas/query.schemas.js';
+import { invoicesQuerySchema, type InvoicesQuery } from './schemas/query.schemas.js';
 
 @Controller()
 export class InvoicesController {
@@ -13,7 +13,7 @@ export class InvoicesController {
   ) {}
 
   @Get('invoices')
-  list(@CurrentOwnerId() ownerId: string, @Query(new ZodValidationPipe(monthQuerySchema)) query: MonthQuery) {
+  list(@CurrentOwnerId() ownerId: string, @Query(new ZodValidationPipe(invoicesQuerySchema)) query: InvoicesQuery) {
     return this.reads.invoices(ownerId, query);
   }
 

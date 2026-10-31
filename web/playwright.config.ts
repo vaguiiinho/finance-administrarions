@@ -1,7 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const WEB_PORT = 3100;
-const STUB_PORT = 4010;
+// Portas sobrescreviveis por ambiente (PW_WEB_PORT, PW_STUB_PORT) para rodar ao lado de servidores ja ativos
+const WEB_PORT = Number(process.env.PW_WEB_PORT ?? 3100);
+const STUB_PORT = Number(process.env.PW_STUB_PORT ?? 4010);
 
 // O web sobe em PRODUCAO (`next build && next start`), nao em `next dev`: o dev (a) bloqueia recursos de dev para a origem
 // 127.0.0.1 (allowedDevOrigins) e a pagina nao hidrata, (b) injeta o overlay "N" (<nextjs-portal>) que intercepta cliques

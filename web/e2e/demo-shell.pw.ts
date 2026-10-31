@@ -26,7 +26,8 @@ test.describe("demo so de visualizacao (CA38, RF30-RF32)", () => {
     await expect(expand).toHaveAttribute("aria-expanded", "true");
     await page.getByRole("tab", { name: "Receitas" }).click();
     await expect(page).toHaveURL(/\/demo\/entries/);
-    await page.getByRole("button", { name: /Próximo mês/ }).click();
+    // a faixa compacta (que repete o seletor) aparece quando o cabecalho sai da vista; usa-se o do cabecalho
+    await page.locator("#entries-header-controls").getByRole("button", { name: /Próximo mês/ }).click();
     await expect(page).toHaveURL(/month=2026-12/);
     for (const re of WRITE_CONTROLS) await expect(page.getByRole("button", { name: re })).toHaveCount(0);
     await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -287,6 +288,7 @@ test.describe("layout global: menu lateral, drawer e footer (design 17)", () => 
   test("'Pular para o conteudo' leva ao <main>, pulando navbar, menu lateral e banner", async ({ page }) => {
     await page.setViewportSize(VIEWPORTS.desktop);
     await page.goto("/demo/entries");
+    await page.waitForURL(/\/demo\/entries\?month=/); // sem `month`, a pagina redireciona no cliente (ADR 0007 7.2); o foco so e estavel depois
     await page.keyboard.press("Tab");
     await expect(page.getByRole("link", { name: "Pular para o conteúdo" })).toBeFocused();
     await page.keyboard.press("Enter");
@@ -296,6 +298,7 @@ test.describe("layout global: menu lateral, drawer e footer (design 17)", () => 
   test("ordem de foco a partir de xl: pular, marca, tema, Entrar, itens do menu lateral, banner, conteudo", async ({ page }) => {
     await page.setViewportSize(VIEWPORTS.desktop);
     await page.goto("/demo/entries");
+    await page.waitForURL(/\/demo\/entries\?month=/); // idem: o redirecionamento destroi o contexto de execucao
     const names: string[] = [];
     for (let i = 0; i < 8; i++) {
       await page.keyboard.press("Tab");

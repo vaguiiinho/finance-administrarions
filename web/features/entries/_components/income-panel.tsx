@@ -12,7 +12,8 @@ import { isBadRequest, settle } from "@/lib/api/queries";
 import type { IncomesPage } from "@/lib/api/types";
 import { IncomeFilter } from "./expense-filters";
 import { EntryItem, EntryRow, NewEntryButton, RecentBadge } from "./entry-drawer-context";
-import { InvalidFilters, PANEL_TITLE_ID } from "./expenses-panel";
+import { InvalidFilters } from "./expenses-panel";
+import { PANEL_TITLE_ID } from "./panel-ids";
 import { IncomeSubtotal } from "./tab-subtotal";
 
 /** Painel da aba Receitas (RF22): sem selecao e sem acao (CA71); filtro de categoria; subtotal da API. */

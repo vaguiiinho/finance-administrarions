@@ -5,18 +5,11 @@ import { useRouter } from "next/navigation";
 import { useAppMode } from "@/components/app-mode";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useNav } from "@/components/navigation";
-import { changeFilter, entriesHref, type EntriesState, type ExpenseFilters as Filters, type ExpenseStatusFilter } from "@/lib/filters/entries-search-params";
+import { changeFilter, clearExpenseFilters, entriesHref, type EntriesState, type ExpenseFilters as Filters } from "@/lib/filters/entries-search-params";
+import { PANEL_TITLE_ID } from "./panel-ids";
+import { StatusField, StatusIndicator } from "./status-filter-field";
 import type { CardDto } from "@/lib/api/types";
-
-type StatusValue = "ALL" | ExpenseStatusFilter;
-
-const STATUS_OPTIONS = [
-  { value: "ALL", label: "Todos" },
-  { value: "PENDING", label: "Pendente" },
-  { value: "PAID", label: "Pago" },
-] as const;
 
 interface FilterControlsProps {
   idPrefix: string;
@@ -36,17 +29,7 @@ function FilterControls({ idPrefix, values, onChange, categories, categoriesErro
   const cardMissing = card !== "" && card !== "pix" && !cards.some((c) => c.id === card);
   return (
     <>
-      <div className="flex flex-col gap-1.5">
-        <span id={`${idPrefix}-status`} className="text-sm font-medium text-text">
-          Status
-        </span>
-        <SegmentedControl<StatusValue>
-          aria-labelledby={`${idPrefix}-status`}
-          options={STATUS_OPTIONS}
-          value={values.status ?? "ALL"}
-          onChange={(v) => onChange({ status: v === "ALL" ? undefined : v })}
-        />
-      </div>
+      <StatusField idPrefix={idPrefix} value={values.status} onChange={(status) => onChange({ status })} />
       <div className="flex flex-col gap-1.5">
         <label htmlFor={`${idPrefix}-category`} className="text-sm font-medium text-text">
           Categoria
@@ -113,20 +96,22 @@ export function ExpenseFilters({ state, categories, categoriesError, cards, card
   const [sheetOpen, setSheetOpen] = useState(false);
   const [draft, setDraft] = useState<Filters>(state.expenses);
   const active = state.expenses;
-  const count = [active.status, active.category, active.card].filter(Boolean).length;
+  const count = [active.status !== "ALL", active.category, active.card].filter(Boolean).length;
 
   const apply = (filters: Filters) =>
     navigate(entriesHref(changeFilter(state, { d_status: filters.status, d_category: filters.category, d_card: filters.card }), basePath), { scope: "panel" });
+  // "Limpar filtros" some depois de usado: o foco vai para o h2 do painel (DL7)
+  const clear = () => navigate(entriesHref(clearExpenseFilters(state), basePath), { scope: "panel", focusId: PANEL_TITLE_ID });
   const retry = () => router.refresh();
   const common = { categories, categoriesError, cards, cardsError, onRetry: retry };
 
   return (
     <div className="flex flex-col gap-3">
       {/* >= md: inline */}
-      <div className="hidden items-end gap-4 md:flex">
+      <div className="hidden flex-wrap items-end gap-4 md:flex">
         <FilterControls idPrefix={`${uid}-inline`} values={active} onChange={(patch) => apply({ ...active, ...patch })} {...common} />
         {count > 0 ? (
-          <Button variant="tertiary" onClick={() => apply({})}>
+          <Button variant="tertiary" onClick={clear}>
             Limpar filtros
           </Button>
         ) : null}
@@ -144,18 +129,20 @@ export function ExpenseFilters({ state, categories, categoriesError, cards, card
           Filtros{count > 0 ? ` (${count})` : ""}
         </Button>
         {count > 0 ? (
-          <Button variant="tertiary" onClick={() => apply({})}>
+          <Button variant="tertiary" aria-label="Limpar filtros" onClick={clear}>
             Limpar
           </Button>
         ) : null}
       </div>
+
+      <StatusIndicator status={active.status} />
 
       {sheetOpen ? (
         <BottomSheet
           title="Filtros"
           titleId={`${uid}-sheet-title`}
           onClose={() => setSheetOpen(false)}
-          onClear={() => setDraft({})}
+          onClear={() => setDraft({ status: "ALL" })}
           onApply={() => {
             setSheetOpen(false);
             apply(draft);

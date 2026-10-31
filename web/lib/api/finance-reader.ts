@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { expiredLoginUrl, passwordChangeUrl } from "@/lib/auth/redirect-urls";
+import type { InitialMonthDecision } from "@/lib/filters/initial-month";
 import * as endpoints from "./endpoints";
 import { ForbiddenApiError, PasswordChangeRequiredApiError, UnauthenticatedApiError, request, type Query } from "./http";
 import type { CategoryDistribution, CardDto, EntryDto, ExpensesPage, IncomesPage, InvoiceDto, MonthlySeries, TotalsDto } from "./types";
@@ -12,6 +13,7 @@ export interface FinanceReader {
   listCards: typeof endpoints.listCards;
   listCategories: typeof endpoints.listCategories;
   listInvoices: typeof endpoints.listInvoices;
+  getInitialMonth: typeof endpoints.getInitialMonth;
   listInvoiceEntries: typeof endpoints.listInvoiceEntries;
   listExpenses: typeof endpoints.listExpenses;
   listIncomes: typeof endpoints.listIncomes;
@@ -42,7 +44,8 @@ function buildProtected(): FinanceReader {
     getSummary: cache((month: string) => guarded(() => endpoints.getSummary(month))),
     listCards: cache(() => guarded(() => endpoints.listCards())),
     listCategories: cache(() => guarded(() => endpoints.listCategories())),
-    listInvoices: (month) => guarded(() => endpoints.listInvoices(month)),
+    listInvoices: (query) => guarded(() => endpoints.listInvoices(query)),
+    getInitialMonth: () => guarded(() => endpoints.getInitialMonth()),
     listInvoiceEntries: (cardId, referenceMonth) => guarded(() => endpoints.listInvoiceEntries(cardId, referenceMonth)),
     listExpenses: (query) => guarded(() => endpoints.listExpenses(query)),
     listIncomes: (query) => guarded(() => endpoints.listIncomes(query)),
@@ -60,7 +63,8 @@ function buildDemo(): FinanceReader {
     getSummary: cache((month: string) => demoGet<{ month: string; totals: TotalsDto }>("/summary", { month })),
     listCards: cache(() => demoGet<{ items: CardDto[] }>("/cards")),
     listCategories: cache(() => demoGet<{ items: string[] }>("/categories")),
-    listInvoices: (month) => demoGet<{ month: string; items: InvoiceDto[] }>("/invoices", { month }),
+    listInvoices: ({ month, status }) => demoGet<{ month: string; items: InvoiceDto[] }>("/invoices", { month, status }),
+    getInitialMonth: () => request<InitialMonthDecision>("GET", "/demo/entries/initial-month", { auth: "none", timeoutMs: endpoints.INITIAL_MONTH_TIMEOUT_MS }),
     listInvoiceEntries: (cardId, referenceMonth) =>
       demoGet<{ card: { id: string; name: string }; referenceMonth: string; items: EntryDto[] }>(`/cards/${enc(cardId)}/invoices/${enc(referenceMonth)}/entries`),
     listExpenses: (query) => demoGet<ExpensesPage>("/entries/expenses", query),

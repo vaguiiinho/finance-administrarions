@@ -110,6 +110,31 @@ describe('CA35 / RF29: leitura publica da demo', () => {
   });
 });
 
+describe('CA59: GET /api/demo/invoices com status (ADR 0007 6.3)', () => {
+  it('PENDING lista a fatura pendente da demo; PAID -> vazio; sem status -> igual a antes', async () => {
+    const all = await e.http().get(`/api/demo/invoices?month=${MONTH}`);
+    expect(all.body.items).toHaveLength(1);
+    expect((await e.http().get(`/api/demo/invoices?month=${MONTH}&status=PENDING`)).body.items).toHaveLength(1);
+    expect((await e.http().get(`/api/demo/invoices?month=${MONTH}&status=PAID`)).body.items).toEqual([]);
+  });
+
+  it('depois de quitada a fatura da demo (por SQL), PAID a lista e PENDING nao', async () => {
+    await e.pool.query(`UPDATE entries SET status = 'PAID', paid_at = now() WHERE id = $1::uuid`, [entryUuid(703)]);
+    expect((await e.http().get(`/api/demo/invoices?month=${MONTH}&status=PAID`)).body.items).toHaveLength(1);
+    expect((await e.http().get(`/api/demo/invoices?month=${MONTH}&status=PENDING`)).body.items).toEqual([]);
+  });
+
+  it('status=ALL ou invalido -> 400 INVALID_VALUE tambem na demo; nunca mistura dados de usuarios', async () => {
+    for (const status of ['ALL', 'pending']) {
+      const res = await e.http().get(`/api/demo/invoices?month=${MONTH}&status=${status}`);
+      expect(res.status, status).toBe(400);
+      expect(res.body.details.fields[0]).toMatchObject({ field: 'status', code: 'INVALID_VALUE' });
+    }
+    const res = await e.http().get(`/api/demo/invoices?month=${MONTH}&status=PENDING`);
+    expect(JSON.stringify(res.body)).not.toMatch(/SECRETO/);
+  });
+});
+
 describe('CA36 / RF29: a demo nao aceita escrita', () => {
   const paths = [
     '/api/demo/entries',

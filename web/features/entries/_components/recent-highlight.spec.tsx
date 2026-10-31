@@ -96,7 +96,7 @@ describe("destaque do lancamento recem-criado (design 3.9.2, D25)", () => {
       referenceMonth: "2026-10", status: "PAID", paidAt: "2026-10-24T13:00:00.000Z", createdAt: "", updatedAt: "",
     } satisfies EntryDto;
     createEntry.mockResolvedValue({ ok: true, data: entry });
-    const state = parseEntriesSearchParams({ month: "2026-10" }, new Date("2026-10-24T13:00:00.000Z"));
+    const state = parseEntriesSearchParams({ month: "2026-10", d_status: "ALL" }, new Date("2026-10-24T13:00:00.000Z"));
     render(
       <AllProviders>
         <EntryDrawerProvider>

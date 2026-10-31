@@ -5,12 +5,15 @@ import { UpdatingRegion } from "@/components/navigation";
 import { BlockErrorBoundary } from "@/components/ui/block-error-boundary";
 import type { FinanceReader } from "@/lib/api/finance-reader";
 import { currentYearMonthSP, monthLongPtBR } from "@/lib/dates/format";
+import { parseAdvanceSignal } from "@/lib/filters/initial-month";
 import { parseEntriesSearchParams, type EntriesTab } from "@/lib/filters/entries-search-params";
 import { EntriesHeader } from "./_components/entries-header";
 import { EntriesTabsBar } from "./_components/entries-tabs-bar";
 import { EntryDrawerHost } from "./_components/entry-drawer-host";
 import { EntryDrawerProvider } from "./_components/entry-drawer-context";
-import { ExpensesPanel, PANEL_TITLE_ID } from "./_components/expenses-panel";
+import { ExpensesPanel } from "./_components/expenses-panel";
+import { PANEL_TITLE_ID } from "./_components/panel-ids";
+import { MonthAdvanceNotice } from "./_components/month-advance-notice";
 import { IncomePanel } from "./_components/income-panel";
 import { InvoicesPanel } from "./_components/invoices-panel";
 import { InvoicesPanelSkeleton, ListPanelSkeleton } from "./_components/panel-skeletons";
@@ -36,6 +39,7 @@ export function EntriesScreen({ searchParams, mode, reader }: { searchParams: Se
   return (
     <AppModeProvider mode={mode}>
       <EntryDrawerProvider>
+        <MonthAdvanceNotice signal={parseAdvanceSignal(searchParams, state.month)} month={state.month} />
         {state.monthWasInvalid ? <MonthNotice /> : null}
         <EntriesHeader state={state} currentMonth={currentMonth} reader={reader} />
         <EntriesTabsBar state={state} currentMonth={currentMonth} />

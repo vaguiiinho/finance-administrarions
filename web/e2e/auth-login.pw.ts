@@ -80,7 +80,7 @@ test.describe("login e next (CA01, CA02, RF35)", () => {
     test(`CA02: next malicioso (${label}) -> /entries`, async ({ page }) => {
       await signIn(page, "ana", next);
       await expect(page).toHaveURL(/\/entries(\?.*)?$/);
-      expect(new URL(page.url()).origin).toBe("http://localhost:3100");
+      expect(new URL(page.url()).origin).toBe(`http://localhost:${process.env.PW_WEB_PORT ?? 3100}`);
     });
   }
 
@@ -243,6 +243,7 @@ test.describe("rotas do web (CA07, CA40, CA41, CA42)", () => {
     await signIn(page, "ana");
     await page.goto("/dashboard?month=2026-11");
     await page.goto("/demo/entries");
+    await page.waitForURL(/\/demo\/entries\?month=/); // o redirecionamento do mes inicial termina antes da proxima navegacao
     await page.goto("/cards");
     expect(apiRequests).toEqual([]);
   });

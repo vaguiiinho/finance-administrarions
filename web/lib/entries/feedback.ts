@@ -1,6 +1,6 @@
 import { formatCivilDate, monthLabelPtBR, monthLongPtBR } from "@/lib/dates/format";
 import { formatBRL } from "@/lib/money/decimal";
-import { changeFilter, changeMonth, changeTab, entriesHref, type EntriesState } from "@/lib/filters/entries-search-params";
+import { changeFilter, changeMonth, changeTab, clearExpenseFilters, clearInvoiceFilters, entriesHref, type EntriesState } from "@/lib/filters/entries-search-params";
 import type { EntryDto, InvoiceDto } from "@/lib/api/types";
 
 export interface FeedbackAction {
@@ -27,8 +27,12 @@ export function matchesFilters(entry: EntryDto, state: EntriesState): boolean {
     const c = state.incomes.category;
     return !c || entry.category.toLowerCase() === c.toLowerCase();
   }
+  if (state.tab === "invoices") {
+    // Fatura sob filtro: compra no cartao e sempre PENDENTE (fica em Pendente e Todos; some sob Pago)
+    return state.invoices.status !== "PAID";
+  }
   const { status, category, card } = state.expenses;
-  if (status && entry.status !== status) return false;
+  if (status !== "ALL" && entry.status !== status) return false;
   if (category && entry.category.toLowerCase() !== category.toLowerCase()) return false;
   if (card === "pix") return entry.card === null;
   if (card) return entry.card?.id === card;
@@ -42,7 +46,7 @@ export function matchesFilters(entry: EntryDto, state: EntriesState): boolean {
 export function createdFeedback(entry: EntryDto, state: EntriesState): Feedback {
   const message = baseCreatedMessage(entry);
   const targetTab = entry.type === "INCOME" ? "income" : "expenses";
-  const withMonthAndTab = (month: string) => entriesHref(changeTab(changeMonth({ ...state, expenses: {}, incomes: {} }, month), targetTab));
+  const withMonthAndTab = (month: string) => entriesHref(changeTab(changeMonth({ ...state, expenses: { status: "ALL" }, incomes: {} }, month), targetTab));
 
   if (entry.referenceMonth !== state.month) {
     return {
@@ -51,14 +55,18 @@ export function createdFeedback(entry: EntryDto, state: EntriesState): Feedback 
     };
   }
   if (state.tab === "invoices") {
-    if (entry.paymentMethod === "CARD") return { message };
+    if (entry.paymentMethod === "CARD") {
+      if (matchesFilters(entry, state)) return { message };
+      // RF22/CA57: a fatura nao aparece sob "Pago"; "Limpar filtros" leva a f_status=ALL, sem tocar em Despesas (RF19)
+      return { message: `${message} Ela não aparece nos filtros atuais.`, action: { label: "Limpar filtros", href: entriesHref(clearInvoiceFilters(state)) } };
+    }
     return { message, action: { label: entry.type === "INCOME" ? "Ver receitas" : "Ver despesas", href: withMonthAndTab(state.month) } };
   }
   if (state.tab !== targetTab) {
     return { message, action: { label: entry.type === "INCOME" ? "Ver receitas" : "Ver despesas", href: withMonthAndTab(state.month) } };
   }
   if (!matchesFilters(entry, state)) {
-    const cleared = state.tab === "income" ? changeFilter(state, { r_category: undefined }) : changeFilter(state, { d_status: undefined, d_category: undefined, d_card: undefined });
+    const cleared = state.tab === "income" ? changeFilter(state, { r_category: undefined }) : clearExpenseFilters(state);
     return { message: `${message} Ela não aparece nos filtros atuais.`, action: { label: "Limpar filtros", href: entriesHref(cleared) } };
   }
   return { message };
