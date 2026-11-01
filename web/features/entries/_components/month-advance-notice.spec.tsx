@@ -136,6 +136,15 @@ describe("MonthAdvanceNotice - ciclo de vida (design 4.3)", () => {
     rerender(wrap(null, "2026-12"));
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
+
+  it("B-1: limpar a URL nao carrega o estado do history (o patch do Next ignora `__NA` e o canonicalUrl manteria adv)", () => {
+    window.history.replaceState({ __NA: true }, "", "/entries?month=2026-12&adv=NEXT_PENDING&adv_from=2026-10");
+    const replace = vi.spyOn(window.history, "replaceState");
+    render(wrap(NEXT("2026-10"), "2026-12"));
+    expect(replace).toHaveBeenCalledTimes(1);
+    expect(replace.mock.calls[0][0]).toBeNull();
+    replace.mockRestore();
+  });
 });
 
 describe("MonthAdvanceNotice - acessibilidade (RNF06, design 10.2)", () => {

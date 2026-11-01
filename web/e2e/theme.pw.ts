@@ -297,7 +297,7 @@ test.describe("CA84 - alternancias repetidas", () => {
     await page.goto(ENTRIES_URL);
     const checkbox = page.getByRole("checkbox", { name: /Internet/ });
     await checkbox.check();
-    await page.getByRole("button", { name: "Marcar como pago" }).click();
+    await page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }).click();
     const modal = page.getByRole("alertdialog");
     await expect(modal).toBeVisible();
     const audited = new Set<string>();

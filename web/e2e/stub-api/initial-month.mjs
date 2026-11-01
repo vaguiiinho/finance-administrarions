@@ -5,9 +5,12 @@ const next = (ym) => {
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
 };
 
-/** facts: { currentMonth, firstPendingMonth | null, hasCard } -> { month, advance } */
-export function resolveInitialMonth({ currentMonth, firstPendingMonth, hasCard }) {
+/** facts: { currentMonth, firstPendingMonth | null, oldestPendingCardMonth | null, hasCard } -> { month, advance } */
+export function resolveInitialMonth({ currentMonth, firstPendingMonth, oldestPendingCardMonth, hasCard }) {
   if (firstPendingMonth !== null && firstPendingMonth < currentMonth) throw new Error("firstPendingMonth anterior a M (o read model filtra a partir de M)");
+  if (oldestPendingCardMonth !== null && oldestPendingCardMonth !== undefined && oldestPendingCardMonth < currentMonth) {
+    return { month: oldestPendingCardMonth, advance: "NONE" };
+  }
   if (firstPendingMonth === currentMonth) return { month: currentMonth, advance: "NONE" };
   if (firstPendingMonth !== null) return { month: firstPendingMonth, advance: "NEXT_PENDING" };
   if (hasCard) return { month: next(currentMonth), advance: "NO_PENDING_AHEAD" };

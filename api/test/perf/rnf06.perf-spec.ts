@@ -229,9 +229,10 @@ const SCENARIO_NAMES = [
   'D3 distribuicao por categoria',
   'E6 categorias',
   'C2 cartoes',
-  // IM1 e IM2 por ultimo: IM2 altera a massa (todas as despesas PAID exceto as do ultimo mes) e o relogio.
+  // IM1-IM3 por ultimo: preparam os status e o relogio para as tres regras de mês inicial.
   'IM1 mes inicial, pendencia em M',
   'IM2 mes inicial, pior caso',
+  'IM3 mes inicial, fatura historica mais antiga',
 ] as const;
 type ScenarioName = (typeof SCENARIO_NAMES)[number];
 
@@ -271,6 +272,11 @@ const scenarios = (): Scenario[] => {
       // M = mes "cheio" da massa (cerca de 50% das despesas pendentes): a primeira pendencia esta em M.
       ...get('IM1 mes inicial, pendencia em M', '/api/entries/initial-month'),
       setup: async () => {
+        await ctx.pool.query(
+          `UPDATE entries SET status = 'PAID', paid_at = COALESCE(paid_at, now()) WHERE payment_method = 'CARD' AND status = 'PENDING' AND reference_month < $1::date`,
+          [`${m}-01`],
+        );
+        await ctx.pool.query(`ANALYZE entries`);
         ctx.clock.set(new Date(`${m}-15T15:00:00.000Z`));
       },
       expectBody: { currentMonth: m, month: m, advance: 'NONE' },
@@ -289,6 +295,23 @@ const scenarios = (): Scenario[] => {
         ctx.clock.set(new Date(`${first}-15T15:00:00.000Z`));
       },
       expectBody: { currentMonth: first(), month: seed.months[seed.months.length - 1], advance: 'NEXT_PENDING' },
+    },
+    {
+      ...get('IM3 mes inicial, fatura historica mais antiga', '/api/entries/initial-month'),
+      setup: async () => {
+        const first = seed.months[0];
+        const last = seed.months[seed.months.length - 1];
+        await ctx.pool.query(
+          `UPDATE entries SET status = 'PAID', paid_at = COALESCE(paid_at, now()) WHERE type = 'EXPENSE' AND status = 'PENDING'`,
+        );
+        await ctx.pool.query(
+          `UPDATE entries SET status = 'PENDING', paid_at = NULL WHERE payment_method = 'CARD' AND reference_month IN ($1::date, $2::date)`,
+          [`${first}-01`, `${last}-01`],
+        );
+        await ctx.pool.query(`ANALYZE entries`);
+        ctx.clock.set(new Date(`${last}-15T15:00:00.000Z`));
+      },
+      expectBody: { currentMonth: seed.months[seed.months.length - 1], month: first(), advance: 'NONE' },
     },
   ];
 };

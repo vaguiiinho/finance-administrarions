@@ -70,7 +70,7 @@ test("CA70: selecionar pendentes, 'Marcar como pago' e confirmar -> pagas, selec
   await gotoReady(page, `${ENTRIES_URL}&d_status=ALL`); // checkbox marcado antes da hidratacao e perdido
   await page.getByRole("checkbox", { name: /Mercado/ }).check();
   await page.getByRole("checkbox", { name: /Internet/ }).check();
-  await page.getByRole("button", { name: "Marcar como pago" }).click();
+  await page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: /Confirmar|Marcar como pago/ }).click();
   // exact: o selo e "Pago"; a coluna Acao mostra "Pago em dd/MM/yyyy" (design 4.x), que nao deve causar ambiguidade
   for (const description of [/Mercado/, /Internet/]) {
@@ -84,9 +84,15 @@ test("CA70: selecionar pendentes, 'Marcar como pago' e confirmar -> pagas, selec
 test("CA71: pagas sem checkbox ativo; aba Receitas sem checkbox nem 'Marcar como pago'", async ({ page }) => {
   await page.goto(`${ENTRIES_URL}&d_status=ALL`); // ADR 0007: a despesa paga (Aluguel) so aparece fora do padrao "Pendente"
   await expect(page.getByRole("checkbox", { name: /Aluguel/ })).toBeDisabled();
+  // Precondicao (sem ela o 0 em Receitas seria vacuo): em Despesas existem o botao de lote e ao menos um botao de linha.
+  const anyPay = /Marcar como pago|^Pagar\b/;
+  await expect(page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:/ }).first()).toBeVisible();
   await tab(page, "Receitas").click();
   await expect(page.getByRole("checkbox")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Marcar como pago" })).toHaveCount(0);
+  // B3: o nome do botao de linha contem "Marcar como pago" (ou "Pagar" em 768 px). Uma unica assercao, por substring/prefixo,
+  // cobre lote (nome inteiro) e linhas ("Marcar como pago: <descricao>"): Receitas nao tem NENHUM controle de pagamento.
+  await expect(page.getByRole("button", { name: anyPay })).toHaveCount(0);
 });
 
 test("CA72: aba Faturas - expandir, 'Pagar fatura' com confirmacao (2 lancamentos, R$ 150,00) e bloco quitado", async ({ page }) => {
@@ -118,7 +124,7 @@ test("RF24: erro 404 do lote mostra mensagem; erro 422 explica que receitas nao 
   await setScenario("batch404");
   await page.goto(ENTRIES_URL);
   await page.getByRole("checkbox", { name: /Internet/ }).check();
-  await page.getByRole("button", { name: "Marcar como pago" }).click();
+  await page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: /Confirmar|Marcar como pago/ }).click();
   // banner persistente (design 4.x, 404 lote). Seletor especifico: o route announcer do Next tambem tem role=alert.
   const banner = page.getByRole("alert").filter({ hasText: "Nenhuma despesa foi alterada" });
@@ -131,7 +137,7 @@ test("RF24: 422 do lote mostra banner explicando que receitas nao podem ser paga
   await setScenario("batch422");
   await page.goto(ENTRIES_URL);
   await page.getByRole("checkbox", { name: /Internet/ }).check();
-  await page.getByRole("button", { name: "Marcar como pago" }).click();
+  await page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: /Confirmar|Marcar como pago/ }).click();
   const banner = page.getByRole("alert").filter({ hasText: "Nenhuma despesa foi alterada" });
   await expect(banner).toBeVisible();

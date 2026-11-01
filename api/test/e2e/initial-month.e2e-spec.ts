@@ -80,10 +80,20 @@ describe('GET /api/entries/initial-month - contrato (ADR 0007 6.1)', () => {
     expect((await as(ana)).body).toEqual({ currentMonth: '2026-10', month: '2026-12', advance: 'NEXT_PENDING' });
   });
 
-  it('CA14: pendencia de mes anterior nao interfere', async () => {
+  it('CA14: PIX pendente de mes anterior nao interfere', async () => {
     await card(ANA, 1);
     await pendingPix(ANA, 1, '2026-09-10');
     expect((await as(ana)).body).toMatchObject({ month: '2026-11', advance: 'NO_PENDING_AHEAD' });
+  });
+
+  it('RFH01: fatura pendente mais antiga abre no mes de referencia, mesmo anterior a M', async () => {
+    e.clock.set(new Date('2026-11-05T13:00:00.000Z'));
+    ana = await e.sessionFor(ANA);
+    await insertOwnedCard(e.pool, ANA, { n: 1, closingDay: 4, dueDay: 11 });
+    await insertOwnedEntry(e.pool, ANA, cardEntry(1, 1, { date: '2026-09-20', closing: '2026-10-04', due: '2026-10-11' }));
+    await insertOwnedEntry(e.pool, ANA, cardEntry(2, 1, { date: '2026-10-20', closing: '2026-11-04', due: '2026-11-11' }));
+    await pendingPix(ANA, 3, '2026-09-15');
+    expect((await as(ana)).body).toEqual({ currentMonth: '2026-11', month: '2026-10', advance: 'NONE' });
   });
 
   it('o resultado e leitura pura: nenhuma escrita (mesmas linhas antes e depois)', async () => {
@@ -219,6 +229,15 @@ describe('GET /api/demo/entries/initial-month - leitura publica (CA24, RNF04)', 
     const demo = await e.http().get(DEMO_ROUTE);
     const real = await as(ana);
     expect(Object.keys(demo.body).sort()).toEqual(Object.keys(real.body).sort());
+  });
+
+  it('demo também abre na fatura de cartão pendente mais antiga, anterior a M', async () => {
+    e.clock.set(new Date('2026-11-05T13:00:00.000Z'));
+    await insertOwnedCard(e.pool, DEMO_USER_ID, { n: 7, name: 'Cartao Demo', closingDay: 4, dueDay: 11 });
+    await insertOwnedEntry(e.pool, DEMO_USER_ID, cardEntry(701, 7, { date: '2026-09-20', closing: '2026-10-04', due: '2026-10-11' }));
+    await insertOwnedEntry(e.pool, DEMO_USER_ID, cardEntry(702, 7, { date: '2026-10-20', closing: '2026-11-04', due: '2026-11-11' }));
+    await pendingPix(DEMO_USER_ID, 703, '2026-09-15');
+    expect((await e.http().get(DEMO_ROUTE)).body).toEqual({ currentMonth: '2026-11', month: '2026-10', advance: 'NONE' });
   });
 
   it('400 UNKNOWN_FIELD com parametro de query tambem na demo', async () => {

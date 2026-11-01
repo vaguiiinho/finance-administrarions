@@ -21,6 +21,15 @@ const param = (page: Page, name: string) => new URL(page.url()).searchParams.get
 const radio = (page: Page, name: string) => page.getByRole("radio", { name });
 const subtotal = (page: Page) => page.getByTestId("subtotal");
 const panelTitle = (page: Page) => page.locator("#entries-panel-title");
+/**
+ * Linhas (tabela) ou cards (< md) VISIVEIS cuja descricao exibida casa com `re`. Conta uma vez por despesa: o `span.sr-only`
+ * ": <descricao>" dentro do botao de pagar tambem casaria com getByText e dobraria a contagem (adendo de design 1.2).
+ */
+const rowsOf = (page: Page, re: RegExp) =>
+  page
+    .locator("tr[data-entry-id], li[data-entry-id]")
+    .filter({ visible: true })
+    .filter({ has: page.locator("span.truncate").filter({ hasText: re }) });
 const MOBILE = { width: 360, height: 800 };
 
 /** CA31: 3 despesas PENDENTES (R$ 300,00) e 2 PAGAS (R$ 200,00) em M. */
@@ -47,8 +56,8 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     await seedData({ cards: [], entries: despesas() });
     await gotoReady(page, url());
     await expect(radio(page, "Pendente")).toBeChecked();
-    await expect(page.getByText(/Pendente [ABC]/).filter({ visible: true })).toHaveCount(3);
-    await expect(page.getByText(/Paga [AB]/).filter({ visible: true })).toHaveCount(0);
+    await expect(rowsOf(page, /Pendente [ABC]/)).toHaveCount(3);
+    await expect(rowsOf(page, /Paga [AB]/)).toHaveCount(0);
     await expect(subtotal(page)).toContainText("com os filtros aplicados");
     await expect(subtotal(page)).toContainText("3 despesas");
     await expect(subtotal(page)).toContainText(/Total\s*R\$\s*300,00/);
@@ -63,8 +72,8 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     await gotoReady(page, url());
     await radio(page, "Todos").click();
     await expect(page).toHaveURL(/d_status=ALL/);
-    await expect(page.getByText(/Paga A/).filter({ visible: true })).toBeVisible();
-    await expect(page.getByText(/Pendente A/).filter({ visible: true })).toBeVisible();
+    await expect(rowsOf(page, /Paga A/)).toHaveCount(1);
+    await expect(rowsOf(page, /Pendente A/)).toHaveCount(1);
     await page.reload();
     await page.waitForLoadState("networkidle");
     await expect(radio(page, "Todos")).toBeChecked();
@@ -75,8 +84,8 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     await page.getByRole("tab", { name: "Faturas" }).click();
     await page.getByRole("tab", { name: "Despesas" }).click();
     await expect(radio(page, "Todos")).toBeChecked();
-    await expect(page.getByText(/Paga A/).filter({ visible: true })).toBeVisible();
-    await expect(page.getByText(/Pendente A/).filter({ visible: true })).toBeVisible();
+    await expect(rowsOf(page, /Paga A/)).toHaveCount(1);
+    await expect(rowsOf(page, /Pendente A/)).toHaveCount(1);
   });
 
   test("CA34: 'Pago' fica registrado e sobrevive a recarregar e a trocar de mes", async ({ page }) => {
@@ -84,7 +93,7 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     await gotoReady(page, url());
     await radio(page, "Pago").click();
     await expect(page).toHaveURL(/d_status=PAID/);
-    await expect(page.getByText(/Paga [AB]/).filter({ visible: true })).toHaveCount(2);
+    await expect(rowsOf(page, /Paga [AB]/)).toHaveCount(2);
     await page.reload();
     await page.waitForLoadState("networkidle");
     await expect(radio(page, "Pago")).toBeChecked();
@@ -105,7 +114,7 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     await gotoReady(page, url());
     await page.getByRole("button", { name: "Limpar filtros" }).click();
     await expect(radio(page, "Todos")).toBeChecked();
-    await expect(page.getByText(/(Pendente|Paga) [ABC]/).filter({ visible: true })).toHaveCount(5);
+    await expect(rowsOf(page, /(Pendente|Paga) [ABC]/)).toHaveCount(5);
     await expect(subtotal(page)).toContainText("todas as despesas do mês");
     await expect(page.getByRole("button", { name: "Limpar filtros" })).toHaveCount(0);
     await expect(panelTitle(page)).toBeFocused();
@@ -120,8 +129,8 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     await sheet.getByRole("radio", { name: "Todos" }).click();
     await sheet.getByRole("button", { name: "Aplicar" }).click();
     await expect(page.getByRole("button", { name: "Filtros", exact: true })).toBeVisible();
-    await expect(page.getByText(/(Pendente|Paga) [ABC]/).filter({ visible: true }).first()).toBeVisible();
-    await expect(page.getByText(/(Pendente|Paga) [ABC]/).filter({ visible: true })).toHaveCount(5);
+    await expect(rowsOf(page, /(Pendente|Paga) [ABC]/).first()).toBeVisible();
+    await expect(rowsOf(page, /(Pendente|Paga) [ABC]/)).toHaveCount(5);
   });
 
   test("CA37: folha no mobile - 'Limpar' + Aplicar tem o mesmo efeito", async ({ page }) => {
@@ -135,7 +144,7 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     await sheet.getByRole("button", { name: "Aplicar" }).click();
     await expect(page).toHaveURL(/d_status=ALL/);
     await expect(page.getByRole("button", { name: "Filtros", exact: true })).toBeVisible();
-    await expect(page.getByText(/(Pendente|Paga) [ABC]/).filter({ visible: true })).toHaveCount(5);
+    await expect(rowsOf(page, /(Pendente|Paga) [ABC]/)).toHaveCount(5);
   });
 
   test("CA38: mes so com despesas pagas -> vazio com filtros; 'Limpar filtros' mostra as pagas", async ({ page }) => {
@@ -191,7 +200,7 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
   test("CA42: pagar uma despesa sob o padrao -> ela sai da lista e os totais se atualizam", async ({ page }) => {
     await seedData({ cards: [], entries: despesas() });
     await gotoReady(page, url());
-    await page.getByRole("button", { name: "Marcar Pendente A como pago" }).first().click();
+    await page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:\s?Pendente A$/ }).first().click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Marcar como pago" }).click();
     await expect(page.getByText("Pendente A", { exact: true }).filter({ visible: true })).toHaveCount(0);
     await expect(subtotal(page)).toContainText("2 despesas");
@@ -201,14 +210,14 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
   test("CA61: o foco vai para o h2 do painel apos pagar individualmente (nao em body), e tambem para a ULTIMA da lista", async ({ page }) => {
     await seedData({ cards: [], entries: despesas() });
     await gotoReady(page, url());
-    await page.getByRole("button", { name: "Marcar Pendente A como pago" }).first().click();
+    await page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:\s?Pendente A$/ }).first().click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Marcar como pago" }).click();
     await expect(page.getByText("Pendente A", { exact: true }).filter({ visible: true })).toHaveCount(0);
     await expect(panelTitle(page)).toBeFocused();
 
     await seedData({ cards: [], entries: [pixExpense(1, M(), { description: "Ultima" })] });
     await gotoReady(page, url());
-    await page.getByRole("button", { name: "Marcar Ultima como pago" }).first().click();
+    await page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:\s?Ultima$/ }).first().click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Marcar como pago" }).click();
     await expect(page.getByText("Ultima", { exact: true }).filter({ visible: true })).toHaveCount(0);
     await expect(panelTitle(page)).toBeFocused();
@@ -218,7 +227,7 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     await seedData({ cards: [], entries: despesas() });
     await gotoReady(page, url());
     await page.getByRole("checkbox", { name: /Pendente A/ }).check();
-    await page.getByRole("button", { name: /Marcar como pago/ }).first().click();
+    await page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: /Marcar como pago/ }).click();
     await expect(page.getByText("Pendente A")).toHaveCount(0);
     await expect(panelTitle(page)).toBeFocused();
@@ -228,7 +237,7 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     await seedData({ cards: [], entries: despesas() });
     await gotoReady(page, url("&d_status=ALL"));
     // por teclado: com clique de mouse o navegador nao aplica :focus-visible ao foco por codigo, e o anel nao apareceria
-    const trigger = page.getByRole("button", { name: "Marcar Pendente A como pago" }).first();
+    const trigger = page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:\s?Pendente A$/ }).first();
     await trigger.focus();
     await page.keyboard.press("Enter");
     await page.getByRole("alertdialog").getByRole("button", { name: "Marcar como pago" }).focus();
@@ -238,7 +247,7 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     // design 6.2: sob "Todos" o foco fica na propria linha (alvo estavel), mesmo depois de o gatilho sumir na revalidacao
     const row = page.locator('tr[data-entry-id]').filter({ hasText: "Pendente A" });
     await expect(row).toBeFocused();
-    await expect(page.getByRole("button", { name: "Marcar Pendente A como pago" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:\s?Pendente A$/ })).toHaveCount(0);
     await expect(row).toBeFocused();
     // o anel nao pode ser cortado pelo overflow-clip do wrapper: fica por dentro da linha
     await expect(row).toHaveCSS("outline-offset", "-2px");
@@ -249,12 +258,12 @@ test.describe("Despesas: padrao Pendente (CA31-CA44, CA60, CA61)", () => {
     await page.setViewportSize(MOBILE);
     await seedData({ cards: [], entries: despesas() });
     await gotoReady(page, url("&d_status=ALL"));
-    await page.getByRole("button", { name: "Marcar Pendente A como pago" }).first().click();
+    await page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:\s?Pendente A$/ }).first().click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Marcar como pago" }).click();
     const card = page.locator("li[data-entry-id]").filter({ hasText: "Pendente A" });
     await expect(card).toBeVisible();
     await expect(card).toBeFocused();
-    await expect(page.getByRole("button", { name: "Marcar Pendente A como pago" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:\s?Pendente A$/ })).toHaveCount(0);
     await expect(card).toBeFocused();
     await expect(panelTitle(page)).not.toBeFocused();
   });

@@ -22,8 +22,8 @@ export class GetInitialEntriesMonth {
   async execute(input: GetInitialEntriesMonthInput): Promise<GetInitialEntriesMonthOutput> {
     const ownerId = requireOwnerId(input.ownerId);
     const currentMonth = ReferenceMonth.of(this.calendar.currentMonth());
-    const { firstPendingMonth, hasCard } = await this.overview.overviewFrom(ownerId, currentMonth);
-    const { month, advance } = resolveInitialMonth({ currentMonth, firstPendingMonth, hasCard });
+    const { firstPendingMonth, oldestPendingCardMonth, hasCard } = await this.overview.overviewFrom(ownerId, currentMonth);
+    const { month, advance } = resolveInitialMonth({ currentMonth, firstPendingMonth, oldestPendingCardMonth, hasCard });
     return { currentMonth, month, advance };
   }
 }

@@ -37,7 +37,7 @@ const openEntryDrawer = async (page: Page) => {
 const nextMonth = (page: Page) => page.getByRole("button", { name: "Próximo mês" }).click();
 const confirmBatch = async (page: Page) => {
   await page.getByRole("checkbox", { name: /Internet/ }).check();
-  await page.getByRole("button", { name: "Marcar como pago" }).click();
+  await page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }).click();
 };
 const fillEntry = async (page: Page, date: string) => {
   const dialog = page.getByRole("dialog");
@@ -158,7 +158,7 @@ const G3_STATES: ScreenDef[] = [
     scenario: "default",
     url: ENTRIES_URL,
     prepare: async (page) => {
-      await page.getByRole("button", { name: "Marcar Internet como pago" }).click();
+      await page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:\s?Internet$/ }).click();
       await page.getByRole("alertdialog").waitFor();
     },
   },

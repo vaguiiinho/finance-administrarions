@@ -5,6 +5,17 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+### Mês inicial pela fatura pendente mais antiga (ADR 0009)
+
+#### Changed
+
+- Ao abrir `/entries` ou `/demo/entries` sem `month`, uma fatura de cartão pendente anterior ao mês atual passa a prevalecer; a tela abre no mês de referência da fatura mais antiga. PIX antigo continua ignorado, e a regra existente segue valendo quando não há fatura antiga.
+- A referência histórica já gravada é mantida; mês explicitamente informado e aviso de avanço para meses futuros não mudam.
+
+#### Tests
+
+- Cobertura de domínio, caso de uso, read model com Postgres, rotas protegida/demo, fixture compartilhada e Playwright para a fatura antiga e para a compatibilidade com PIX anterior.
+
 ### Listagem de lançamentos: mês inicial e status padrão orientados a pendências (ADR 0007)
 
 #### Added

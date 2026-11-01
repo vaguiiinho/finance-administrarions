@@ -123,11 +123,20 @@ test.describe("regra do mes inicial (CA01-CA17)", () => {
     await expect(notice(page)).toHaveText(noticeText.nextPending(M(), monthFromNow(2)));
   });
 
-  test("CA14: pendencia (fatura e PIX) de mes anterior nao interfere -> M+1", async ({ page }) => {
-    await seedData({ cards: [azul], entries: [cardExpense(1, azul, monthFromNow(-1)), pixExpense(2, monthFromNow(-1))] });
+  test("CA14: PIX pendente de mes anterior nao interfere -> M+1", async ({ page }) => {
+    await seedData({ cards: [azul], entries: [pixExpense(2, monthFromNow(-1))] });
     await openWithoutMonth(page);
     expect(monthOfUrl(page)).toBe(monthFromNow(1));
     await expect(notice(page)).toHaveText(noticeText.noneAhead(M(), monthFromNow(1)));
+  });
+
+  test("RFH01: fatura pendente mais antiga abre no mes de referencia, sem aviso de avanço", async ({ page }) => {
+    const card = stubCard(3, "Fechamento 04", 4, 11);
+    await seedData({ cards: [card], entries: [cardExpense(1, card, monthFromNow(-1)), cardExpense(2, card, M())] });
+    await openWithoutMonth(page);
+    expect(monthOfUrl(page)).toBe(monthFromNow(-1));
+    await expect(notice(page)).toHaveCount(0);
+    await expect(panelTitle(page, monthFromNow(-1))).toBeVisible();
   });
 
   test("CA15: virada de ano com a proxima pendencia (hoje 15/12/2026 na API -> janeiro de 2027), lista mostra a fatura 2027-01", async ({ page }) => {
@@ -178,8 +187,8 @@ test.describe("fronteiras de fuso vindas da API (CA18-CA20; o relogio decisivo e
     expect(monthOfUrl(page)).toBe("2026-11");
   });
 
-  test("CA19: 01/11 00:30 em SP (2026-11-01T03:30Z): M = novembro; so ha pendencia em outubro -> dezembro", async ({ page }) => {
-    await seedData({ now: "2026-11-01T03:30:00.000Z", cards: [azul], entries: [cardExpense(1, azul, "2026-10")] });
+  test("CA19: 01/11 00:30 em SP (2026-11-01T03:30Z): M = novembro; PIX pendente so em outubro -> dezembro", async ({ page }) => {
+    await seedData({ now: "2026-11-01T03:30:00.000Z", cards: [azul], entries: [pixExpense(1, "2026-10")] });
     await openWithoutMonth(page);
     expect(monthOfUrl(page)).toBe("2026-12");
     await expect(notice(page)).toHaveText(noticeText.noneAhead("2026-11", "2026-12"));
@@ -215,7 +224,7 @@ test.describe("falha da verificacao (CA22, RNF02)", () => {
   test("falha tambem fixa o mes: pagar nao reaplica a regra (RF07)", async ({ page }) => {
     await seedData({ cards: [azul], entries: [pixExpense(1, M(), { description: "Unica" })] }, "initial-month-error");
     await openWithoutMonth(page);
-    await page.getByRole("button", { name: "Marcar Unica como pago" }).first().click();
+    await page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:\s?Unica$/ }).first().click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Marcar como pago" }).click();
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
     expect(monthOfUrl(page)).toBe(M());
@@ -361,6 +370,41 @@ test.describe("aviso de avanco: ciclo de vida e acessibilidade (RF05, RNF06; des
     await expect(page.locator("main#conteudo")).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: /Novo lançamento/ }).first()).toBeFocused();
+  });
+
+  // B-1 (revisao ciclo 2): "Fechar | Some ate a proxima abertura com avanco" (design 4.3) tambem vale depois de pagar, que dispara
+  // a Server Action com revalidatePath. O replaceState(window.history.state, ...) do aviso poderia deixar `adv` no canonicalUrl do Next.
+  const payAlpha = async (page: import("@playwright/test").Page) => {
+    await seedData({ cards: [azul], entries: [pixExpense(1, monthFromNow(2), { description: "Alpha" }), pixExpense(2, monthFromNow(2), { description: "Beta" })] });
+    await openWithoutMonth(page);
+    await expect(notice(page)).toBeVisible();
+    return async () => {
+      await page.getByRole("button", { name: /^(Marcar como pago|Pagar)\s?:\s?Alpha$/ }).first().click();
+      await page.getByRole("alertdialog").getByRole("button", { name: "Marcar como pago" }).click();
+      await expect(page.getByRole("alertdialog")).toHaveCount(0);
+      // conclusao: a lista foi revalidada (sob o padrao "Pendente" a despesa paga sai); "Beta" segue la
+      await expect(page.getByRole("checkbox", { name: /Alpha/ })).toHaveCount(0);
+      await expect(page.getByRole("checkbox", { name: /Beta/ })).toBeVisible();
+      await page.waitForLoadState("networkidle");
+    };
+  };
+
+  test("B-1: fechar o aviso e pagar uma despesa NAO reabre o aviso (nem recoloca adv na URL)", async ({ page }) => {
+    const pay = await payAlpha(page);
+    await page.getByRole("button", { name: "Fechar aviso de mês" }).click();
+    await expect(notice(page)).toHaveCount(0);
+    await pay();
+    await page.waitForTimeout(1_000);
+    await expect(notice(page)).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.has("adv")).toBe(false);
+    expect(new URL(page.url()).searchParams.has("adv_from")).toBe(false);
+  });
+
+  test("B-1 (variante): sem fechar, pagar mantem o aviso (design 4.3: 'Pagar ou criar lancamento | Permanece')", async ({ page }) => {
+    const pay = await payAlpha(page);
+    await pay();
+    await expect(notice(page)).toBeVisible();
+    expect(new URL(page.url()).searchParams.has("adv")).toBe(false);
   });
 
   test("Esc nao fecha o aviso", async ({ page }) => {

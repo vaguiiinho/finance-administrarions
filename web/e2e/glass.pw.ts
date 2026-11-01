@@ -223,7 +223,7 @@ for (const theme of THEMES) {
       await gotoReady(page, ENTRIES_URL);
       const t = await resolveTokens(page, ["--surface-2", "--tooltip-bg"]);
       await page.getByRole("checkbox", { name: /Internet/ }).check();
-      await page.getByRole("button", { name: "Marcar como pago" }).click();
+      await page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }).click();
       await page.getByRole("alertdialog").getByRole("button", { name: /Marcar como pago/ }).click();
       await page.getByRole("status").filter({ hasText: /pag/i }).first().waitFor();
       await expectOpaque("toast", page.getByTestId("toast").filter({ hasText: /pag/i }), t["--surface-2"]);
@@ -444,7 +444,7 @@ test.describe("CA12 - popover sobre cards de vidro", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await gotoReady(page, ENTRIES_URL);
     await page.getByRole("checkbox", { name: /Internet/ }).check();
-    await page.getByRole("button", { name: "Marcar como pago" }).click();
+    await page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: /Marcar como pago/ }).click();
     const toast = page.getByRole("status").filter({ hasText: /pag/i }).first();
     await toast.waitFor();

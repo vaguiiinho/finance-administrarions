@@ -105,7 +105,7 @@ for (const theme of THEMES) {
       await checkDisabled(block.getByRole("button", { name: "Pagar fatura" }), theme);
 
       await gotoReady(page, ENTRIES_URL);
-      await checkDisabled(page.getByRole("button", { name: "Marcar como pago" }), theme);
+      await checkDisabled(page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }), theme);
 
       await openDrawer(page);
       const dialog = page.getByRole("dialog");
@@ -145,7 +145,7 @@ for (const theme of THEMES) {
         await setScenario("default", { holdMutations: true });
         await gotoReady(page, ENTRIES_URL);
         await page.getByRole("checkbox", { name: /Internet/ }).check();
-        await page.getByRole("button", { name: "Marcar como pago" }).click();
+        await page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }).click();
         const confirm = page.getByRole("alertdialog").getByRole("button", { name: /Marcar como pago|Pagando/ });
         await confirm.click();
         await expect(confirm).toHaveAttribute("aria-busy", "true");

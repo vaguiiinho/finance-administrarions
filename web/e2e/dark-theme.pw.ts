@@ -151,7 +151,7 @@ test.describe("superficies do escuro usam tokens do escuro", () => {
     expectDark("menu de mes", await backgrounds(page, '[role="group"][aria-label="Escolher mês"]'));
     await page.keyboard.press("Escape");
     await page.getByRole("checkbox", { name: /Internet/ }).check();
-    await page.getByRole("button", { name: "Marcar como pago" }).click();
+    await page.getByRole("button", { name: /^Marcar como pago( \(\d+\))?$/ }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: /Marcar como pago/ }).click();
     await page.getByRole("status").filter({ hasText: /pag/i }).first().waitFor();
     expectDark("toast", await backgrounds(page, '[role="status"]:has-text("pag")'));

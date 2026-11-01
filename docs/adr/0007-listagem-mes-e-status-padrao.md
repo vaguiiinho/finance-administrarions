@@ -1,6 +1,7 @@
 # ADR 0007 - Listagem de lançamentos: mês inicial e status padrão orientados a pendências
 
 - **Status:** Aceito (2026-10-30). Aprovado pelo usuário, com as decisões da seção 0; implementado na branch `feat/listies`. Divergências da implementação: seção 15.
+- **Adendo:** a decisão PV2 sobre faturas anteriores a M foi alterada pelo ADR 0009: faturas de cartão pendentes antigas passam a ser selecionadas; PIX anterior a M continua ignorado.
 - **Data:** 2026-10-30
 - **Spec:** `docs/specs/listagem-mes-e-status-padrao.md` (rev. 3)
 - **Relacionados:** ADR 0001 (contratos, BFF, URL como estado), ADR 0005 (dono, demo, `FinanceReader`, `AppMode`), ADR 0006 (cancelamento, aprovado e ainda não implementado), `docs/api/finance.md`
@@ -17,7 +18,7 @@
 | Item | Decisão | Efeito neste ADR |
 |---|---|---|
 | **PV1** | PIX futuro conta na busca pela próxima pendência. | Mantém o padrão (seção 11). |
-| **PV2** | Pendência anterior a M não interfere. | Mantém o padrão (seção 11). |
+| **PV2 (decisão original, refinada pelo ADR 0009)** | Pendência anterior a M não interfere. | Aplicável a PIX antigo; fatura de cartão pendente antiga passou a ser selecionada. |
 | **PV3** | Sem cartão e sem pendência: abre em M. | Mantém o padrão (seção 11). |
 | **R3** | Opção A: avanço sem limite. | Risco aceito (seção 12). |
 | **RNF01** | Vale número constante de consultas e p95 abaixo de 300 ms. | Resolve C2. O índice de contingência continua condicionado à medição (seção 8). |
@@ -444,7 +445,7 @@ Atenção a e2e que usam `goto('/entries')` sem `month`, pois passam a ser redir
 | Premissa | Decisão | Alternativa descartada | Impacto que a alternativa teria |
 |---|---|---|---|
 | **PV1** | Pendência futura inclui PIX | Só faturas nos meses futuros | **Regra:** recebe `pendingInCurrentMonth` e `firstFutureInvoiceMonth`. **SQL:** duas condições, e `payment_method` não está no índice, exigindo leitura do heap; reavaliar índice. **CA:** CA10 e CA13 mudam. **Negócio:** quem tem só PIX futuro abre em M+1 (com cartão) ou em M (sem cartão), e o PIX futuro não atrai a abertura. |
-| **PV2** | Pendência anterior a M não interfere | Abrir no mês mais antigo com pendência | **Regra:** cai a invariante 4 e o mês pode ser menor que M; `MonthAdvance` ganha um valor, como `OLDEST_PENDING`, e a invariante 2 é revista. **SQL:** remove `reference_month >= M`, sem novo índice. **CA:** CA14 e CA19 mudam. **UI:** novo texto de aviso. **Negócio:** resolve R4, mas cria o inverso de R3: uma data antiga errada prende a abertura no passado. **Demo:** não muda, pois o histórico não tem pendências. |
+| **PV2 (refinada pelo ADR 0009)** | Decisão original: pendência anterior a M não interfere | Abrir no mês mais antigo com pendência | Aplicada somente a faturas de cartão antigas: busca histórica restrita a `payment_method = CARD`; PIX antigo continua ignorado. O mês pode ser menor que M e `advance = NONE` evita o aviso de avanço. CA14/CA19 especificam PIX antigo; RFH01 cobre fatura antiga. A demo usa o mesmo fluxo e seu histórico anterior à âncora já está pago. |
 | **PV3** | Sem cartão e sem pendência: fica em M | M+1 também sem cartão | **Regra:** `hasCard` deixa de existir; port e SQL simplificam (sai o `EXISTS`). **CA:** CA11 muda, e RF01 perde a condição 4. **Negócio:** usuário novo ou só de PIX nunca abre no mês corrente e cai em mês vazio, agravando R2. |
 
 Rever qualquer uma delas após a implementação afetaria principalmente `resolveInitialMonth`, sua fixture e os CA citados. PV1 é a única que poderia afetar índice.
@@ -498,7 +499,8 @@ Nenhum altera a spec, conforme solicitado.
 | Linha de base de performance defasada | Nova execução obrigatória antes do fechamento |
 | Divergência do stub | Fixture compartilhada e rejeição de `ALL` no stub |
 | Redirecionamento quebrar e2e existentes | Levantamento na seção 10 |
-| R1, R2, R4, R5 (produto) | Inalterados por este ADR; RF05 mitiga R2 |
+| R1, R2, R5 (produto) | Inalterados; RF05 mitiga R2 |
+| R4 (produto) | Mitigado para faturas de cartão pendentes antigas; PIX antigo continua sem definir o mês inicial. |
 
 ---
 
@@ -530,3 +532,9 @@ Conferido contra o código da árvore de trabalho em 2026-10-30. O restante do A
 - **Timeout de 1,5 s.** `INITIAL_MONTH_TIMEOUT_MS = 1500` em `web/lib/api/endpoints.ts`, aplicado por `request()` com `AbortSignal.timeout` nas duas leituras (protegida e demo).
 - **Sinal de aviso.** `adv` e `adv_from` são validados em `parseAdvanceSignal` (`adv_from < month`) e removidos da URL por `MonthAdvanceNotice` com `history.replaceState`.
 - **Redirect em streaming (C1/CA29).** Os testes `CA29` de `web/e2e/initial-month.pw.ts` cobrem Voltar em navegação no cliente e depois de carga completa. O resultado da execução não está registrado aqui.
+
+## 16. Adendo pelo ADR 0009 — fatura de cartão pendente mais antiga
+
+O ADR 0009, aprovado em 2026-11-01, altera a regra histórica de PV2 sem tornar PIX antigo elegível. `PendingOverviewReadModel` retorna, em uma consulta, tanto `firstPendingMonth` (todas as despesas pendentes a partir de M) quanto `oldestPendingCardMonth` (faturas de cartão pendentes em qualquer mês). `resolveInitialMonth` escolhe a fatura antiga se `oldestPendingCardMonth < M`; caso contrário, aplica a tabela original.
+
+Para o mês histórico, `advance = NONE` significa que não há aviso de avanço futuro; o redirecionamento fixa o mês na URL sem `adv`. A referência gravada continua sendo a autoridade, mês explícito e fallback permanecem iguais, e os endpoints protegido e demo compartilham a decisão. O PIX antigo não entra na consulta histórica.

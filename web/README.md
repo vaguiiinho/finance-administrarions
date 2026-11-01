@@ -24,12 +24,12 @@ API_URL=http://127.0.0.1:3001 npm run dev    # ver .env.example; a API deve roda
 
 | Parâmetro | Valores | Observação |
 |---|---|---|
-| `month` | `YYYY-MM` | Ausente: `redirectToInitialMonth` consulta `GET /entries/initial-month` (timeout de 1,5 s) e redireciona com `replace`, mantendo os demais parâmetros. Falha ou timeout: `month` = mês atual em America/Sao_Paulo, sem aviso |
+| `month` | `YYYY-MM` | Ausente: `redirectToInitialMonth` consulta `GET /entries/initial-month` (timeout de 1,5 s) e redireciona com `replace`, mantendo os demais parâmetros. Fatura de cartão pendente mais antiga pode selecionar mês anterior a M; PIX antigo não conta. Falha ou timeout: `month` = mês atual em America/Sao_Paulo, sem aviso |
 | `adv`, `adv_from` | `NEXT_PENDING` ou `NO_PENDING_AHEAD`; `YYYY-MM` | Sinal do aviso de avanço de mês. O cliente o remove da URL ao montar; valor inválido é ignorado |
 | `d_status` | `PENDING` (padrão, omitido), `PAID`, `ALL` | Status de Despesas. `ALL` não é enviado à API |
 | `f_status` | `PENDING` (padrão, omitido), `PAID`, `ALL` | Status de Faturas, independente de `d_status`. `ALL` não é enviado à API |
 
-Valor inválido de status vale `PENDING`. A regra do mês inicial mora na API; o web só monta as URLs (`lib/filters/initial-month.ts`). Ver `../docs/adr/0007-listagem-mes-e-status-padrao.md`.
+Valor inválido de status vale `PENDING`. A regra do mês inicial mora na API; o web só monta as URLs (`lib/filters/initial-month.ts`). Ver `../docs/adr/0009-mes-inicial-fatura-pendente-mais-antiga.md`.
 
 ## Testes
 

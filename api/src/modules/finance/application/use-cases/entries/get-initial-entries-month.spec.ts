@@ -15,6 +15,8 @@ const rm = (v: string) => unwrap<ReferenceMonth>(ReferenceMonth.parse(v));
 interface OwnerData {
   /** Meses de referencia das despesas PENDENTES (fatura ou PIX) do dono. */
   pending: string[];
+  /** Meses de referência de faturas de cartão PENDENTES, inclusive anteriores ao mês consultado. */
+  pendingCard?: string[];
   hasCard: boolean;
 }
 
@@ -27,7 +29,8 @@ function fakeOverview(data: Record<string, OwnerData>) {
       const mine = data[ownerId.value];
       if (!mine) throw new Error(`dono inesperado: ${ownerId.value}`);
       const ahead = mine.pending.map(rm).filter((m) => m.compare(from) >= 0).sort((a, b) => a.compare(b));
-      return { firstPendingMonth: ahead[0] ?? null, hasCard: mine.hasCard };
+      const cardMonths = (mine.pendingCard ?? []).map(rm).sort((a, b) => a.compare(b));
+      return { firstPendingMonth: ahead[0] ?? null, oldestPendingCardMonth: cardMonths[0] ?? null, hasCard: mine.hasCard };
     },
   };
   return { readModel, calls };
@@ -66,9 +69,20 @@ describe('GetInitialEntriesMonth (ADR 0007 5.2)', () => {
     expect(await run(readModel, new FixedBusinessCalendar('2026-10'))).toMatchObject({ month: '2026-10', advance: 'NONE' });
   });
 
-  it('CA14: pendencia de mes anterior a M nao interfere (o port so ve de M em diante)', async () => {
+  it('CA14: PIX pendente anterior a M nao interfere', async () => {
     const { readModel } = fakeOverview({ [ANA]: { pending: ['2026-09'], hasCard: true } });
     expect(await run(readModel, new FixedBusinessCalendar('2026-10'))).toMatchObject({ month: '2026-11', advance: 'NO_PENDING_AHEAD' });
+  });
+
+  it('RFH01: fatura de cartao pendente anterior a M e escolhida antes das pendencias atuais', async () => {
+    const { readModel } = fakeOverview({
+      [ANA]: { pending: ['2026-11'], pendingCard: ['2026-11', '2026-10'], hasCard: true },
+    });
+    expect(await run(readModel, new FixedBusinessCalendar('2026-11'))).toEqual({
+      currentMonth: '2026-11',
+      month: '2026-10',
+      advance: 'NONE',
+    });
   });
 
   it('CA23: isolamento - Ana (cartao, sem pendencia) abre em novembro mesmo com Bruno pendente em out e dez', async () => {

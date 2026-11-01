@@ -53,7 +53,9 @@ export function MonthAdvanceNotice({ signal, month }: { signal: AdvanceSignal | 
     if (!signal) return;
     const { pathname, search, hash } = window.location;
     const clean = stripAdvanceSignal(`${pathname}${search}`);
-    if (clean !== `${pathname}${search}`) window.history.replaceState(window.history.state, "", `${clean}${hash}`);
+    // `null` (e nao `window.history.state`): o estado do Next carrega `__NA`, e o patch de replaceState do app-router
+    // ignora a chamada nesse caso, deixando `adv` no canonicalUrl; uma Server Action (revalidatePath) o reaplicaria e reabriria o aviso.
+    if (clean !== `${pathname}${search}`) window.history.replaceState(null, "", `${clean}${hash}`);
   }, [signal]);
 
   useEffect(() => {

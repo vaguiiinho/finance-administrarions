@@ -250,7 +250,18 @@ function buildDemo() {
       entry(1000 + n++, { ...base, description: "Demo: Salário", type: "INCOME", category: "Salário", amount: "5000.00", date: `${m}-05`, status: "RECEIVED" }),
       entry(1000 + n++, { ...base, description: "Demo: Aluguel", category: "Moradia", amount: "1500.00", date: `${m}-02`, status: "PAID", paidAt: `${m}-02T13:00:00.000Z` }),
       entry(1000 + n++, { ...base, description: "Demo: Internet", category: "Moradia", amount: "99.90", date: `${m}-10` }),
-      entry(1000 + n++, { ...base, description: "Demo: Mercado", category: "Alimentação", amount: "420.00", date: `${prev}-10`, paymentMethod: "CARD", card: { id: demoCard.id, name: demoCard.name }, invoice: { closingDate: `${prev}-25`, dueDate: `${m}-05` } }),
+      entry(1000 + n++, {
+        ...base,
+        description: "Demo: Mercado",
+        category: "Alimentação",
+        amount: "420.00",
+        date: `${prev}-10`,
+        paymentMethod: "CARD",
+        status: m < now ? "PAID" : "PENDING",
+        paidAt: m < now ? `${m}-05T13:00:00.000Z` : null,
+        card: { id: demoCard.id, name: demoCard.name },
+        invoice: { closingDate: `${prev}-25`, dueDate: `${m}-05` },
+      }),
     );
   }
   return { cards: [demoCard], entries };
@@ -279,7 +290,16 @@ const READS = [
     if (state.initialMonthDelayMs > 0) await sleep(state.initialMonthDelayMs);
     const currentMonth = spMonth(stubNow());
     const pending = data.entries.filter((e) => e.type === "EXPENSE" && e.status === "PENDING" && e.referenceMonth >= currentMonth).map((e) => e.referenceMonth).sort();
-    const { month: initial, advance } = resolveInitialMonth({ currentMonth, firstPendingMonth: pending[0] ?? null, hasCard: data.cards.length > 0 });
+    const oldestPendingCardMonth = data.entries
+      .filter((e) => e.type === "EXPENSE" && e.paymentMethod === "CARD" && e.status === "PENDING")
+      .map((e) => e.referenceMonth)
+      .sort()[0] ?? null;
+    const { month: initial, advance } = resolveInitialMonth({
+      currentMonth,
+      firstPendingMonth: pending[0] ?? null,
+      oldestPendingCardMonth,
+      hasCard: data.cards.length > 0,
+    });
     return json(res, 200, { currentMonth, month: initial, advance });
   }],
   ["/entries/expenses", listExpenses],

@@ -118,7 +118,7 @@
   },
   {
     "ca": "CA14",
-    "name": "pendencia de mes anterior nao interfere (o read model ja filtra a partir de M)",
+    "name": "PIX pendente de mes anterior nao interfere",
     "currentMonth": "2026-10",
     "firstPendingMonth": null,
     "hasCard": true,
@@ -211,6 +211,16 @@
     "name": "mudanca de fechamento nao e retroativa: a fatura segue em M",
     "currentMonth": "2026-10",
     "firstPendingMonth": "2026-10",
+    "hasCard": true,
+    "month": "2026-10",
+    "advance": "NONE"
+  },
+  {
+    "ca": "RFH01",
+    "name": "fatura pendente anterior a M prevalece sobre a pendencia atual",
+    "currentMonth": "2026-11",
+    "firstPendingMonth": "2026-11",
+    "oldestPendingCardMonth": "2026-10",
     "hasCard": true,
     "month": "2026-10",
     "advance": "NONE"

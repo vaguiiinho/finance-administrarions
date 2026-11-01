@@ -68,6 +68,14 @@ describe("redirectToInitialMonth: sucesso", () => {
     expect(q(href).get("adv")).toBe("NO_PENDING_AHEAD");
   });
 
+  it("fatura antiga pendente redireciona ao mês histórico sem aviso de avanço", async () => {
+    getInitialMonth.mockResolvedValue({ currentMonth: "2026-11", month: "2026-10", advance: "NONE" });
+    const href = await target({ tab: "invoices" });
+    expect(q(href).get("month")).toBe("2026-10");
+    expect(q(href).has("adv")).toBe(false);
+    expect(q(href).get("tab")).toBe("invoices");
+  });
+
   it("mantem os demais parametros (P05, RF03: /entries?tab=... sem month)", async () => {
     getInitialMonth.mockResolvedValue({ currentMonth: "2026-10", month: "2026-10", advance: "NONE" });
     const href = await target({ tab: "income", r_category: "Salário", f_status: "ALL" });

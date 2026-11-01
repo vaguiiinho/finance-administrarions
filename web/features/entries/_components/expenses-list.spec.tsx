@@ -42,6 +42,10 @@ const ITEMS = [
 
 // A lista renderiza tabela (>= md) e cards (< md) no mesmo DOM; os testes usam a tabela, que e a primeira.
 const table = () => within(screen.getByRole("table", { hidden: true }));
+// B3 / WCAG 2.5.3 (adendo de design 1.2): o nome do botao de linha COMECA pelo texto visivel e termina na descricao.
+// jsdom nao aplica CSS, entao na tabela as duas variantes responsivas ("Marcar como pago" e "Pagar") entram no nome: aqui so se ancora
+// o inicio no texto visivel do lg e o fim na descricao; a faixa por largura e conferida no Playwright (e2e/pay-button-name.pw.ts).
+const rowPayName = (description: string) => new RegExp(`^Marcar como pago[\\s\\S]*:\\s*${description}$`);
 const rowCheckbox = (name: RegExp) => table().getByRole("checkbox", { name, hidden: true });
 
 // `statusFilter`: PROP PROPOSTA PELO TESTER (ADR 0007 6.2 / design 6.2): o filtro de status vigente da aba, para decidir o foco.
@@ -177,7 +181,7 @@ describe("ExpensesList - pagamento individual e apresentacao", () => {
   it("botao da linha usa 'Marcar X como pago', confirma e mostra '\"X\" marcado como pago.'", async () => {
     payEntry.mockResolvedValue({ ok: true, data: { ...ITEMS[1], status: "PAID" } });
     setup();
-    await userEvent.click(table().getByRole("button", { name: "Marcar Internet como pago", hidden: true }));
+    await userEvent.click(table().getByRole("button", { name: rowPayName("Internet"), hidden: true }));
     expect(within(screen.getByRole("alertdialog")).getByRole("heading", { name: 'Marcar "Internet" como pago?' })).toBeInTheDocument();
     await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Marcar como pago" }));
     expect(payEntry).toHaveBeenCalledWith("e2");
@@ -187,7 +191,7 @@ describe("ExpensesList - pagamento individual e apresentacao", () => {
   it("404 individual: toast de erro 'Esta despesa não foi encontrada. A lista foi atualizada.'", async () => {
     payEntry.mockResolvedValue({ ok: false, error: { status: 404, code: "ENTRY_NOT_FOUND", message: "x" } });
     setup();
-    await userEvent.click(table().getByRole("button", { name: "Marcar Internet como pago", hidden: true }));
+    await userEvent.click(table().getByRole("button", { name: rowPayName("Internet"), hidden: true }));
     await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Marcar como pago" }));
     // design 2.3: toasts de erro usam role=alert
     expect(await screen.findByRole("alert")).toHaveTextContent("Esta despesa não foi encontrada. A lista foi atualizada.");
@@ -208,6 +212,29 @@ describe("ExpensesList - pagamento individual e apresentacao", () => {
   });
 });
 
+describe("ExpensesList - nome acessivel dos botoes de pagamento (CAF07, B3, WCAG 2.5.3)", () => {
+  it("card (< md): nome e exatamente 'Marcar como pago: <descricao>', sem o formato antigo 'Marcar X como pago'", () => {
+    setup();
+    const cardButtons = screen.getAllByRole("button", { name: /^Marcar como pago\s?:\s?Internet$/, hidden: true });
+    expect(cardButtons.length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByRole("button", { name: "Marcar Internet como pago", hidden: true })).not.toBeInTheDocument();
+  });
+
+  it("tabela (>= md): o nome comeca pelo texto visivel e termina na descricao da despesa", () => {
+    setup();
+    expect(table().getByRole("button", { name: rowPayName("Internet"), hidden: true })).toBeInTheDocument();
+    expect(table().getByRole("button", { name: rowPayName("Mercado"), hidden: true })).toBeInTheDocument();
+  });
+
+  it("o botao de lote continua com nome proprio, sem a descricao, e distinto dos botoes de linha", async () => {
+    setup();
+    await userEvent.click(rowCheckbox(/Internet/));
+    const batch = screen.getAllByRole("button", { name: "Marcar como pago (1)", hidden: true });
+    expect(batch.length).toBeGreaterThan(0);
+    for (const b of batch) expect(b).not.toHaveAccessibleName(/:/);
+  });
+});
+
 describe("ExpensesList - Server Action que rejeita (falha de transporte)", () => {
   it("sai do estado ocupado e mostra a mensagem generica no modal aberto", async () => {
     payEntries.mockRejectedValue(new Error("rede"));
@@ -224,7 +251,7 @@ describe("ExpensesList - Server Action que rejeita (falha de transporte)", () =>
 
 describe("ExpensesList - foco depois do pagamento individual (RF24, CA61, design 6.2)", () => {
   const payOne = async (name = "Internet") => {
-    await userEvent.click(table().getByRole("button", { name: `Marcar ${name} como pago`, hidden: true }));
+    await userEvent.click(table().getByRole("button", { name: rowPayName(name), hidden: true }));
     await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Marcar como pago" }));
   };
 
@@ -255,6 +282,7 @@ describe("ExpensesList - foco depois do pagamento individual (RF24, CA61, design
     expect(row).toHaveFocus();
     expect(row).toHaveAttribute("tabindex", "-1");
     // a revalidacao marca a despesa como paga: o gatilho desaparece e o foco continua na linha (nao cai em body)
+    expect(table().getByRole("button", { name: rowPayName("Internet"), hidden: true })).toBeInTheDocument(); // precondicao: sem ela a ausencia abaixo seria vacua
     view.rerender(
       <AllProviders>
         <h2 id="panel-title" tabIndex={-1}>
@@ -263,7 +291,7 @@ describe("ExpensesList - foco depois do pagamento individual (RF24, CA61, design
         <ExpensesList items={ITEMS.map((e) => (e.id === ITEMS[1].id ? { ...e, status: "PAID" as const } : e))} panelTitleId="panel-title" statusFilter="ALL" />
       </AllProviders>,
     );
-    expect(table().queryByRole("button", { name: "Marcar Internet como pago", hidden: true })).not.toBeInTheDocument();
+    expect(table().queryByRole("button", { name: rowPayName("Internet"), hidden: true })).not.toBeInTheDocument();
     expect(table().getByRole("row", { name: /Internet/, hidden: true })).toHaveFocus();
   });
 
@@ -271,7 +299,7 @@ describe("ExpensesList - foco depois do pagamento individual (RF24, CA61, design
     let resolvePay!: (v: unknown) => void;
     payEntry.mockReturnValue(new Promise((r) => (resolvePay = r)));
     const view = setup(ITEMS, "ALL");
-    await userEvent.click(table().getByRole("button", { name: "Marcar Internet como pago", hidden: true }));
+    await userEvent.click(table().getByRole("button", { name: rowPayName("Internet"), hidden: true }));
     await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Marcar como pago" }));
     view.rerender(
       <AllProviders>

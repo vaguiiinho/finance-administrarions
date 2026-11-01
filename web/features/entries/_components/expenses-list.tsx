@@ -286,9 +286,10 @@ export function ExpensesList({ items, panelTitleId, statusFilter = "ALL" }: Expe
                 {readOnly ? null : (
                   <td className="px-2 py-2">
                     {entry.status === "PENDING" ? (
-                      <Button aria-label={`Marcar ${entry.description} como pago`} onClick={() => requestPay([entry], "single")}>
+                      <Button onClick={() => requestPay([entry], "single")}>
                         <span className="hidden lg:inline">Marcar como pago</span>
                         <span className="lg:hidden">Pagar</span>
+                        <span className="sr-only">: {entry.description}</span>
                       </Button>
                     ) : entry.paidAt ? (
                       <span className="text-muted">Pago em {formatInstantDate(entry.paidAt)}</span>
@@ -342,8 +343,9 @@ export function ExpensesList({ items, panelTitleId, statusFilter = "ALL" }: Expe
                 </div>
                 {entry.status === "PENDING" ? (
                   readOnly ? null : (
-                    <Button className="mt-3 w-full" aria-label={`Marcar ${entry.description} como pago`} onClick={() => requestPay([entry], "single")}>
+                    <Button className="mt-3 w-full" onClick={() => requestPay([entry], "single")}>
                       Marcar como pago
+                      <span className="sr-only">: {entry.description}</span>
                     </Button>
                   )
                 ) : entry.paidAt ? (

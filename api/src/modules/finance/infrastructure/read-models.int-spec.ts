@@ -460,17 +460,21 @@ describe('InvoiceReadModel.listByMonth - filtro por status (ADR 0007 5.4, CA45-C
 describe('PendingOverviewReadModel.overviewFrom (ADR 0007 5.4; CA03, CA09, CA10, CA14, CA21, CA23)', () => {
   const overview = async (from: string) => {
     const r = await infra.readModels.pendingOverview.overviewFrom(DEFAULT_OWNER, rm(from));
-    return { first: r.firstPendingMonth?.toString() ?? null, hasCard: r.hasCard };
+    return {
+      first: r.firstPendingMonth?.toString() ?? null,
+      oldestCard: r.oldestPendingCardMonth?.toString() ?? null,
+      hasCard: r.hasCard,
+    };
   };
   const pendingPix = (n: number, date: string) => pending(n, { date });
 
   it('sem nada: nenhuma pendencia e sem cartao', async () => {
-    expect(await overview('2026-10')).toEqual({ first: null, hasCard: false });
+    expect(await overview('2026-10')).toEqual({ first: null, oldestCard: null, hasCard: false });
   });
 
   it('cartao sem despesas: hasCard true e nenhuma pendencia (CA08)', async () => {
     await insertCard(pool, { n: 1 });
-    expect(await overview('2026-10')).toEqual({ first: null, hasCard: true });
+    expect(await overview('2026-10')).toEqual({ first: null, oldestCard: null, hasCard: true });
   });
 
   it('o ponto de partida e INCLUSIVO: pendencia em M conta (CA01, CA09 - PIX pendente em M)', async () => {
@@ -490,18 +494,33 @@ describe('PendingOverviewReadModel.overviewFrom (ADR 0007 5.4; CA03, CA09, CA10,
     expect((await overview('2027-01')).first).toBe('2027-02');
   });
 
-  it('CA14 / PV2: pendencias de meses ANTERIORES a M sao ignoradas (fatura e PIX)', async () => {
+  it('CA14: PIX anterior a M e ignorado, mas o read model retorna faturas antigas separadamente', async () => {
     await insertCard(pool, { n: 1 });
     await insertEntry(pool, cardEntry(1, 1, { date: '2026-08-12', closing: '2026-08-25', due: '2026-09-05' })); // fatura 2026-09
     await insertEntry(pool, pendingPix(2, '2026-09-10'));
-    expect(await overview('2026-10')).toEqual({ first: null, hasCard: true });
+    expect(await overview('2026-10')).toEqual({ first: null, oldestCard: '2026-09', hasCard: true });
+  });
+
+  it('faturas de cartão anteriores: encontra a menor referência pendente sem incluir PIX', async () => {
+    await insertCard(pool, { n: 1, closingDay: 4, dueDay: 11 });
+    await insertEntry(pool, cardEntry(1, 1, { date: '2026-10-20', closing: '2026-11-04', due: '2026-11-11' }));
+    await insertEntry(pool, cardEntry(2, 1, { date: '2026-09-20', closing: '2026-10-04', due: '2026-10-11' }));
+    await insertEntry(pool, pendingPix(3, '2026-09-15'));
+    expect(await overview('2026-11')).toEqual({ first: '2026-11', oldestCard: '2026-10', hasCard: true });
+  });
+
+  it('fatura antiga já paga não conta como pendente', async () => {
+    await insertCard(pool, { n: 1, closingDay: 4, dueDay: 11 });
+    await insertEntry(pool, cardEntry(1, 1, { date: '2026-09-20', closing: '2026-10-04', due: '2026-10-11', status: 'PAID' }));
+    await insertEntry(pool, pendingPix(2, '2026-09-15'));
+    expect(await overview('2026-11')).toEqual({ first: null, oldestCard: null, hasCard: true });
   });
 
   it('despesas PAGAS nao contam', async () => {
     await insertCard(pool, { n: 1 });
     await insertEntry(pool, { n: 1, date: '2026-10-10' });
     await insertEntry(pool, cardEntry(2, 1, { ...NOV, status: 'PAID' }));
-    expect((await overview('2026-10')).first).toBeNull();
+    expect(await overview('2026-10')).toEqual({ first: null, oldestCard: null, hasCard: true });
   });
 
   it('receitas nunca geram pendencia', async () => {
@@ -514,26 +533,26 @@ describe('PendingOverviewReadModel.overviewFrom (ADR 0007 5.4; CA03, CA09, CA10,
     await insertCard(pool, { n: 1, closingDay: 25, dueDay: 5 });
     // compra de 12/10 em cartao que fecha dia 25: ja fechou em 25/10; referencia 2026-11
     await insertEntry(pool, cardEntry(1, 1, { date: '2026-10-12', closing: '2026-10-25', due: '2026-11-05' }));
-    expect((await overview('2026-10')).first).toBe('2026-11');
-    expect((await overview('2026-11')).first).toBe('2026-11');
-    expect((await overview('2026-12')).first).toBeNull();
+    expect(await overview('2026-10')).toEqual({ first: '2026-11', oldestCard: '2026-11', hasCard: true });
+    expect(await overview('2026-11')).toEqual({ first: '2026-11', oldestCard: '2026-11', hasCard: true });
+    expect(await overview('2026-12')).toEqual({ first: null, oldestCard: '2026-11', hasCard: true });
   });
 
   it('CA21: mudar o fechamento do cartao nao muda a fatura gravada', async () => {
     await insertCard(pool, { n: 1, closingDay: 25, dueDay: 5 });
     await insertEntry(pool, cardEntry(1, 1, { date: '2026-09-12', closing: '2026-09-25', due: '2026-10-05' }));
     await pool.query(`UPDATE cards SET closing_day = 10, due_day = 17`);
-    expect((await overview('2026-10')).first).toBe('2026-10');
+    expect(await overview('2026-10')).toEqual({ first: '2026-10', oldestCard: '2026-10', hasCard: true });
   });
 
   it('virada de ano: de 2026-12 acha 2027-01', async () => {
     await insertEntry(pool, pendingPix(1, '2027-01-05'));
-    expect((await overview('2026-12')).first).toBe('2027-01');
+    expect(await overview('2026-12')).toEqual({ first: '2027-01', oldestCard: null, hasCard: false });
   });
 
   it('salto longo, sem limite de distancia (R3)', async () => {
     await insertEntry(pool, pendingPix(1, '2036-03-05'));
-    expect((await overview('2026-10')).first).toBe('2036-03');
+    expect(await overview('2026-10')).toEqual({ first: '2036-03', oldestCard: null, hasCard: false });
   });
 
   it('CA23 / RNF04: so o dono conta (pendencias e cartao do outro nao aparecem)', async () => {
@@ -544,7 +563,7 @@ describe('PendingOverviewReadModel.overviewFrom (ADR 0007 5.4; CA03, CA09, CA10,
     await insertOwnedEntry(pool, BRUNO_ID, { n: 50, date: '2026-10-10', status: 'PENDING', paidAt: null });
     await insertOwnedEntry(pool, BRUNO_ID, { n: 51, date: '2026-12-10', status: 'PENDING', paidAt: null });
     const ana = await overview('2026-10');
-    expect(ana).toEqual({ first: null, hasCard: true });
+    expect(ana).toEqual({ first: null, oldestCard: null, hasCard: true });
     const bruno = await infra.readModels.pendingOverview.overviewFrom(unwrap<OwnerId>(OwnerId.create(BRUNO_ID)), rm('2026-10'));
     expect(bruno.firstPendingMonth?.toString()).toBe('2026-10');
     // Bruno sem cartao proprio nao herda o cartao da Ana
@@ -573,6 +592,7 @@ describe('PendingOverviewReadModel.overviewFrom (ADR 0007 5.4; CA03, CA09, CA10,
     const model = new PrismaPendingOverviewReadModel(counting as never);
     const result = await model.overviewFrom(DEFAULT_OWNER, rm('2026-10'));
     expect(result.firstPendingMonth?.toString()).toBe('2030-05');
+    expect(result.oldestPendingCardMonth).toBeNull();
     expect(result.hasCard).toBe(true);
     expect(queries).toBe(1);
   });

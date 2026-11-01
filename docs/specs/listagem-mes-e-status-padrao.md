@@ -5,6 +5,7 @@
 - Data: 2026-10-30 (rev. 3, aprovada)
 - Branch: `feat/listies`
 - Status: **aprovada pelo usuário, conforme informado pelo coordenador.** As decisões técnicas da seção 11 foram resolvidas no ADR 0007 (Aceito). A tarefa 21 (atualização da spec e do design de origem) foi feita em 2026-10-30: notas "Superado" em `docs/specs/lancamentos-financeiros.md` e `docs/design/lancamentos-financeiros.md`.
+- **Adendo aprovado em 2026-11-01:** ver `docs/specs/mes-inicial-fatura-pendente-mais-antiga.md` e ADR 0009. Faturas de cartão pendentes anteriores a M passam a ser consideradas; PIX anterior a M continua sem influenciar a seleção.
 - Pedido original (literal):
   > modifique a listagem:
   > - se não tiver fatura pendente de nenhum cartão pula para o mês seguinte de acordo com o fechamento
@@ -61,7 +62,7 @@ Informadas ao planner pelo coordenador.
 | **B3** | PIX pendente em M | Impede o avanço. Qualquer pendência em M (fatura ou PIX) mantém a tela em M. |
 | **B4** | Até onde avança | Vai direto para o primeiro mês futuro com pendência. Se não houver nenhum, abre em M+1. |
 | **PV1** | PIX futuro | Conta na busca do próximo mês com pendência. |
-| **PV2** | Pendência de mês anterior | Não muda o mês inicial, seja fatura ou PIX. |
+| **PV2 (alterada pelo ADR 0009)** | Pendência de mês anterior | Fatura de cartão pendente anterior a M pode definir o mês inicial; PIX anterior a M continua sem influenciar. |
 | **PV3** | Sem cartão e sem pendência | Abre em M. |
 | **R3 / P08** | Limite de avanço | Sem limite nesta feature. O aviso mostra o mês para onde a tela pulou. |
 | **P02** | Aviso de avanço | Mantido, como requisito (RF05). |
@@ -206,8 +207,8 @@ Cartões usados nos exemplos (datas calculadas pela regra RF05 da spec de origem
 - When abre `/entries` sem `month` em 30/10/2026
 - Then o mês selecionado é dezembro de 2026, com o aviso de avanço.
 
-**CA14 - Pendência de mês anterior não interfere** (decisão PV2)
-- Given hoje é 30/10/2026, fatura 2026-09 e despesa PIX de 2026-09 pendentes, e nenhuma pendência a partir de 2026-10, com cartão cadastrado
+**CA14 - PIX pendente de mês anterior não interfere** (decisão PV2)
+- Given hoje é 30/10/2026, despesa PIX de 2026-09 pendente, e nenhuma pendência a partir de 2026-10, com cartão cadastrado
 - When o usuário abre `/entries` sem `month`
 - Then o mês selecionado é novembro de 2026.
 
@@ -234,7 +235,7 @@ Cartões usados nos exemplos (datas calculadas pela regra RF05 da spec de origem
 **CA19 - Timezone: primeiro minuto do mês em SP**
 - Given o instante 2026-11-01 03:30 UTC (01/11/2026 00:30 em SP), com cartão
 - When o usuário abre `/entries` sem `month`
-- Then M é novembro: com pendência em 2026-11 o mês é novembro de 2026; com pendência apenas em 2026-10, é dezembro de 2026.
+- Then M é novembro: com pendência em 2026-11 o mês é novembro de 2026; com PIX pendente apenas em 2026-10, é dezembro de 2026.
 
 **CA20 - Timezone na virada de ano**
 - Given o instante 2027-01-01 02:30 UTC (31/12/2026 23:30 em SP), com cartão
@@ -464,7 +465,7 @@ Cenário-base de 2026-10: Azul parcialmente paga (1 despesa PAGO, 1 PENDENTE) e 
 - Filtros de categoria ou cartão na aba Faturas.
 - Filtrar as despesas dentro do bloco de fatura (DR7).
 - Alterar o resultado de `GET /entries/expenses` e `GET /invoices` quando chamados sem `status`: continuam devolvendo tudo. O padrão é da tela.
-- Alerta ou destaque para pendências vencidas de meses anteriores (decisão PV2).
+- Alerta ou destaque para PIX pendente em mês anterior; faturas antigas de cartão podem definir o mês inicial, mas não exibem aviso de avanço.
 - Limite de distância para o avanço de mês (decisão R3 / P08).
 - Foco da ação do toast.
 
@@ -473,7 +474,7 @@ Cenário-base de 2026-10: Azul parcialmente paga (1 despesa PAGO, 1 PENDENTE) e 
 - **R1 - Despesas e faturas pagas escondidas.** Com o padrão Pendente, o que está pago deixa de aparecer à primeira vista nas duas abas. Quem procura uma fatura paga precisa mudar o filtro.
 - **R2 - Avanço a um mês vazio.** Quem tem cartão e nenhuma pendência abre em um mês vazio (CA08), o que pode parecer perda de dados. RF05 mitiga.
 - **R3 - Salto longo (aceito).** Uma única despesa pendente com data digitada errada (por exemplo, 2036) leva a abertura da tela para esse mês até ser paga. Como não existe edição nem exclusão de lançamento, a única saída é pagá-la. O risco foi aceito nesta feature; RF05 e "Mês atual" mitigam.
-- **R4 - Pendência vencida não vista.** A regra só olha para a frente: pendência atrasada de mês anterior fica ainda menos visível (decisão PV2).
+- **R4 - Pendência PIX vencida não vista.** PIX pendente em mês anterior não muda o mês inicial. Faturas antigas de cartão passam a ser selecionadas; uma referência errada ainda pode abrir a listagem em um mês histórico.
 - **R5 - Mês atual "sem pendência" esconde o que já foi pago.** O resumo inicial passa a ser de um mês futuro, não do mês corrente, para quem está em dia.
 - **R6 - Troca de mês durante o uso.** Sem o mês fixado na visita, a revalidação após pagar a última pendência trocaria o mês (CA28, T2).
 - **R7 - Foco perdido.** Sob "Pendente", o bloco ou a linha paga é desmontada, e o foco precisa ir para o título do painel (RF21, RF24, CA55, CA61).
@@ -548,3 +549,13 @@ Dependem de T1 a T6. As tarefas [api] seguem as sugestões de T1 e T6; se o arch
 19. [api] Medir o p95 das leituras novas contra o limite de 300 ms e confirmar o número constante de consultas (RNF01).
 20. [web] Medir o impacto no carregamento da tela (R9, T4).
 21. Doc-writer: atualizar CA61, RF20, RF21, os critérios da aba Faturas e o termo "Mês selecionado" da spec de origem, as seções correspondentes do design, `CHANGELOG.md` e registro em `docs/runs/`.
+
+## 13. Adendo: fatura pendente anterior ao mês atual
+
+O ADR 0009 altera apenas a escolha automática quando não há `month` explícito. Se existir fatura de cartão pendente antes de M, abre-se no menor mês de referência dessas faturas, inclusive quando também há pendências atuais. Usa-se `reference_month` persistido, sem recalcular a fatura com o fechamento vigente. PIX anterior a M continua ignorado; na ausência de fatura antiga, CA01-CA30 mantêm a regra original.
+
+**RFH01 - Fatura antiga mais pendente**
+- Given hoje é novembro de 2026, cartão com fechamento no dia 04 e vencimento no dia 11, e compras pendentes em 20/09/2026 e 20/10/2026
+- When o usuário abre `/entries` sem `month`
+- Then a listagem abre em outubro de 2026 (mês de referência da fatura pendente mais antiga), sem aviso de avanço.
+- And se a fatura de outubro deixar de ter despesas pendentes, a abertura passa para novembro, conforme a regra atual.

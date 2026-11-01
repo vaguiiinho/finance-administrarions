@@ -131,10 +131,11 @@ Erros: 400 `VALIDATION_ERROR`; 404 `CARD_NOT_FOUND` (cartão inexistente; só de
 
 Rota pública equivalente: `GET /api/demo/entries/initial-month` (dono = usuário demo). Não aceita query: qualquer parâmetro gera 400 `VALIDATION_ERROR` com `UNKNOWN_FIELD`. Uma única consulta ao banco.
 
-Regra (ADR 0007): `M` é o mês corrente em America/Sao_Paulo. Considera-se pendência uma despesa `PENDING` (PIX ou cartão) com mês de referência >= `M`; pendências anteriores a `M` não interferem.
+Regra (ADR 0007, com adendo do ADR 0009): `M` é o mês corrente em America/Sao_Paulo. Se houver fatura de cartão `PENDING` com referência anterior a `M`, usa-se a menor referência histórica. PIX anterior a `M` é ignorado. Na ausência de fatura antiga, considera-se a primeira despesa `PENDING` (PIX ou cartão) com referência >= `M`.
 
 | Situação | `month` | `advance` |
 |---|---|---|
+| Fatura de cartão pendente anterior a `M` | menor referência da fatura | `NONE` (sem aviso de avanço) |
 | Há pendência em `M` | `M` | `NONE` |
 | Primeira pendência em mês > `M` | esse mês | `NEXT_PENDING` |
 | Sem pendência e com cartão | `M+1` | `NO_PENDING_AHEAD` |
@@ -475,13 +476,15 @@ sequenceDiagram
 
 ### Mês inicial da listagem (`GET /api/entries/initial-month`)
 
-Regra pura `resolveInitialMonth` (domínio), alimentada por uma única consulta (`PendingOverviewReadModel`: menor mês de referência >= `M` com despesa pendente, mais a existência de cartão).
+Regra pura `resolveInitialMonth` (domínio), alimentada por uma única consulta (`PendingOverviewReadModel`: menor mês de referência >= `M` com despesa pendente, menor referência de fatura de cartão pendente em qualquer mês e existência de cartão). Fatura de cartão anterior a M prevalece; PIX anterior a M não entra nessa busca histórica.
 
 ```mermaid
 flowchart TD
   A[GET initial-month] --> B["M = mês atual em America/Sao_Paulo (BusinessCalendar)"]
-  B --> C["overviewFrom(dono, M): firstPendingMonth e hasCard (1 consulta)"]
-  C --> D{firstPendingMonth}
+  B --> C["overviewFrom(dono, M): firstPendingMonth, oldestPendingCardMonth e hasCard (1 consulta)"]
+  C --> H{oldestPendingCardMonth < M?}
+  H -- sim --> I["month = oldestPendingCardMonth, advance = NONE"]
+  H -- não --> D{firstPendingMonth}
   D -- "= M" --> E["month = M, advance = NONE"]
   D -- "> M" --> F["month = firstPendingMonth, advance = NEXT_PENDING"]
   D -- "nenhum" --> G{hasCard}
