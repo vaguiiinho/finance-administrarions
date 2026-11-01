@@ -7,9 +7,11 @@ import { ExpensesList } from "./expenses-list";
 
 const payEntries = vi.fn();
 const payEntry = vi.fn();
+const updateExpenseEntry = vi.fn();
 vi.mock("@/app/(protected)/entries/actions", () => ({
   payEntries: (...args: unknown[]) => payEntries(...args),
   payEntry: (...args: unknown[]) => payEntry(...args),
+  updateExpenseEntry: (...args: unknown[]) => updateExpenseEntry(...args),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/entries" }));
 vi.mock("next/link", () => ({ default: ({ children, href, ...rest }: { children: React.ReactNode; href: string }) => <a href={href} {...rest}>{children}</a> }));
@@ -49,19 +51,68 @@ const rowPayName = (description: string) => new RegExp(`^Marcar como pago[\\s\\S
 const rowCheckbox = (name: RegExp) => table().getByRole("checkbox", { name, hidden: true });
 
 // `statusFilter`: PROP PROPOSTA PELO TESTER (ADR 0007 6.2 / design 6.2): o filtro de status vigente da aba, para decidir o foco.
-const setup = (items = ITEMS, statusFilter?: "ALL" | "PENDING" | "PAID") =>
+const setup = (items = ITEMS, statusFilter?: "ALL" | "PENDING" | "PAID", canEditExpenses = false) =>
   render(
     <AllProviders>
       <h2 id="panel-title" tabIndex={-1}>
         Despesas
       </h2>
-      <ExpensesList items={items} panelTitleId="panel-title" {...(statusFilter ? { statusFilter } : {})} />
+      <ExpensesList items={items} panelTitleId="panel-title" canEditExpenses={canEditExpenses} {...(statusFilter ? { statusFilter } : {})} />
     </AllProviders>,
   );
 
 beforeEach(() => {
   payEntries.mockReset();
   payEntry.mockReset();
+  updateExpenseEntry.mockReset();
+  router.refresh.mockClear();
+});
+
+describe("ExpensesList - edição de despesas por ADMIN", () => {
+  it("não mostra o ícone de edição para usuário sem permissão", () => {
+    setup();
+    expect(screen.queryByRole("button", { name: "Editar despesa: Mercado", hidden: true })).not.toBeInTheDocument();
+  });
+
+  it("abre o drawer, envia os campos editáveis e atualiza a tela", async () => {
+    updateExpenseEntry.mockResolvedValue({ ok: true, data: ITEMS[0] });
+    setup(ITEMS, undefined, true);
+    await userEvent.click(screen.getAllByRole("button", { name: "Editar despesa: Mercado", hidden: true })[0]);
+
+    const drawer = within(screen.getByRole("dialog", { name: "Editar despesa" }));
+    await userEvent.clear(drawer.getByLabelText(/^Descrição/));
+    await userEvent.type(drawer.getByLabelText(/^Descrição/), "Mercado corrigido");
+    await userEvent.clear(drawer.getByLabelText(/^Categoria/));
+    await userEvent.type(drawer.getByLabelText(/^Categoria/), "Alimentação");
+    await userEvent.clear(drawer.getByLabelText(/^Data/));
+    await userEvent.type(drawer.getByLabelText(/^Data/), "2026-10-20");
+    await userEvent.clear(drawer.getByLabelText(/^Valor/));
+    await userEvent.type(drawer.getByLabelText(/^Valor/), "12345");
+    await userEvent.click(drawer.getByRole("button", { name: "Salvar alterações" }));
+
+    await waitFor(() => expect(updateExpenseEntry).toHaveBeenCalledWith("e1", {
+      description: "Mercado corrigido",
+      category: "Alimentação",
+      date: "2026-10-20",
+      amount: "123.45",
+    }));
+    expect(await screen.findByText("Despesa atualizada.")).toBeInTheDocument();
+    expect(router.refresh).toHaveBeenCalled();
+  });
+
+  it("mantém bloqueada a data de compra no cartão já pago", async () => {
+    const paidCard = entry("e4", "Compra paga", "50.00", {
+      paymentMethod: "CARD",
+      card: { id: "c1", name: "Nubank" },
+      invoice: { closingDate: "2026-10-25", dueDate: "2026-11-05" },
+      status: "PAID",
+      paidAt: "2026-10-02T13:00:00.000Z",
+    });
+    setup([paidCard], undefined, true);
+    await userEvent.click(screen.getAllByRole("button", { name: "Editar despesa: Compra paga", hidden: true })[0]);
+
+    expect(within(screen.getByRole("dialog", { name: "Editar despesa" })).getByLabelText(/^Data/)).toBeDisabled();
+  });
 });
 
 describe("ExpensesList - selecao em lote (CA70, CA71, P11, P12)", () => {

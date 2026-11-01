@@ -26,3 +26,21 @@ export class IncomesNotPayableError extends AppError {
     super('Receitas não podem ser marcadas como pagas.', { incomeIds });
   }
 }
+
+export class EntryNotEditableError extends AppError {
+  readonly code = 'ENTRY_NOT_EDITABLE';
+  readonly kind = 'business_rule' as const;
+
+  constructor(id: string) {
+    super('Somente despesas podem ser editadas.', { id });
+  }
+}
+
+export class PaidCardExpenseDateLockedError extends AppError {
+  readonly code = 'PAID_CARD_EXPENSE_DATE_LOCKED';
+  readonly kind = 'business_rule' as const;
+
+  constructor(id: string) {
+    super('A data de uma despesa paga no cartão não pode ser alterada.', { id, field: 'date' });
+  }
+}

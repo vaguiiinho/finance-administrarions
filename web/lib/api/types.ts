@@ -116,6 +116,13 @@ export interface CreateEntryPayload {
   paid?: boolean;
 }
 
+export interface UpdateExpensePayload {
+  description: string;
+  category: string;
+  date: string;
+  amount: string;
+}
+
 export interface CardPayload {
   name: string;
   closingDay: number;

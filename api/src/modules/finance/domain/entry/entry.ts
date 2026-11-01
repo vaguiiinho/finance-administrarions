@@ -8,8 +8,8 @@ import { ReferenceMonth } from '../billing/reference-month.js';
 import type { CardBillingInfo } from '../card/card-billing-info.js';
 import type { CardId } from '../card/value-objects/card-id.js';
 import type { OwnerId } from '../owner/owner-id.js';
-import { IncomeNotPayableError } from './errors/entry-errors.js';
-import { EntryCreated, EntryPaid, type EntryDomainEvent } from './events/entry-events.js';
+import { IncomeNotPayableError, PaidCardExpenseDateLockedError } from './errors/entry-errors.js';
+import { EntryCreated, EntryPaid, EntryUpdated, type EntryDomainEvent, type EntryEditData } from './events/entry-events.js';
 import type { NewEntryInput } from './new-entry-input.js';
 import type { Category } from './value-objects/category.js';
 import type { Description } from './value-objects/description.js';
@@ -73,6 +73,16 @@ function initialStatus(input: NewEntryInput): EntryStatus {
   if (input.type === 'INCOME') return 'RECEIVED';
   if (input.paymentMethod === 'CARD') return 'PENDING';
   return input.paid === false ? 'PENDING' : 'PAID';
+}
+
+function entryEditData(s: EntrySnapshot): EntryEditData {
+  return {
+    description: s.description.value,
+    category: s.category.value,
+    date: s.date.toString(),
+    amount: s.amount.toString(),
+    referenceMonth: s.referenceMonth.toString(),
+  };
 }
 
 export class Entry extends AggregateRoot<EntryDomainEvent> {
@@ -145,6 +155,51 @@ export class Entry extends AggregateRoot<EntryDomainEvent> {
     return true;
   }
 
+  updateExpense(
+    input: Pick<NewEntryInput, 'description' | 'category' | 'date' | 'amount'>,
+    card: CardBillingInfo | null,
+    now: Date,
+  ): boolean {
+    if (this.state.type !== 'EXPENSE') fail('A edição exige uma despesa.');
+    const dateChanged = !input.date.equals(this.state.date);
+    const changed =
+      input.description.value !== this.state.description.value ||
+      input.category.key !== this.state.category.key ||
+      dateChanged ||
+      input.amount.toString() !== this.state.amount.toString();
+    if (!changed) return false;
+
+    if (this.state.paymentMethod === 'CARD' && dateChanged && this.state.status === 'PAID') {
+      throw new PaidCardExpenseDateLockedError(this.state.id.value);
+    }
+
+    const before = entryEditData(this.state);
+    let invoiceDates = this.state.invoiceDates;
+    if (this.state.paymentMethod === 'CARD' && dateChanged) {
+      if (!card || !this.state.cardId || !card.cardId.equals(this.state.cardId)) {
+        fail('Alterar a data de uma despesa no cartão exige o snapshot do mesmo cartão.');
+      }
+      if (!card.ownerId.equals(this.state.ownerId)) fail('Cartão de outro dono (RF24).');
+      invoiceDates = calculateInvoiceDates(input.date, card.closingDay, card.dueDay);
+    } else if (card !== null) {
+      fail('Snapshot de cartão inesperado durante a edição.');
+    }
+
+    this.state = {
+      ...this.state,
+      description: input.description,
+      category: input.category,
+      date: input.date,
+      amount: input.amount,
+      invoiceDates,
+      referenceMonth: invoiceDates ? invoiceDates.referenceMonth : ReferenceMonth.forPix(input.date),
+      updatedAt: now,
+    };
+    assertConsistent(this.state);
+    this.record(new EntryUpdated(this.state.id.value, this.state.ownerId.value, before, entryEditData(this.state), now));
+    return true;
+  }
+
   isIncome(): boolean {
     return this.state.type === 'INCOME';
   }
@@ -204,4 +259,5 @@ export class Entry extends AggregateRoot<EntryDomainEvent> {
       now,
     );
   }
+
 }

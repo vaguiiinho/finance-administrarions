@@ -1,6 +1,7 @@
 import { type E2eApp } from '../support/e2e-app.js';
 import { startFinanceE2e } from '../support/finance-e2e.js';
 import { query } from '../support/db.js';
+import { DEFAULT_OWNER_ID } from '../support/default-owner-db.js';
 
 let e: E2eApp;
 const T0 = new Date('2026-10-05T13:00:00.000Z');
@@ -33,6 +34,7 @@ const newCard = async (name = 'C', closingDay = 25, dueDay = 5) => (await e.http
 const cardEntry = (cardId: string, over: Record<string, unknown> = {}) => create({ paymentMethod: 'CARD', cardId, paid: undefined, ...over });
 const rowOf = async (id: string) => (await query<{ status: string; paid_at: Date | null }>(e.pool, 'SELECT status, paid_at FROM entries WHERE id = $1::uuid', [id]))[0];
 const payBatch = (ids: unknown) => e.http().post('/api/entries/pay').send({ ids });
+const makeAdmin = () => e.pool.query('UPDATE users SET role = $1::user_role WHERE id = $2::uuid', ['ADMIN', DEFAULT_OWNER_ID]);
 
 describe('E4 POST /api/entries/:id/pay', () => {
   it('CA24: despesa no cartao PENDING -> 200 PAID com paidAt em UTC (relogio injetado)', async () => {
@@ -91,15 +93,110 @@ describe('E4 POST /api/entries/:id/pay', () => {
     expect((await rowOf(income.id)).status).toBe('RECEIVED');
   });
 
-  it('CA28: nao existe estorno nem edicao/exclusao - PATCH e DELETE -> 404 ROUTE_NOT_FOUND', async () => {
+  it('CA28: PATCH e DELETE continuam indisponiveis e PUT exige ADMIN', async () => {
     const exp = await create({ paid: undefined });
-    for (const method of ['patch', 'delete', 'put'] as const) {
+    for (const method of ['patch', 'delete'] as const) {
       const res = await e.http()[method](`/api/entries/${exp.id}`);
       expect(res.status).toBe(404);
       expect(res.body.code).toBe('ROUTE_NOT_FOUND');
     }
     expect((await e.http().post(`/api/entries/${exp.id}/unpay`)).status).toBe(404);
+    expect((await e.http().put(`/api/entries/${exp.id}`).send({})).status).toBe(403);
     expect((await rowOf(exp.id)).status).toBe('PAID');
+  });
+});
+
+describe('PUT /api/entries/:id (admin)', () => {
+  it('edita descrição, categoria, data e valor sem alterar status nem paidAt', async () => {
+    const exp = await create({ paid: false });
+    await makeAdmin();
+    e.clock.set(T1);
+
+    const res = await e.http().put(`/api/entries/${exp.id}`).send({
+      description: 'Conta atualizada',
+      category: 'Moradia',
+      date: '2026-11-02',
+      amount: '125.50',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: exp.id,
+      description: 'Conta atualizada',
+      category: 'Moradia',
+      date: '2026-11-02',
+      amount: '125.50',
+      referenceMonth: '2026-11',
+      status: 'PENDING',
+      paidAt: null,
+    });
+    const row = await query<{ status: string; paid_at: Date | null; amount: string }>(
+      e.pool,
+      'SELECT status, paid_at, amount::text AS amount FROM entries WHERE id = $1::uuid',
+      [exp.id],
+    );
+    expect(row[0]).toEqual({ status: 'PENDING', paid_at: null, amount: '125.50' });
+  });
+
+  it('recalcula a fatura ao mudar a data de compra no cartão pendente', async () => {
+    const card = await newCard('Cartão', 25, 5);
+    const exp = await cardEntry(card.id, { date: '2026-10-10' });
+    await makeAdmin();
+
+    const res = await e.http().put(`/api/entries/${exp.id}`).send({
+      description: 'Compra corrigida',
+      category: 'Mercado',
+      date: '2026-10-26',
+      amount: '80.00',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      date: '2026-10-26',
+      invoice: { closingDate: '2026-11-25', dueDate: '2026-12-05' },
+      referenceMonth: '2026-12',
+      status: 'PENDING',
+    });
+  });
+
+  it('bloqueia data de cartão paga, mas permite corrigir seus demais campos', async () => {
+    const card = await newCard();
+    const exp = await cardEntry(card.id);
+    await e.http().post(`/api/entries/${exp.id}/pay`);
+    await makeAdmin();
+    const dateEdit = await e.http().put(`/api/entries/${exp.id}`).send({
+      description: 'Conta',
+      category: 'Moradia',
+      date: '2026-10-26',
+      amount: '100.00',
+    });
+    expect(dateEdit.status).toBe(422);
+    expect(dateEdit.body.code).toBe('PAID_CARD_EXPENSE_DATE_LOCKED');
+
+    const detailsEdit = await e.http().put(`/api/entries/${exp.id}`).send({
+      description: 'Conta corrigida',
+      category: 'Moradia',
+      date: '2026-10-10',
+      amount: '110.00',
+    });
+    expect(detailsEdit.status).toBe(200);
+    expect(detailsEdit.body).toMatchObject({ status: 'PAID', description: 'Conta corrigida', amount: '110.00' });
+  });
+
+  it('corpo estrito, id inexistente e receita mantêm os erros do contrato', async () => {
+    const exp = await create();
+    const income = await create({ type: 'INCOME', paid: undefined });
+    await makeAdmin();
+    const body = { description: 'Conta', category: 'Moradia', date: '2026-10-10', amount: '100.00' };
+    const unknownField = await e.http().put(`/api/entries/${exp.id}`).send({ ...body, status: 'PAID' });
+    const missing = await e.http().put(`/api/entries/${MISSING}`).send(body);
+    const notExpense = await e.http().put(`/api/entries/${income.id}`).send(body);
+    expect(unknownField.status).toBe(400);
+    expect(unknownField.body.details.fields).toContainEqual(expect.objectContaining({ field: 'status', code: 'UNKNOWN_FIELD' }));
+    expect(missing.status).toBe(404);
+    expect(missing.body.code).toBe('ENTRY_NOT_FOUND');
+    expect(notExpense.status).toBe(422);
+    expect(notExpense.body.code).toBe('ENTRY_NOT_EDITABLE');
   });
 });
 

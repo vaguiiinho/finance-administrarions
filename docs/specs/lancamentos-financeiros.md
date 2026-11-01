@@ -3,6 +3,7 @@
 **Impacto em UI: sim** (telas: Lançamentos com abas Despesas/Faturas/Receitas e drawer de criação, Cartões e Dashboard mensal; alternador de tema claro/escuro na navbar)
 
 > **Superação parcial (2026-10-30):** para a tela `/entries` e `/demo/entries`, o mês padrão (CA61, RF19), o filtro de status e a aba Faturas (RF20, RF21 e os critérios CA44, CA45, CA54 e CA72) e o termo "Mês selecionado" deixam de valer como escritos abaixo. Valem `docs/specs/listagem-mes-e-status-padrao.md` (rev. 3), `docs/adr/0007-listagem-mes-e-status-padrao.md` e `docs/design/listagem-mes-e-status-padrao.md`. O CA61 continua valendo para o dashboard. Cada ponto afetado tem uma nota "Superado" no próprio texto.
+> **Superação parcial posterior:** B3 foi revista para permitir edição administrativa de despesas, sem exclusão. O contrato adotado está na seção "Extensão: edição administrativa de despesas" ao final; a API está em `docs/api/finance.md`.
 
 **Revisão 3** (2026-10-24). O ADR `docs/adr/0001-lancamentos-financeiros.md` e o design `docs/design/lancamentos-financeiros.md` foram revistos para a revisão 3 e implementados (branch `feature/finance`). O fechamento da feature (Playwright, desempenho, follow-ups de UX) está em `docs/specs/lancamentos-financeiros-fechamento.md` e `docs/adr/0002-lancamentos-financeiros-fechamento.md`.
 
@@ -14,6 +15,7 @@
 | 2 | 2026-10-24 | Decisões B1-B5 (categoria livre, tipo Receita/Despesa, sem edição/exclusão, cartões com mês de referência pelo fechamento, dashboard com seletor de mês); aprovação do design (D1-D4); tema claro/escuro (D5); DR1-DR4. Abertas B6 e B7. |
 | 3 | 2026-10-24 | **B6 resolvida:** só seletor de mês (sem intervalo de/até), na listagem e no dashboard. **B7 resolvida:** receita com data futura conta no saldo realizado. **Mês de referência de compra no cartão passa a ser o mês do vencimento da fatura** (antes: mês do fechamento); tabela CA21 refeita. **Formas de pagamento:** apenas PIX e CARTAO (substitui CONTA). **Alteração da regra 1** (status inicial): despesa PIX nasce PAGA por padrão, com opção "Ainda não paguei"; despesa no cartão nasce PENDENTE. **Tela de lançamentos com abas** (Despesas, Faturas, Receitas) e cabeçalho comum com seletor de mês, botão de novo lançamento e resumo do mês; o resumo do topo é sempre do mês inteiro e cada aba tem subtotal próprio (substitui "totais respeitam filtros ativos"). Filtro por tipo e por intervalo saem; "Pagar fatura" migra para a aba Faturas. **Atalho "+ Novo cartão"** no drawer de lançamento. Novos DR5-DR8; novas perguntas B8-B9. CAs renumerados. |
 | 3 (fechamento) | 2026-10-25 | Sem mudança de regra de negócio. Fechamento em `docs/specs/lancamentos-financeiros-fechamento.md` (ADR 0002). B8 e B9 decididas com a resposta padrão (seção 9). Desvio aprovado de RF27/CA84 (B1 do fechamento): ver nota em RF27. |
+| 4 | Posterior à rev. 3 | B3 parcialmente supersedida: despesas podem ser editadas por ADMIN; exclusão e estorno continuam fora. Ver a extensão ao final. |
 
 ## 1. Contexto
 
@@ -47,7 +49,7 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 | **Dia efetivo** | Dia de fechamento ou vencimento ajustado a um mês: se o mês não tem esse dia (ex.: 31 em fevereiro), vale o último dia do mês. |
 | **Data de fechamento da fatura** | Data em que fecha a fatura de uma compra: o fechamento efetivo do mês da compra, se o dia da compra for <= a ele; senão, o fechamento efetivo do mês seguinte. |
 | **Data de vencimento da fatura** | Primeira ocorrência do dia de vencimento (efetivo) **estritamente após** a data de fechamento da fatura. |
-| **Mês de referência (competência)** | Mês/ano ao qual o lançamento pertence para listagem, totais, faturas e dashboard. PIX: mês da data. CARTAO: mês da data de vencimento da fatura. Calculado na criação e gravado; nunca recalculado. |
+| **Mês de referência (competência)** | Mês/ano ao qual o lançamento pertence para listagem, totais, faturas e dashboard. PIX: mês da data. CARTAO: mês da data de vencimento da fatura. Calculado na criação e gravado; na edição administrativa, é recalculado apenas quando a data muda conforme a seção "Extensão". |
 | **Fatura** | Conjunto das despesas de um cartão com o mesmo mês de referência. Identificada por **cartão + mês de referência** (= mês do vencimento) e exibida com suas datas de fechamento e vencimento. |
 | **Pagar fatura** | Marcar como pagas, numa operação atômica, todas as despesas PENDENTE de uma fatura. |
 | **Status** | `PENDENTE` ou `PAGO` (despesa); `RECEBIDA` (receita). |
@@ -80,7 +82,7 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 |---|---|
 | **B1** | Categoria é texto livre; uma categoria pode ter vários lançamentos. Autocomplete com as categorias já usadas, trim e comparação case-insensitive. |
 | **B2** | Lançamento tem tipo `RECEITA` ou `DESPESA`. Receita nasce RECEBIDA, sem fluxo de pagamento. Regras de pagamento de despesa: individual/lote, atômico, idempotente, 404 com todos os ids ausentes, 422 para receitas, sem estorno. Saldo realizado = receitas - despesas pagas; saldo previsto = receitas - todas as despesas. (O status inicial da despesa foi alterado na rev. 3, ver B11; a regra de totais "respeitando filtros" foi substituída na rev. 3, ver DR6.) |
-| **B3** | Edição e exclusão de lançamentos continuam fora de escopo. |
+| **B3 (revista)** | Edição administrativa de despesas permitida conforme a extensão ao final. Exclusão de lançamentos continua fora de escopo. |
 | **B4** | Cadastro de cartão (nome, dia de fechamento, dia de vencimento); mês de referência calculado na criação e gravado; listagem e dashboard usam o mês de referência; filtro por cartão; ação "Pagar fatura". Parcelamento e recorrência fora de escopo. (Regra do mês de referência revista na rev. 3, ver B10; filtro por tipo e período revistos, ver B6 e B12.) |
 | **B5** | Dashboard com seletor de mês, padrão = mês atual em America/Sao_Paulo; barras com os 12 meses terminando no mês selecionado; donut com a distribuição das despesas por categoria no mês; cards com receitas, despesas (pago/pendente) e saldo realizado/previsto. |
 | **Design (D1-D4)** | Aprovados e mantidos: D1 drawer para criação/edição; D2 modal de alerta para confirmação; D3 barras empilhadas (forma da DR3); D4 donut com até 5 categorias + "Outras". Também: tokens `--primary-strong`, `--on-primary`, `--surface-2`, `--scrim`, `--focus-ring`, `--chart-1..6`; pasta `web/components/`; drawer fecha sem confirmação de descarte. |
@@ -153,7 +155,7 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
   1. **Data de fechamento da fatura:** seja F o dia efetivo de fechamento no mês da compra (dia de fechamento, ou último dia do mês se ele não existir). Se dia da compra <= F, a fatura fecha em F do mês da compra; senão, fecha no dia efetivo de fechamento do mês seguinte (dezembro -> janeiro do ano seguinte).
   2. **Data de vencimento da fatura:** primeira ocorrência do dia de vencimento **estritamente após** a data de fechamento, usando o dia efetivo de cada mês (dia inexistente -> último dia do mês). Ou seja: se o dia efetivo de vencimento no mês do fechamento for maior que o dia do fechamento, vence nesse mês; senão, vence no dia efetivo de vencimento do mês seguinte.
   3. **Mês de referência** = mês/ano da data de vencimento.
-- Calculado uma única vez, na criação; nunca recalculado (nem por edição do cartão).
+- Na criação, é calculado com os dias do cartão vigentes naquele momento e não é recalculado quando o cartão é editado. Na edição administrativa, mudar a data de uma despesa pendente no cartão recalcula as datas da fatura com o calendário atual; sem mudança de data, preserva-se o snapshot histórico.
 - Exemplos: cartão fecha 25 e vence 5 — compra 10/10 -> fecha 25/10 -> vence 05/11 -> novembro; compra 26/10 -> fecha 25/11 -> vence 05/12 -> dezembro. Cartão fecha 3 e vence 10 — compra 02/10 -> fecha 03/10 -> vence 10/10 -> outubro. Tabela completa em CA21.
 
 #### RF06 - Marcar uma despesa como paga
@@ -808,7 +810,7 @@ Objetivo: permitir registrar **receitas** e **despesas** pagas via **PIX** ou **
 
 - Autenticação e multiusuário (lançamentos e cartões globais).
 - Recorrência e parcelamento de lançamentos.
-- Edição e exclusão de lançamentos (B3); exclusão de cartão.
+- Exclusão de lançamentos e de cartões; estorno de pagamentos. A edição administrativa de despesas foi incluída pela extensão ao final.
 - Estorno de pagamento (PAGO -> PENDENTE); receita "a receber"/pendente e fluxo de recebimento (B7).
 - Formas de pagamento além de PIX e cartão de crédito (dinheiro, débito, boleto, conta); receita no cartão.
 - Filtro por intervalo de datas ou de meses (de/até) e visão "todos os meses" na listagem (B6).
@@ -964,3 +966,10 @@ Nenhuma em aberto. B8 e B9 foram aprovadas com a resposta padrão (ver decididos
 34. [web] Atalho "+ Novo cartão" dentro do drawer, com seleção automática, preservação dos dados e erro 409 inline (CA75).
 35. [web] Instalar Recharts; dashboard: seletor de mês, cards (resumo do mês), barras conforme DR3 com eixo negativo, donut de despesas, estados por bloco, alternativas acessíveis, cores por tema (CA59-CA66, CA86).
 36. [web] Revisão final de responsividade, acessibilidade e contraste nas três telas, todas as abas, em ambos os temas e todos os estados (CA67, CA76, CA82-CA85).
+
+## Extensão: edição administrativa de despesas
+
+- `PUT /api/entries/:id` exige `ADMIN` e continua limitado ao proprietário autenticado; o papel administrativo não concede acesso aos lançamentos de outros usuários.
+- Campos editáveis: descrição, categoria, data e valor. Tipo, forma de pagamento, cartão, status e `paidAt` são preservados.
+- Em PIX, alterar a data recalcula o mês de referência. Em cartão pendente, alterar a data recalcula fatura e referência usando os dias atuais do cartão; se a data não mudar, o snapshot histórico é preservado. A data de cartão pago não pode mudar; os outros campos permanecem editáveis.
+- A lista protegida mostra o ícone de edição apenas a ADMIN, ao lado da ação de pagamento. A API sempre valida a role independentemente da interface.

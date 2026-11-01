@@ -14,6 +14,15 @@ export const createEntryBodySchema = z.strictObject({
 
 export type CreateEntryBody = z.infer<typeof createEntryBodySchema>;
 
+export const updateExpenseBodySchema = z.strictObject({
+  description: z.string(),
+  category: z.string(),
+  date: z.string(),
+  amount: z.string(),
+});
+
+export type UpdateExpenseBody = z.infer<typeof updateExpenseBodySchema>;
+
 /** Corpo de E5 (strict). Tamanho do array: 1..100 itens na lista bruta. */
 export const payBatchBodySchema = z.strictObject({
   ids: z.array(z.string()).min(1).max(100),

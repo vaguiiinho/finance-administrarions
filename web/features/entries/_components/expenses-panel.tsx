@@ -45,7 +45,17 @@ function announce(state: EntriesState, page: ExpensesPage): string {
 }
 
 /** Painel da aba Despesas (RF20): filtros, subtotal (da API), lista, paginacao e vazios (3.12). */
-export async function ExpensesPanel({ state, reader = createFinanceReader("protected"), mode = PROTECTED_MODE }: { state: EntriesState; reader?: FinanceReader; mode?: AppMode }) {
+export async function ExpensesPanel({
+  state,
+  reader = createFinanceReader("protected"),
+  mode = PROTECTED_MODE,
+  canEditExpenses = false,
+}: {
+  state: EntriesState;
+  reader?: FinanceReader;
+  mode?: AppMode;
+  canEditExpenses?: boolean;
+}) {
   const { basePath } = mode;
   const pagePromise = reader.listExpenses(toApiQuery(state));
   const categoriesPromise = settle(reader.listCategories());
@@ -101,7 +111,14 @@ export async function ExpensesPanel({ state, reader = createFinanceReader("prote
   } else {
     body = (
       <>
-        <ExpensesList key={listKey} items={items} panelTitleId={PANEL_TITLE_ID} statusFilter={state.expenses.status} />
+        <ExpensesList
+          key={listKey}
+          items={items}
+          panelTitleId={PANEL_TITLE_ID}
+          statusFilter={state.expenses.status}
+          canEditExpenses={canEditExpenses}
+          categories={categories.ok ? categories.data.items : []}
+        />
         <Pagination
           page={pagination.page}
           totalPages={pagination.totalPages}

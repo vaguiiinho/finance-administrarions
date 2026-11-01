@@ -18,6 +18,7 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 | Método | Rota | Descrição | Sucesso |
 |---|---|---|---|
 | POST | `/api/entries` | Cria lançamento (receita ou despesa) | 201 |
+| PUT | `/api/entries/:id` | Edita uma despesa (somente ADMIN) | 200 |
 | GET | `/api/entries/initial-month` | Mês inicial sugerido para a listagem de lançamentos (sem query) | 200 |
 | GET | `/api/entries/expenses` | Despesas de um mês de referência, com filtros, paginação e subtotal | 200 |
 | GET | `/api/entries/incomes` | Receitas de um mês de referência, com filtro de categoria, paginação e subtotal | 200 |
@@ -34,7 +35,7 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 | GET | `/api/dashboard/monthly-series?month=` | 12 meses terminando em `month` | 200 |
 | GET | `/api/dashboard/category-distribution?month=` | Despesas do mês por categoria | 200 |
 
-Não existe edição nem exclusão de lançamentos, nem exclusão de cartões.
+Não existe exclusão de lançamentos nem exclusão de cartões.
 
 ### Objeto `Entry` (resposta de criação, listagens e pagamento)
 
@@ -59,7 +60,7 @@ Não existe edição nem exclusão de lançamentos, nem exclusão de cartões.
 
 - `type`: `INCOME` | `EXPENSE`. `paymentMethod`: `PIX` | `CARD`. `status`: `PENDING` | `PAID` | `RECEIVED` (`RECEIVED` só para receitas).
 - `card` e `invoice` são `null` quando a forma é `PIX` (e em toda receita).
-- `referenceMonth` é calculado pela API e nunca muda (ver "Regras de negócio").
+- `referenceMonth` é calculado pela API e não pode ser enviado no corpo (ver "Regras de negócio" e `PUT /api/entries/:id`).
 
 ### Objetos de totais
 
@@ -126,6 +127,30 @@ POST /api/entries
 ```
 
 Erros: 400 `VALIDATION_ERROR`; 404 `CARD_NOT_FOUND` (cartão inexistente; só depois de passar a validação 400).
+
+### PUT /api/entries/:id
+
+Exige o nível `ADMIN`. O escopo continua sendo o dono autenticado: a rota não permite que um administrador altere lançamentos de outro usuário.
+
+Corpo estrito:
+
+| Campo | Tipo | Obrigatório | Regra |
+|---|---|---|---|
+| `description` | string | sim | 1-120 |
+| `category` | string | sim | 1-50; preserva a grafia canônica já usada |
+| `date` | string | sim | `YYYY-MM-DD`, data existente, ano 1900-9998 |
+| `amount` | string | sim | decimal positivo, até 2 casas, máximo `9999999999.99` |
+
+Tipo, forma de pagamento, cartão, status e `paidAt` são preservados e não podem ser enviados. Para despesas PIX, a mudança de data recalcula `referenceMonth` para o mês da data. Para despesas no cartão, uma mudança de data recalcula fechamento, vencimento e mês de referência conforme os dias atuais do cartão; se a data não mudar, os dados históricos da fatura são mantidos. A data de uma despesa já paga no cartão é imutável, para não mover uma compra entre faturas quitadas; os outros campos continuam editáveis.
+
+Exemplo:
+
+```http
+PUT /api/entries/0192f3a4-6b1c-7d2e-8f90-a1b2c3d4e5f6
+{ "description": "Mercado", "category": "Alimentação", "date": "2026-10-15", "amount": "230.50" }
+```
+
+Erros: 400 `VALIDATION_ERROR`; 403 `FORBIDDEN` para usuário sem nível ADMIN; 404 `ENTRY_NOT_FOUND`; 422 `ENTRY_NOT_EDITABLE` para receitas e `PAID_CARD_EXPENSE_DATE_LOCKED` quando se tenta mudar a data de uma compra paga no cartão.
 
 ### GET /api/entries/initial-month
 

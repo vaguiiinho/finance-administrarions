@@ -1,4 +1,5 @@
 import { Prisma } from '@shared/infrastructure/prisma/generated/client.js';
+import { InvariantViolationError } from '@shared/domain/app-error.js';
 import type { PrismaExecutor } from '@shared/infrastructure/prisma/prisma-executor.js';
 import type { InvoiceKey } from '../../domain/billing/invoice-key.js';
 import type { Entry } from '../../domain/entry/entry.js';
@@ -37,6 +38,17 @@ export class PrismaEntryRepository implements EntryRepository {
       ORDER BY e.id
       FOR UPDATE OF e`);
     return rows.map((row) => EntryMapper.toDomain(row));
+  }
+
+  async update(entry: Entry): Promise<void> {
+    const { id, userId, createdAt, ...data } = EntryMapper.toPersistence(entry);
+    const { count } = await this.prisma.entry.updateMany({
+      where: { id, userId, type: 'EXPENSE' },
+      data: { ...data, createdAt },
+    });
+    if (count !== 1) {
+      throw new InvariantViolationError('update: lançamento não atualizado (contrato de lock violado).');
+    }
   }
 
   async saveAll(entries: readonly Entry[]): Promise<void> {

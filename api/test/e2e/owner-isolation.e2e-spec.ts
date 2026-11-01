@@ -132,6 +132,16 @@ describe('CA30 / RF25: recurso de outro dono e inexistente (404)', () => {
   it('administrador contra recurso de usuario comum tambem e 404 (CA25)', async () => {
     expect((await get(vagner, `/api/cards/${cardUuid(2)}/invoices/${MONTH}/entries`)).body.code).toBe('CARD_NOT_FOUND');
     expect((await post(vagner, `/api/entries/${entryUuid(13)}/pay`)).body.code).toBe('ENTRY_NOT_FOUND');
+    const before = await query(e.pool, 'SELECT * FROM entries ORDER BY id');
+    const edit = await put(vagner, `/api/entries/${entryUuid(12)}`, {
+      description: 'Alteração não autorizada',
+      category: 'Mercado',
+      date: '2026-11-07',
+      amount: '99.00',
+    });
+    expect(edit.status).toBe(404);
+    expect(edit.body.code).toBe('ENTRY_NOT_FOUND');
+    expect(await query(e.pool, 'SELECT * FROM entries ORDER BY id')).toEqual(before);
   });
 
   it('o dono continua conseguindo: Bruno paga a fatura dele', async () => {

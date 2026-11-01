@@ -11,6 +11,8 @@ export interface EntryRepository {
   findByIdsForUpdate(ownerId: OwnerId, ids: readonly EntryId[]): Promise<Entry[]>;
   /** Exige transação. Despesas PENDING do cartão com esse mês de referência, travadas em ordem de id asc. */
   findPendingByInvoiceForUpdate(ownerId: OwnerId, key: InvoiceKey): Promise<Entry[]>;
+  /** Exige transação e lock obtido por findByIdsForUpdate; persiste os campos editáveis da despesa. */
+  update(entry: Entry): Promise<void>;
   /** Persiste status, paidAt, updatedAt de despesas existentes (guarda status = PENDING e user_id = entry.ownerId). */
   saveAll(entries: readonly Entry[]): Promise<void>;
   /** Usado só pelo DemoDatasetStore (ADR 0005 5.6). */

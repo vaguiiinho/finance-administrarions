@@ -14,6 +14,7 @@ import type {
   PayEntriesResult,
   PayInvoiceResult,
   TotalsDto,
+  UpdateExpensePayload,
 } from "./types";
 
 /** Uma funcao por endpoint do ADR 6.2 (S1, C1-C3, I1-I3, E1-E6, D2, D3). */
@@ -38,6 +39,7 @@ export const payInvoiceRequest = (cardId: string, referenceMonth: string) =>
 export const listExpenses = (query: Record<string, string>) => apiGet<ExpensesPage>("/entries/expenses", query);
 export const listIncomes = (query: Record<string, string>) => apiGet<IncomesPage>("/entries/incomes", query);
 export const createEntryRequest = (payload: CreateEntryPayload) => apiPost<EntryDto>("/entries", payload);
+export const updateExpenseRequest = (id: string, payload: UpdateExpensePayload) => apiPut<EntryDto>(`/entries/${encodeURIComponent(id)}`, payload);
 export const payEntryRequest = (id: string) => apiPost<EntryDto>(`/entries/${encodeURIComponent(id)}/pay`);
 export const payEntriesRequest = (ids: string[]) => apiPost<PayEntriesResult>("/entries/pay", { ids });
 export const getMonthlySeries = (month: string) => apiGet<MonthlySeries>("/dashboard/monthly-series", { month });

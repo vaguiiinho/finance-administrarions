@@ -3,7 +3,7 @@
 import { settleAction } from "@/lib/api/safe-action";
 import { useId, useMemo, useRef, useState } from "react";
 import { useAppMode } from "@/components/app-mode";
-import { Button } from "@/components/ui/button";
+import { Button, IconButton } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SessionExpiredInline, useAuthRedirect } from "@/components/session-expired";
 import { InlineAlert } from "@/components/ui/states";
@@ -20,6 +20,7 @@ import { PayConfirmDialog } from "./pay-confirm-dialog";
 import { useFocusAfterClose } from "./use-focus-after-close";
 import { focusTargetAfterPay } from "@/lib/entries/focus-target";
 import type { StatusFilter } from "@/lib/filters/entries-search-params";
+import { EditExpenseDrawer } from "./edit-expense-drawer";
 
 interface ExpensesListProps {
   items: EntryDto[];
@@ -27,6 +28,8 @@ interface ExpensesListProps {
   panelTitleId: string;
   /** Filtro de status vigente: sob "Todos" a linha paga permanece (foco na propria linha/card); nos demais ela sai (foco no h2). */
   statusFilter?: StatusFilter;
+  canEditExpenses?: boolean;
+  categories?: string[];
 }
 
 type Banner = { kind: "missing" | "income"; labels: string[] } | null;
@@ -55,7 +58,13 @@ const checkboxLabel = (e: EntryDto) => (e.status === "PENDING" ? `Selecionar ${e
  * Lista da aba Despesas (RF20): tabela em >= md e cards em < md (mesmo estado de selecao), selecao so de pendentes
  * (P12), pagamento individual/lote com confirmacao (D2) e banners de 404/422 do lote (3.10).
  */
-export function ExpensesList({ items, panelTitleId, statusFilter = "ALL" }: ExpensesListProps) {
+export function ExpensesList({
+  items,
+  panelTitleId,
+  statusFilter = "ALL",
+  canEditExpenses = false,
+  categories = [],
+}: ExpensesListProps) {
   // Na demo (so visualizacao) nada de escrita existe no DOM: sem checkbox, sem "Pagar", sem barra de lote (RF31, CA38)
   const { readOnly } = useAppMode();
   const uid = useId();
@@ -68,6 +77,7 @@ export function ExpensesList({ items, panelTitleId, statusFilter = "ALL" }: Expe
   const [authError, setAuthError] = useState<ActionError | null>(null);
   useAuthRedirect(authError);
   const [banner, setBanner] = useState<Banner>(null);
+  const [editing, setEditing] = useState<EntryDto | null>(null);
   const lastTrigger = useRef<HTMLElement | null>(null);
   const focusAfterClose = useFocusAfterClose(confirm !== null);
 
@@ -285,15 +295,25 @@ export function ExpensesList({ items, panelTitleId, statusFilter = "ALL" }: Expe
                 </td>
                 {readOnly ? null : (
                   <td className="px-2 py-2">
-                    {entry.status === "PENDING" ? (
-                      <Button onClick={() => requestPay([entry], "single")}>
-                        <span className="hidden lg:inline">Marcar como pago</span>
-                        <span className="lg:hidden">Pagar</span>
-                        <span className="sr-only">: {entry.description}</span>
-                      </Button>
-                    ) : entry.paidAt ? (
-                      <span className="text-muted">Pago em {formatInstantDate(entry.paidAt)}</span>
-                    ) : null}
+                    <div className="flex items-center gap-2">
+                      {entry.status === "PENDING" ? (
+                        <Button onClick={() => requestPay([entry], "single")}>
+                          <span className="hidden lg:inline">Marcar como pago</span>
+                          <span className="lg:hidden">Pagar</span>
+                          <span className="sr-only">: {entry.description}</span>
+                        </Button>
+                      ) : entry.paidAt ? (
+                        <span className="text-muted">Pago em {formatInstantDate(entry.paidAt)}</span>
+                      ) : null}
+                      {canEditExpenses ? (
+                        <IconButton aria-label={`Editar despesa: ${entry.description}`} title="Editar despesa" onClick={() => setEditing(entry)}>
+                          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                          </svg>
+                        </IconButton>
+                      ) : null}
+                    </div>
                   </td>
                 )}
               </EntryRow>
@@ -341,16 +361,26 @@ export function ExpensesList({ items, panelTitleId, statusFilter = "ALL" }: Expe
                     </p>
                   </div>
                 </div>
-                {entry.status === "PENDING" ? (
-                  readOnly ? null : (
-                    <Button className="mt-3 w-full" onClick={() => requestPay([entry], "single")}>
-                      Marcar como pago
-                      <span className="sr-only">: {entry.description}</span>
-                    </Button>
-                  )
-                ) : entry.paidAt ? (
-                  <p className="mt-2 text-sm text-muted">Pago em {formatInstant(entry.paidAt)}</p>
-                ) : null}
+                {readOnly ? null : (
+                  <div className="mt-3 flex items-center gap-2">
+                    {entry.status === "PENDING" ? (
+                      <Button className={canEditExpenses ? "flex-1" : "w-full"} onClick={() => requestPay([entry], "single")}>
+                        Marcar como pago
+                        <span className="sr-only">: {entry.description}</span>
+                      </Button>
+                    ) : entry.paidAt ? (
+                      <p className="flex-1 text-sm text-muted">Pago em {formatInstant(entry.paidAt)}</p>
+                    ) : null}
+                    {canEditExpenses ? (
+                      <IconButton aria-label={`Editar despesa: ${entry.description}`} title="Editar despesa" onClick={() => setEditing(entry)}>
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9" />
+                          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                        </svg>
+                      </IconButton>
+                    ) : null}
+                  </div>
+                )}
               </EntryItem>
             );
           })}
@@ -389,6 +419,7 @@ export function ExpensesList({ items, panelTitleId, statusFilter = "ALL" }: Expe
           }}
         />
       ) : null}
+      {editing ? <EditExpenseDrawer key={editing.id} entry={editing} categories={categories} onClose={() => setEditing(null)} /> : null}
     </div>
   );
 }

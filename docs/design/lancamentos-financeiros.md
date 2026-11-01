@@ -17,6 +17,7 @@
 | 3 | Spec rev. 3. `/entries` reestruturada em **cabeçalho comum** (seletor de mês, "+ Novo lançamento", resumo do mês inteiro) + **abas Despesas / Faturas / Receitas** (D16-D21). Removidos: filtro de período (intervalo de/até e "Todos"), filtro de tipo, status "Recebida" no filtro, barra de fatura (D14) e regra de filtros incompatíveis (D13). Formas de pagamento **PIX e Cartão** (sai "Conta"); "Ainda não paguei" (D23); atalho **"+ Novo cartão" embutido** no drawer (D22). Mês da fatura = **mês do vencimento**; datas de fechamento/vencimento em `dd/MM/yyyy` na aba Faturas. Atalho de `/cards` para a aba Despesas filtrada (DR8). Dashboard só com seletor de mês. Tokens, contraste, D1-D5 mantidos; novos pares de contraste para abas, subtotal, blocos de fatura e painel de novo cartão (sem tokens novos). CAs renumerados conforme a spec rev. 3. |
 | 4 | Fechamento (sem tela nova). Ajustados ao código conferido: combobox de categoria (3.9.1), destaque estático de recém-criado (3.9.2), gráfico estreito e movimento reduzido (5.5), destaque do donut pela legenda (5.6). Desvio 2 (tema com diálogo aberto) em 12, aprovado. Seção 13: divergências para o frontend-dev e matriz de verificação CA82/CA83/CA86. |
 | 5 | **Paleta suavizada** (aprovada pelo usuário em 2026-10-25; sem tela nem componente novo). Escuro: fundos azul-ardósia (`--bg` `#151B26`, `--surface` `#1C2330`, `--surface-2` `#252D3C`) no lugar do quase-preto, texto `#E3E7EE`, `--text-muted` `#9BA5B7` e `--accent` `#5CC8DB`. Claro: fundo `#EEF1F5` com cartões brancos, borda `#D9DEE6`, texto `#1E293B`, `--text-muted` `#4B5567`. Tokens dependentes derivados (`--surface-active`, `--input-bg`, `--header-bg`, `--border-strong`, `--text-disabled`, `--skeleton`, `--scrim`, `--tooltip-*`, `--scrollbar-*`, `--chart-axis/grid/zero-line/cursor`, `--chart-1`, `--chart-6`, `--focus-color`, `--accent-active`). Novos tokens `--shadow-color` e `--shadow-card` (sombra sutil dos cartões). Tokens semânticos e séries de gráfico sem mudança de valor, conferidos contra os novos fundos: nenhum par abaixo do mínimo. Atualizadas 1.2, 1.3, 1.9 e 13.3; `design-system.md` sincronizado. |
+| 6 | Edição administrativa de despesas: drawer de edição e ícone de lápis na coluna de ação, visível só a ADMIN; datas de compra pagas no cartão ficam bloqueadas. |
 
 Este documento define estrutura visual, hierarquia, componentes, estados e interação. Não contém código. Nomes de componentes são sugestões para o frontend-dev.
 
@@ -1286,7 +1287,7 @@ O `web/` ainda é o scaffold do `create-next-app` (só `app/page.tsx`, `app/layo
 
 ## 10. Fora de escopo (UI)
 
-- Edição/exclusão de lançamentos (B3), exclusão de cartão, estorno, detalhe de lançamento.
+- Exclusão de lançamentos, exclusão de cartão, estorno, detalhe de lançamento. A edição administrativa de despesas está incluída conforme a revisão 6.
 - Filtro de intervalo de/até, "todos os períodos" e filtro de tipo (B6).
 - Seleção ou pagamento parcial dentro do bloco de fatura (DR7); status de fatura aberta/fechada/vencida; limite de crédito.
 - Pré-visualização de fatura, vencimento ou mês de referência no formulário de lançamento ou de cartão (P24).

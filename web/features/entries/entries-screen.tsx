@@ -32,7 +32,17 @@ type SearchParams = Record<string, string | string[] | undefined>;
  * Tela de lancamentos (ADR 0005 9.6): a mesma no protegido e na demo. O drawer de "Novo lancamento" (escrita) so e montado
  * fora da demo; os botoes de escrita somem sozinhos em `readOnly` (`WriteOnly`).
  */
-export function EntriesScreen({ searchParams, mode, reader }: { searchParams: SearchParams; mode: AppMode; reader: FinanceReader }) {
+export function EntriesScreen({
+  searchParams,
+  mode,
+  reader,
+  canEditExpenses = false,
+}: {
+  searchParams: SearchParams;
+  mode: AppMode;
+  reader: FinanceReader;
+  canEditExpenses?: boolean;
+}) {
   const state = parseEntriesSearchParams(searchParams);
   const currentMonth = currentYearMonthSP();
 
@@ -51,7 +61,7 @@ export function EntriesScreen({ searchParams, mode, reader }: { searchParams: Se
             <BlockErrorBoundary key={state.tab} message={TAB_ERRORS[state.tab]}>
               {/* Primeira visita a outra aba: skeleton so do painel (key por aba); mes/filtro/pagina mantem o conteudo ate chegar o novo */}
               <Suspense key={state.tab} fallback={state.tab === "invoices" ? <InvoicesPanelSkeleton /> : <ListPanelSkeleton />}>
-                {state.tab === "expenses" ? <ExpensesPanel state={state} reader={reader} mode={mode} /> : state.tab === "invoices" ? <InvoicesPanel state={state} reader={reader} mode={mode} /> : <IncomePanel state={state} reader={reader} mode={mode} />}
+                {state.tab === "expenses" ? <ExpensesPanel state={state} reader={reader} mode={mode} canEditExpenses={canEditExpenses} /> : state.tab === "invoices" ? <InvoicesPanel state={state} reader={reader} mode={mode} /> : <IncomePanel state={state} reader={reader} mode={mode} />}
               </Suspense>
             </BlockErrorBoundary>
           </UpdatingRegion>

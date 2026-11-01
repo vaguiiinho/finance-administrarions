@@ -47,6 +47,7 @@ const ADMIN_ROUTES = [
   'POST /api/admin/users/:id/deactivate',
   'POST /api/admin/users/:id/reactivate',
   'POST /api/admin/users/:id/password-reset',
+  'PUT /api/entries/:id',
 ].sort();
 const PROTECTED_FINANCE = [
   'POST /api/entries',
@@ -55,6 +56,7 @@ const PROTECTED_FINANCE = [
   'GET /api/entries/initial-month',
   'POST /api/entries/pay',
   'POST /api/entries/:id/pay',
+  'PUT /api/entries/:id',
   'GET /api/categories',
   'POST /api/cards',
   'GET /api/cards',

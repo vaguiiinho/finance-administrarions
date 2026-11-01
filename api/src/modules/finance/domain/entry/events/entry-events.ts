@@ -33,4 +33,22 @@ export class EntryPaid implements DomainEvent {
   ) {}
 }
 
-export type EntryDomainEvent = EntryCreated | EntryPaid;
+export interface EntryEditData {
+  description: string;
+  category: string;
+  date: string;
+  amount: string;
+  referenceMonth: string;
+}
+
+export class EntryUpdated implements DomainEvent {
+  constructor(
+    readonly entryId: string,
+    readonly ownerId: string,
+    readonly before: EntryEditData,
+    readonly after: EntryEditData,
+    readonly occurredAt: Date,
+  ) {}
+}
+
+export type EntryDomainEvent = EntryCreated | EntryPaid | EntryUpdated;

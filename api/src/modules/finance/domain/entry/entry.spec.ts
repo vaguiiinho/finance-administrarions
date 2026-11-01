@@ -194,6 +194,57 @@ describe('Entry.markAsPaid (CA24, CA25, CA27, CA28)', () => {
     expect(entry.toSnapshot().createdAt).toEqual(NOW);
   });
 
+  describe('Entry.updateExpense', () => {
+    const changes = (over: Partial<Parameters<typeof rawEntry>[0]> = {}) =>
+      NewEntryInput.parse(rawEntry({ date: '2026-10-10', ...over, paymentMethod: 'PIX', cardId: null, paid: undefined }));
+
+    it('atualiza campos permitidos de PIX, preservando status e paidAt e recalculando o mês', () => {
+      const entry = pixExpense(1, { paid: false, date: '2026-10-10' });
+      const original = entry.toSnapshot();
+      entry.updateExpense(changes({ description: '  Feira  ', category: 'Mercado', date: '2026-11-02', amount: '45.90' }), null, LATER);
+      const updated = entry.toSnapshot();
+
+      expect(updated.description.value).toBe('Feira');
+      expect(updated.category.value).toBe('Mercado');
+      expect(updated.date.toString()).toBe('2026-11-02');
+      expect(updated.amount.toString()).toBe('45.90');
+      expect(updated.referenceMonth.toString()).toBe('2026-11');
+      expect(updated.status).toBe(original.status);
+      expect(updated.paidAt).toBe(original.paidAt);
+      expect(updated.updatedAt).toEqual(LATER);
+    });
+
+    it('recalcula a fatura de cartão pendente somente quando a data muda', () => {
+      const card = newCard(1, { closingDay: 25, dueDay: 5 });
+      const entry = cardExpense(1, card, { date: '2026-10-10' });
+      const originalInvoice = entry.invoiceDates;
+
+      entry.updateExpense(changes({ description: 'Compra corrigida', category: 'Mercado', amount: '99.90' }), null, LATER);
+      expect(entry.invoiceDates).toBe(originalInvoice);
+      expect(entry.referenceMonth.toString()).toBe('2026-11');
+
+      entry.updateExpense(changes({ date: '2026-10-26' }), card.billingInfo(), LATER);
+      expect(entry.invoiceDates?.closingDate.toString()).toBe('2026-11-25');
+      expect(entry.invoiceDates?.dueDate.toString()).toBe('2026-12-05');
+      expect(entry.referenceMonth.toString()).toBe('2026-12');
+    });
+
+    it('não permite alterar a data de cartão já pago, mas mantém os demais campos editáveis', () => {
+      const card = newCard(1);
+      const entry = cardExpense(1, card);
+      entry.markAsPaid(LATER);
+      const paidAt = entry.toSnapshot().paidAt;
+
+      const error = thrown(() => entry.updateExpense(changes({ date: '2026-10-26' }), card.billingInfo(), LATER));
+      expect(error).toMatchObject({ code: 'PAID_CARD_EXPENSE_DATE_LOCKED', kind: 'business_rule' });
+
+      entry.updateExpense(changes({ description: 'Descrição corrigida', amount: '20.00' }), null, LATER);
+      expect(entry.status).toBe('PAID');
+      expect(entry.toSnapshot().paidAt).toEqual(paidAt);
+      expect(entry.toSnapshot().description.value).toBe('Descrição corrigida');
+    });
+  });
+
   it('CA25: ja PAID e no-op (false), sem mudar paidAt/updatedAt nem emitir evento', () => {
     const entry = cardExpense(1, newCard(1));
     entry.markAsPaid(LATER);
@@ -224,11 +275,11 @@ describe('Entry.markAsPaid (CA24, CA25, CA27, CA28)', () => {
     expect(entry.toSnapshot()).toEqual(before);
   });
 
-  it('CA28: nao existe operacao que volte a PENDING ou altere datas/referencia', () => {
+  it('CA28: edição não cria operação para desfazer pagamento ou reverter status', () => {
     const names = Object.getOwnPropertyNames(Entry.prototype).filter((n) => n !== 'constructor');
-    const forbidden = /(unpay|revert|reopen|undo|refund|cancel|setstatus|markaspending|settle.*back|setreference|setdates|changereference|recalculate|updateinvoice|setcard|update$|edit)/i;
+    const forbidden = /(unpay|revert|reopen|undo|refund|cancel|setstatus|markaspending|settle.*back)/i;
     expect(names.filter((n) => forbidden.test(n))).toEqual([]);
-    expect(names).toEqual(expect.arrayContaining(['markAsPaid', 'toSnapshot', 'isIncome']));
+    expect(names).toEqual(expect.arrayContaining(['markAsPaid', 'updateExpense', 'toSnapshot', 'isIncome']));
   });
 });
 

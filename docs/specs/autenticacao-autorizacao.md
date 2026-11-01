@@ -23,7 +23,7 @@ Hoje a aplicação é monousuário e não tem autenticação (`docs/api/finance.
   - faturas: listar, ver despesas, pagar;
   - categorias: só listagem. São derivadas dos lançamentos e não existe tabela nem CRUD de categoria;
   - resumo e dashboard.
-  - **Não existe** edição nem exclusão de lançamento, nem exclusão de cartão. Categoria como entidade, inativação de cartão e cancelamento de lançamento ficam para a Feature B (`docs/specs/categorias-inativacao.md`).
+  - A edição administrativa de despesas foi incluída posteriormente (ver `docs/api/finance.md`); a API continua isolando os dados pelo proprietário autenticado. Exclusão de lançamento e de cartão não existe. Categoria como entidade, inativação de cartão e cancelamento de lançamento ficam para a Feature B (`docs/specs/categorias-inativacao.md`).
 - **web** (`web/app/(app)/`): telas `/entries`, `/dashboard` e `/cards` dentro do grupo `(app)`, e `/` redireciona para `/entries`. O navegador nunca chama a API. Leituras são feitas por RSC e mutações por Server Actions (`entries/actions.ts`, `cards/actions.ts`) via `web/lib/api/http.ts`, que roda só no servidor (`API_URL`), ou seja, um BFF. A navbar fica em `web/components/app-header.tsx`: marca, `MainNav` e `ThemeToggle`.
 - **Deploy:** o workflow (`.github/workflows/deploy.yml`) e o `web/Dockerfile` ainda injetam `NEXT_PUBLIC_API_URL` no web, o que sugere uma API acessível pelo navegador e contradiz o BFF (ADR 0001 §9.2, ADR 0005 D11).
 
@@ -522,7 +522,7 @@ O pedido, já com as decisões do usuário:
 
 ## 6. Fora de escopo
 
-- **Feature B (`docs/specs/categorias-inativacao.md`):** categoria como entidade (criar, renomear, inativar, reativar, separada por tipo), inativação e reativação de cartão, e cancelamento de lançamento. Edição e exclusão de lançamento e exclusão de cartão continuam fora.
+- **Feature B (`docs/specs/categorias-inativacao.md`):** categoria como entidade (criar, renomear, inativar, reativar, separada por tipo), inativação e reativação de cartão, e cancelamento de lançamento. Exclusão de lançamento e exclusão de cartão continuam fora.
 - Cadastro público, convite por e-mail ou link e qualquer forma de autocadastro.
 - Recuperação de senha pelo próprio usuário (por e-mail ou similar). A única recuperação é a redefinição feita pelo administrador.
 - Exclusão de usuário (só inativação) e exclusão ou transferência dos dados de um usuário.

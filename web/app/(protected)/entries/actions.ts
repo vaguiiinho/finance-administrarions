@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { toResult } from "@/lib/api/action-result";
-import { createEntryRequest, listInvoiceEntries, payEntriesRequest, payEntryRequest, payInvoiceRequest } from "@/lib/api/endpoints";
+import { createEntryRequest, listInvoiceEntries, payEntriesRequest, payEntryRequest, payInvoiceRequest, updateExpenseRequest } from "@/lib/api/endpoints";
 import { invalidInput, isUuid, isYearMonthString } from "@/lib/api/validate";
-import type { ActionResult, CreateEntryPayload, EntryDto, PayEntriesResult, PayInvoiceResult } from "@/lib/api/types";
+import type { ActionResult, CreateEntryPayload, EntryDto, PayEntriesResult, PayInvoiceResult, UpdateExpensePayload } from "@/lib/api/types";
 
 /** Uma mutacao re-renderiza resumo, subtotal, faturas e listas juntos (R16, CA51, CA70, CA72). */
 function revalidateEntries() {
@@ -14,6 +14,13 @@ function revalidateEntries() {
 
 export async function createEntry(payload: CreateEntryPayload): Promise<ActionResult<EntryDto>> {
   const result = await toResult(() => createEntryRequest(payload));
+  if (result.ok) revalidateEntries();
+  return result;
+}
+
+export async function updateExpenseEntry(id: string, payload: UpdateExpensePayload): Promise<ActionResult<EntryDto>> {
+  if (!isUuid(id)) return invalidInput("id");
+  const result = await toResult(() => updateExpenseRequest(id, payload));
   if (result.ok) revalidateEntries();
   return result;
 }

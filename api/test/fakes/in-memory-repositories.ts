@@ -50,7 +50,7 @@ export class InMemoryCardRepository implements CardRepository {
 
 export class InMemoryEntryRepository implements EntryRepository {
   store = new Map<string, Entry>();
-  calls = { insert: 0, findByIdsForUpdate: 0, findPendingByInvoiceForUpdate: 0, saveAll: 0 };
+  calls = { insert: 0, findByIdsForUpdate: 0, findPendingByInvoiceForUpdate: 0, update: 0, saveAll: 0 };
   /** Simula falha no meio da gravacao: grava `failAfter` entradas e lanca (CA34, CA42). */
   failAfter: number | null = null;
   /** Quando true, `findByIdsForUpdate`/`findPending...` exigem estar dentro de uow.run (contrato "exige transacao"). */
@@ -99,6 +99,11 @@ export class InMemoryEntryRepository implements EntryRepository {
       this.store.set(entry.id.value, copyEntry(entry));
       written++;
     }
+  }
+  async update(entry: Entry): Promise<void> {
+    this.calls.update++;
+    this.assertTx();
+    this.store.set(entry.id.value, copyEntry(entry));
   }
   async deleteAllOf(ownerId: OwnerId): Promise<void> {
     for (const [id, e] of [...this.store]) if (e.ownerId.equals(ownerId)) this.store.delete(id);
