@@ -51,4 +51,16 @@ export class EntryUpdated implements DomainEvent {
   ) {}
 }
 
-export type EntryDomainEvent = EntryCreated | EntryPaid | EntryUpdated;
+export class EntryDeleted implements DomainEvent {
+  constructor(
+    readonly entryId: string,
+    readonly ownerId: string,
+    readonly data: EntryEditData,
+    readonly paymentMethod: PaymentMethod,
+    readonly status: EntryStatus,
+    readonly paidAt: Date | null,
+    readonly occurredAt: Date,
+  ) {}
+}
+
+export type EntryDomainEvent = EntryCreated | EntryPaid | EntryUpdated | EntryDeleted;

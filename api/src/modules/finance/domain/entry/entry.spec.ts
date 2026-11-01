@@ -182,6 +182,22 @@ describe('Entry - eventos', () => {
     expect(eventNames(events)).toEqual(['EntryPaid']);
     expect(events[0]).toMatchObject({ paidAt: LATER });
   });
+
+  it('deleteExpense emite EntryDeleted com os dados da despesa removida', () => {
+    const entry = pixExpense(1, { paid: false });
+    pullEvents(entry);
+    entry.deleteExpense(LATER);
+    const events = pullEvents(entry);
+    expect(eventNames(events)).toEqual(['EntryDeleted']);
+    expect(events[0]).toMatchObject({
+      entryId: entry.id.value,
+      ownerId: DEFAULT_OWNER.value,
+      data: { description: 'Aluguel', amount: '1500.00' },
+      status: 'PENDING',
+      occurredAt: LATER,
+    });
+    expect(pullEvents(entry)).toEqual([]);
+  });
 });
 
 describe('Entry.markAsPaid (CA24, CA25, CA27, CA28)', () => {

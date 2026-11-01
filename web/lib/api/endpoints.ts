@@ -1,6 +1,6 @@
 import "server-only";
 import type { InitialMonthDecision } from "@/lib/filters/initial-month";
-import { apiGet, apiPost, apiPut, request } from "./http";
+import { apiDelete, apiGet, apiPost, apiPut, request } from "./http";
 import type {
   CardDto,
   CardPayload,
@@ -40,6 +40,7 @@ export const listExpenses = (query: Record<string, string>) => apiGet<ExpensesPa
 export const listIncomes = (query: Record<string, string>) => apiGet<IncomesPage>("/entries/incomes", query);
 export const createEntryRequest = (payload: CreateEntryPayload) => apiPost<EntryDto>("/entries", payload);
 export const updateExpenseRequest = (id: string, payload: UpdateExpensePayload) => apiPut<EntryDto>(`/entries/${encodeURIComponent(id)}`, payload);
+export const deleteExpenseRequest = (id: string) => apiDelete<void>(`/entries/${encodeURIComponent(id)}`);
 export const payEntryRequest = (id: string) => apiPost<EntryDto>(`/entries/${encodeURIComponent(id)}/pay`);
 export const payEntriesRequest = (ids: string[]) => apiPost<PayEntriesResult>("/entries/pay", { ids });
 export const getMonthlySeries = (month: string) => apiGet<MonthlySeries>("/dashboard/monthly-series", { month });

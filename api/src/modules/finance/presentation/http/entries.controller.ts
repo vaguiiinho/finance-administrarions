@@ -1,9 +1,10 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Put, Query } from '@nestjs/common';
 import { RequireRole } from '@shared/presentation/auth/access-metadata.js';
 import { CurrentOwnerId } from '@shared/presentation/auth/current-principal.decorators.js';
 import { ZodValidationPipe } from '@shared/presentation/pipes/zod-validation.pipe.js';
 import { CreateEntry } from '../../application/use-cases/entries/create-entry.js';
 import { UpdateExpense } from '../../application/use-cases/entries/update-expense.js';
+import { DeleteExpense } from '../../application/use-cases/entries/delete-expense.js';
 import { MarkEntryAsPaid } from '../../application/use-cases/entries/mark-entry-as-paid.js';
 import { PayEntriesInBatch } from '../../application/use-cases/entries/pay-entries-in-batch.js';
 import { FinanceReadHandlers } from './finance-read-handlers.js';
@@ -29,6 +30,7 @@ export class EntriesController {
   constructor(
     @Inject(CreateEntry) private readonly createEntry: CreateEntry,
     @Inject(UpdateExpense) private readonly updateExpense: UpdateExpense,
+    @Inject(DeleteExpense) private readonly deleteExpense: DeleteExpense,
     @Inject(MarkEntryAsPaid) private readonly markEntryAsPaid: MarkEntryAsPaid,
     @Inject(PayEntriesInBatch) private readonly payEntriesInBatch: PayEntriesInBatch,
     @Inject(FinanceReadHandlers) private readonly reads: FinanceReadHandlers,
@@ -49,6 +51,13 @@ export class EntriesController {
     @Body(new ZodValidationPipe(updateExpenseBodySchema)) body: UpdateExpenseBody,
   ) {
     return presentEntry(await this.updateExpense.execute({ ownerId, id, ...body }));
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @RequireRole('ADMIN')
+  async delete(@CurrentOwnerId() ownerId: string, @Param('id') id: string): Promise<void> {
+    await this.deleteExpense.execute({ ownerId, id });
   }
 
   // Declarada antes das rotas com parâmetro de caminho; sem query (UNKNOWN_FIELD).

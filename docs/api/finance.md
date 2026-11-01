@@ -19,6 +19,7 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 |---|---|---|---|
 | POST | `/api/entries` | Cria lançamento (receita ou despesa) | 201 |
 | PUT | `/api/entries/:id` | Edita uma despesa (somente ADMIN) | 200 |
+| DELETE | `/api/entries/:id` | Exclui definitivamente uma despesa (somente ADMIN) | 204 |
 | GET | `/api/entries/initial-month` | Mês inicial sugerido para a listagem de lançamentos (sem query) | 200 |
 | GET | `/api/entries/expenses` | Despesas de um mês de referência, com filtros, paginação e subtotal | 200 |
 | GET | `/api/entries/incomes` | Receitas de um mês de referência, com filtro de categoria, paginação e subtotal | 200 |
@@ -151,6 +152,18 @@ PUT /api/entries/0192f3a4-6b1c-7d2e-8f90-a1b2c3d4e5f6
 ```
 
 Erros: 400 `VALIDATION_ERROR`; 403 `FORBIDDEN` para usuário sem nível ADMIN; 404 `ENTRY_NOT_FOUND`; 422 `ENTRY_NOT_EDITABLE` para receitas e `PAID_CARD_EXPENSE_DATE_LOCKED` quando se tenta mudar a data de uma compra paga no cartão.
+
+### DELETE /api/entries/:id
+
+Exige o nível `ADMIN`, mas só alcança despesas do proprietário autenticado. Remove definitivamente despesas pendentes ou pagas; receitas não podem ser excluídas por esta rota. A exclusão atualiza listas, resumos, dashboard e totais das faturas. Não há recuperação.
+
+Sem corpo. Sucesso: `204 No Content`.
+
+```http
+DELETE /api/entries/0192f3a4-6b1c-7d2e-8f90-a1b2c3d4e5f6
+```
+
+Erros: 400 `VALIDATION_ERROR`; 403 `FORBIDDEN` para usuário sem nível ADMIN; 404 `ENTRY_NOT_FOUND` para id inexistente ou de outro proprietário; 422 `ENTRY_NOT_DELETABLE` para receitas.
 
 ### GET /api/entries/initial-month
 
@@ -339,13 +352,14 @@ Formato único: `{ "code": string, "message": string, "details": unknown }`. `me
 | 400 | `VALIDATION_ERROR` | Corpo, query, path param ou regra de entrada inválidos | `{ fields: [...] }` |
 | 400 | `MALFORMED_JSON` | JSON do corpo ilegível | `null` |
 | 404 | `ROUTE_NOT_FOUND` | Rota inexistente | `{ method, path }` |
-| 404 | `ENTRY_NOT_FOUND` | Lançamento inexistente (`POST /entries/:id/pay`) | `{ id }` |
+| 404 | `ENTRY_NOT_FOUND` | Lançamento inexistente em pagamento, edição ou exclusão | `{ id }` |
 | 404 | `ENTRIES_NOT_FOUND` | Algum id do lote inexistente | `{ missingIds }` |
 | 404 | `CARD_NOT_FOUND` | Cartão inexistente (criar lançamento, PUT cartão, faturas) | `{ id }` |
 | 409 | `CARD_NAME_TAKEN` | Nome de cartão já usado | `{ fields: [{ field: "name", code: "NAME_TAKEN", ... }] }` |
 | 413 | `PAYLOAD_TOO_LARGE` | Corpo grande demais | `null` |
 | 422 | `ENTRY_NOT_PAYABLE` | Pagar receita individualmente | `{ incomeIds: [id] }` |
 | 422 | `ENTRIES_NOT_PAYABLE` | Lote contém receita | `{ incomeIds }` |
+| 422 | `ENTRY_NOT_DELETABLE` | Tentar excluir receita | `{ id }` |
 | 500 | `INTERNAL_ERROR` | Erro não previsto (detalhe só no log) | `null` |
 
 Códigos de campo (`details.fields[].code`): `REQUIRED`, `INVALID_TYPE`, `UNKNOWN_FIELD`, `INVALID_FORMAT`, `INVALID_VALUE`, `INVALID_DATE`, `OUT_OF_RANGE`, `TOO_LONG`, `TOO_MANY_DECIMALS`, `MUST_BE_POSITIVE`, `TOO_LARGE`, `EMPTY`, `TOO_MANY_ITEMS`, `NOT_INTEGER`, `NOT_ALLOWED_FOR_INCOME`, `NOT_ALLOWED_FOR_PIX`, `NOT_ALLOWED_FOR_CARD`, `NAME_TAKEN`.

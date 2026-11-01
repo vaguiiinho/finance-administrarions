@@ -13,5 +13,5 @@ export default async function EntriesPage(props: PageProps<"/entries">) {
   // Sem `month` na URL resolve o mes inicial e redireciona (replace); com `month` nao faz nada (ADR 0007 7.2)
   await redirectToInitialMonth(searchParams, PROTECTED_MODE, reader);
   const user = await getCurrentUser();
-  return <EntriesScreen searchParams={searchParams} mode={PROTECTED_MODE} reader={reader} canEditExpenses={user?.role === "ADMIN"} />;
+  return <EntriesScreen searchParams={searchParams} mode={PROTECTED_MODE} reader={reader} canManageExpenses={user?.role === "ADMIN"} />;
 }

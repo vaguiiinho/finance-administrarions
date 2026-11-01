@@ -11,6 +11,7 @@ import { CreateCard } from '@finance/application/use-cases/cards/create-card.js'
 import { UpdateCard } from '@finance/application/use-cases/cards/update-card.js';
 import { CreateEntry } from '@finance/application/use-cases/entries/create-entry.js';
 import { UpdateExpense } from '@finance/application/use-cases/entries/update-expense.js';
+import { DeleteExpense } from '@finance/application/use-cases/entries/delete-expense.js';
 import { MarkEntryAsPaid } from '@finance/application/use-cases/entries/mark-entry-as-paid.js';
 import { PayEntriesInBatch } from '@finance/application/use-cases/entries/pay-entries-in-batch.js';
 import { PayInvoice } from '@finance/application/use-cases/invoices/pay-invoice.js';
@@ -49,6 +50,7 @@ export function buildHarness(now: Date = NOW) {
     updateCard: asDefaultOwner(new UpdateCard(cards, clock, publisher)),
     createEntry: asDefaultOwner(new CreateEntry(entries, cards, catalog, ids, clock, publisher)),
     updateExpense: asDefaultOwner(new UpdateExpense(uow, catalog, entryReadModel, clock, publisher)),
+    deleteExpense: asDefaultOwner(new DeleteExpense(uow, clock, publisher)),
     markEntryAsPaid: asDefaultOwner(new MarkEntryAsPaid(uow, entryReadModel, clock, publisher)),
     payBatch: asDefaultOwner(new PayEntriesInBatch(uow, paymentService, clock, publisher)),
     payInvoice: asDefaultOwner(new PayInvoice(uow, paymentService, clock, publisher)),

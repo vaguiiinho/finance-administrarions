@@ -49,12 +49,12 @@ export async function ExpensesPanel({
   state,
   reader = createFinanceReader("protected"),
   mode = PROTECTED_MODE,
-  canEditExpenses = false,
+  canManageExpenses = false,
 }: {
   state: EntriesState;
   reader?: FinanceReader;
   mode?: AppMode;
-  canEditExpenses?: boolean;
+  canManageExpenses?: boolean;
 }) {
   const { basePath } = mode;
   const pagePromise = reader.listExpenses(toApiQuery(state));
@@ -116,7 +116,7 @@ export async function ExpensesPanel({
           items={items}
           panelTitleId={PANEL_TITLE_ID}
           statusFilter={state.expenses.status}
-          canEditExpenses={canEditExpenses}
+          canManageExpenses={canManageExpenses}
           categories={categories.ok ? categories.data.items : []}
         />
         <Pagination

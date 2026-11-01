@@ -8,8 +8,8 @@ import { ReferenceMonth } from '../billing/reference-month.js';
 import type { CardBillingInfo } from '../card/card-billing-info.js';
 import type { CardId } from '../card/value-objects/card-id.js';
 import type { OwnerId } from '../owner/owner-id.js';
-import { IncomeNotPayableError, PaidCardExpenseDateLockedError } from './errors/entry-errors.js';
-import { EntryCreated, EntryPaid, EntryUpdated, type EntryDomainEvent, type EntryEditData } from './events/entry-events.js';
+import { EntryNotDeletableError, IncomeNotPayableError, PaidCardExpenseDateLockedError } from './errors/entry-errors.js';
+import { EntryCreated, EntryDeleted, EntryPaid, EntryUpdated, type EntryDomainEvent, type EntryEditData } from './events/entry-events.js';
 import type { NewEntryInput } from './new-entry-input.js';
 import type { Category } from './value-objects/category.js';
 import type { Description } from './value-objects/description.js';
@@ -198,6 +198,21 @@ export class Entry extends AggregateRoot<EntryDomainEvent> {
     assertConsistent(this.state);
     this.record(new EntryUpdated(this.state.id.value, this.state.ownerId.value, before, entryEditData(this.state), now));
     return true;
+  }
+
+  deleteExpense(at: Date): void {
+    if (this.state.type !== 'EXPENSE') throw new EntryNotDeletableError(this.state.id.value);
+    this.record(
+      new EntryDeleted(
+        this.state.id.value,
+        this.state.ownerId.value,
+        entryEditData(this.state),
+        this.state.paymentMethod,
+        this.state.status,
+        this.state.paidAt,
+        at,
+      ),
+    );
   }
 
   isIncome(): boolean {

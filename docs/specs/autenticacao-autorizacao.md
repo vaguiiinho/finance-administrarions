@@ -522,7 +522,7 @@ O pedido, já com as decisões do usuário:
 
 ## 6. Fora de escopo
 
-- **Feature B (`docs/specs/categorias-inativacao.md`):** categoria como entidade (criar, renomear, inativar, reativar, separada por tipo), inativação e reativação de cartão, e cancelamento de lançamento. Exclusão de lançamento e exclusão de cartão continuam fora.
+- **Feature B (`docs/specs/categorias-inativacao.md`):** categoria como entidade (criar, renomear, inativar, reativar, separada por tipo), inativação e reativação de cartão, e cancelamento de lançamento. Exclusão de receitas e de cartões continua fora.
 - Cadastro público, convite por e-mail ou link e qualquer forma de autocadastro.
 - Recuperação de senha pelo próprio usuário (por e-mail ou similar). A única recuperação é a redefinição feita pelo administrador.
 - Exclusão de usuário (só inativação) e exclusão ou transferência dos dados de um usuário.

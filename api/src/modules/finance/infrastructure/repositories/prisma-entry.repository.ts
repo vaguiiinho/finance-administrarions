@@ -51,6 +51,16 @@ export class PrismaEntryRepository implements EntryRepository {
     }
   }
 
+  async delete(entry: Entry): Promise<void> {
+    const snapshot = entry.toSnapshot();
+    const { count } = await this.prisma.entry.deleteMany({
+      where: { id: snapshot.id.value, userId: snapshot.ownerId.value, type: 'EXPENSE' },
+    });
+    if (count !== 1) {
+      throw new InvariantViolationError('delete: lançamento não removido (contrato de lock violado).');
+    }
+  }
+
   async saveAll(entries: readonly Entry[]): Promise<void> {
     if (entries.length === 0) return;
     const snapshots = entries.map((entry) => entry.toSnapshot());

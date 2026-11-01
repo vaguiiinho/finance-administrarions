@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { toResult } from "@/lib/api/action-result";
-import { createEntryRequest, listInvoiceEntries, payEntriesRequest, payEntryRequest, payInvoiceRequest, updateExpenseRequest } from "@/lib/api/endpoints";
+import { createEntryRequest, deleteExpenseRequest, listInvoiceEntries, payEntriesRequest, payEntryRequest, payInvoiceRequest, updateExpenseRequest } from "@/lib/api/endpoints";
 import { invalidInput, isUuid, isYearMonthString } from "@/lib/api/validate";
 import type { ActionResult, CreateEntryPayload, EntryDto, PayEntriesResult, PayInvoiceResult, UpdateExpensePayload } from "@/lib/api/types";
 
@@ -22,6 +22,13 @@ export async function updateExpenseEntry(id: string, payload: UpdateExpensePaylo
   if (!isUuid(id)) return invalidInput("id");
   const result = await toResult(() => updateExpenseRequest(id, payload));
   if (result.ok) revalidateEntries();
+  return result;
+}
+
+export async function deleteExpenseEntry(id: string): Promise<ActionResult<void>> {
+  if (!isUuid(id)) return invalidInput("id");
+  const result = await toResult(() => deleteExpenseRequest(id));
+  if (result.ok || result.error.status === 404) revalidateEntries();
   return result;
 }
 

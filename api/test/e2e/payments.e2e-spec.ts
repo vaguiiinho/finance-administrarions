@@ -93,13 +93,14 @@ describe('E4 POST /api/entries/:id/pay', () => {
     expect((await rowOf(income.id)).status).toBe('RECEIVED');
   });
 
-  it('CA28: PATCH e DELETE continuam indisponiveis e PUT exige ADMIN', async () => {
+  it('CA28: PATCH continua indisponivel e PUT/DELETE exigem ADMIN', async () => {
     const exp = await create({ paid: undefined });
-    for (const method of ['patch', 'delete'] as const) {
-      const res = await e.http()[method](`/api/entries/${exp.id}`);
-      expect(res.status).toBe(404);
-      expect(res.body.code).toBe('ROUTE_NOT_FOUND');
-    }
+    const patch = await e.http().patch(`/api/entries/${exp.id}`);
+    expect(patch.status).toBe(404);
+    expect(patch.body.code).toBe('ROUTE_NOT_FOUND');
+    const deleteDenied = await e.http().delete(`/api/entries/${exp.id}`);
+    expect(deleteDenied.status).toBe(403);
+    expect(deleteDenied.body.code).toBe('FORBIDDEN');
     expect((await e.http().post(`/api/entries/${exp.id}/unpay`)).status).toBe(404);
     expect((await e.http().put(`/api/entries/${exp.id}`).send({})).status).toBe(403);
     expect((await rowOf(exp.id)).status).toBe('PAID');
@@ -197,6 +198,43 @@ describe('PUT /api/entries/:id (admin)', () => {
     expect(missing.body.code).toBe('ENTRY_NOT_FOUND');
     expect(notExpense.status).toBe(422);
     expect(notExpense.body.code).toBe('ENTRY_NOT_EDITABLE');
+  });
+});
+
+describe('DELETE /api/entries/:id (admin)', () => {
+  it('remove uma despesa paga e atualiza os agregados', async () => {
+    const exp = await create({ paid: undefined });
+    await makeAdmin();
+
+    const res = await e.http().delete(`/api/entries/${exp.id}`);
+
+    expect(res.status).toBe(204);
+    expect(res.text).toBe('');
+    expect(await query(e.pool, 'SELECT id FROM entries WHERE id = $1::uuid', [exp.id])).toHaveLength(0);
+    const list = await e.http().get('/api/entries/expenses?month=2026-10');
+    expect(list.body.items).toEqual([]);
+    expect((await e.http().get('/api/summary?month=2026-10')).body.totals.expenses.total).toBe('0.00');
+  });
+
+  it('id inexistente -> 404, receita -> 422 e permanecem sem alteracao', async () => {
+    const income = await create({ type: 'INCOME', paid: undefined });
+    await makeAdmin();
+
+    const missing = await e.http().delete(`/api/entries/${MISSING}`);
+    const notExpense = await e.http().delete(`/api/entries/${income.id}`);
+
+    expect(missing.status).toBe(404);
+    expect(missing.body.code).toBe('ENTRY_NOT_FOUND');
+    expect(notExpense.status).toBe(422);
+    expect(notExpense.body.code).toBe('ENTRY_NOT_DELETABLE');
+    expect(await query(e.pool, 'SELECT id FROM entries WHERE id = $1::uuid', [income.id])).toHaveLength(1);
+  });
+
+  it('id malformado -> 400', async () => {
+    await makeAdmin();
+    const res = await e.http().delete('/api/entries/invalid');
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_ERROR');
   });
 });
 

@@ -8,10 +8,12 @@ import { ExpensesList } from "./expenses-list";
 const payEntries = vi.fn();
 const payEntry = vi.fn();
 const updateExpenseEntry = vi.fn();
+const deleteExpenseEntry = vi.fn();
 vi.mock("@/app/(protected)/entries/actions", () => ({
   payEntries: (...args: unknown[]) => payEntries(...args),
   payEntry: (...args: unknown[]) => payEntry(...args),
   updateExpenseEntry: (...args: unknown[]) => updateExpenseEntry(...args),
+  deleteExpenseEntry: (...args: unknown[]) => deleteExpenseEntry(...args),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/entries" }));
 vi.mock("next/link", () => ({ default: ({ children, href, ...rest }: { children: React.ReactNode; href: string }) => <a href={href} {...rest}>{children}</a> }));
@@ -51,13 +53,13 @@ const rowPayName = (description: string) => new RegExp(`^Marcar como pago[\\s\\S
 const rowCheckbox = (name: RegExp) => table().getByRole("checkbox", { name, hidden: true });
 
 // `statusFilter`: PROP PROPOSTA PELO TESTER (ADR 0007 6.2 / design 6.2): o filtro de status vigente da aba, para decidir o foco.
-const setup = (items = ITEMS, statusFilter?: "ALL" | "PENDING" | "PAID", canEditExpenses = false) =>
+const setup = (items = ITEMS, statusFilter?: "ALL" | "PENDING" | "PAID", canManageExpenses = false) =>
   render(
     <AllProviders>
       <h2 id="panel-title" tabIndex={-1}>
         Despesas
       </h2>
-      <ExpensesList items={items} panelTitleId="panel-title" canEditExpenses={canEditExpenses} {...(statusFilter ? { statusFilter } : {})} />
+      <ExpensesList items={items} panelTitleId="panel-title" canManageExpenses={canManageExpenses} {...(statusFilter ? { statusFilter } : {})} />
     </AllProviders>,
   );
 
@@ -65,6 +67,7 @@ beforeEach(() => {
   payEntries.mockReset();
   payEntry.mockReset();
   updateExpenseEntry.mockReset();
+  deleteExpenseEntry.mockReset();
   router.refresh.mockClear();
 });
 
@@ -112,6 +115,41 @@ describe("ExpensesList - edição de despesas por ADMIN", () => {
     await userEvent.click(screen.getAllByRole("button", { name: "Editar despesa: Compra paga", hidden: true })[0]);
 
     expect(within(screen.getByRole("dialog", { name: "Editar despesa" })).getByLabelText(/^Data/)).toBeDisabled();
+  });
+});
+
+describe("ExpensesList - exclusão de despesas por ADMIN", () => {
+  it("não mostra a ação de exclusão sem permissão", () => {
+    setup();
+    expect(screen.queryByRole("button", { name: "Excluir despesa: Mercado", hidden: true })).not.toBeInTheDocument();
+  });
+
+  it("confirma exclusão irreversível, chama a action e atualiza a tela", async () => {
+    deleteExpenseEntry.mockResolvedValue({ ok: true, data: undefined });
+    setup(ITEMS, undefined, true);
+    await userEvent.click(screen.getAllByRole("button", { name: "Excluir despesa: Mercado", hidden: true })[0]);
+
+    const dialog = within(screen.getByRole("alertdialog"));
+    expect(dialog.getByRole("heading", { name: 'Excluir "Mercado"?' })).toBeInTheDocument();
+    expect(dialog.getByText("Esta ação não pode ser desfeita.")).toBeInTheDocument();
+    expect(dialog.getByText(/removido permanentemente dos resumos e das faturas/)).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole("button", { name: "Excluir despesa" }));
+
+    await waitFor(() => expect(deleteExpenseEntry).toHaveBeenCalledWith("e1"));
+    expect(await screen.findByText("Despesa excluída.")).toBeInTheDocument();
+    expect(router.refresh).toHaveBeenCalled();
+  });
+
+  it("mantém a confirmação aberta e apresenta o erro sem sucesso falso", async () => {
+    deleteExpenseEntry.mockResolvedValue({ ok: false, error: { status: 500, code: "INTERNAL_ERROR", message: "Erro inesperado." } });
+    setup(ITEMS, undefined, true);
+    await userEvent.click(screen.getAllByRole("button", { name: "Excluir despesa: Internet", hidden: true })[0]);
+    const dialog = within(screen.getByRole("alertdialog"));
+    await userEvent.click(dialog.getByRole("button", { name: "Excluir despesa" }));
+
+    expect(await dialog.findByRole("alert")).toHaveTextContent("Erro inesperado.");
+    expect(dialog.getByRole("heading", { name: 'Excluir "Internet"?' })).toBeInTheDocument();
+    expect(screen.queryByText("Despesa excluída.")).not.toBeInTheDocument();
   });
 });
 

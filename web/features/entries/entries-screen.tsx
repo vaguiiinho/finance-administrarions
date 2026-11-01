@@ -36,12 +36,12 @@ export function EntriesScreen({
   searchParams,
   mode,
   reader,
-  canEditExpenses = false,
+  canManageExpenses = false,
 }: {
   searchParams: SearchParams;
   mode: AppMode;
   reader: FinanceReader;
-  canEditExpenses?: boolean;
+  canManageExpenses?: boolean;
 }) {
   const state = parseEntriesSearchParams(searchParams);
   const currentMonth = currentYearMonthSP();
@@ -61,7 +61,7 @@ export function EntriesScreen({
             <BlockErrorBoundary key={state.tab} message={TAB_ERRORS[state.tab]}>
               {/* Primeira visita a outra aba: skeleton so do painel (key por aba); mes/filtro/pagina mantem o conteudo ate chegar o novo */}
               <Suspense key={state.tab} fallback={state.tab === "invoices" ? <InvoicesPanelSkeleton /> : <ListPanelSkeleton />}>
-                {state.tab === "expenses" ? <ExpensesPanel state={state} reader={reader} mode={mode} canEditExpenses={canEditExpenses} /> : state.tab === "invoices" ? <InvoicesPanel state={state} reader={reader} mode={mode} /> : <IncomePanel state={state} reader={reader} mode={mode} />}
+                {state.tab === "expenses" ? <ExpensesPanel state={state} reader={reader} mode={mode} canManageExpenses={canManageExpenses} /> : state.tab === "invoices" ? <InvoicesPanel state={state} reader={reader} mode={mode} /> : <IncomePanel state={state} reader={reader} mode={mode} />}
               </Suspense>
             </BlockErrorBoundary>
           </UpdatingRegion>

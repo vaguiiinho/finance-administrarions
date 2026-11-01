@@ -50,7 +50,7 @@ export class InMemoryCardRepository implements CardRepository {
 
 export class InMemoryEntryRepository implements EntryRepository {
   store = new Map<string, Entry>();
-  calls = { insert: 0, findByIdsForUpdate: 0, findPendingByInvoiceForUpdate: 0, update: 0, saveAll: 0 };
+  calls = { insert: 0, findByIdsForUpdate: 0, findPendingByInvoiceForUpdate: 0, update: 0, delete: 0, saveAll: 0 };
   /** Simula falha no meio da gravacao: grava `failAfter` entradas e lanca (CA34, CA42). */
   failAfter: number | null = null;
   /** Quando true, `findByIdsForUpdate`/`findPending...` exigem estar dentro de uow.run (contrato "exige transacao"). */
@@ -104,6 +104,16 @@ export class InMemoryEntryRepository implements EntryRepository {
     this.calls.update++;
     this.assertTx();
     this.store.set(entry.id.value, copyEntry(entry));
+  }
+  async delete(entry: Entry): Promise<void> {
+    this.calls.delete++;
+    this.assertTx();
+    const snapshot = entry.toSnapshot();
+    const existing = this.store.get(snapshot.id.value);
+    if (!existing || !existing.ownerId.equals(snapshot.ownerId) || existing.type !== 'EXPENSE') {
+      throw new Error('delete: lançamento não encontrado ou não é despesa.');
+    }
+    this.store.delete(snapshot.id.value);
   }
   async deleteAllOf(ownerId: OwnerId): Promise<void> {
     for (const [id, e] of [...this.store]) if (e.ownerId.equals(ownerId)) this.store.delete(id);

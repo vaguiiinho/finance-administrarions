@@ -1,9 +1,9 @@
 # ADR 0001 - Lançamentos financeiros (receitas e despesas), cartões, faturas, pagamento em lote e dashboard mensal
 
-- **Status:** Aceito (aprovado pelo usuário em 2026-10-24, rev. 3)
+- **Status:** Aceito (base aprovada pelo usuário em 2026-10-24; extensões posteriores nas revisões 4 e 5)
 - **Data:** 2026-10-24 (revisão 3)
-- **Spec:** `docs/specs/lancamentos-financeiros.md` (revisão 3)
-- **Design:** `docs/design/lancamentos-financeiros.md` (revisão 3)
+- **Spec:** `docs/specs/lancamentos-financeiros.md` (revisão 5)
+- **Design:** `docs/design/lancamentos-financeiros.md` (revisão 7)
 - **Autor:** architect
 - **Escopo:** `api/` (NestJS 12 ESM, Prisma 7 + `@prisma/adapter-pg`, PostgreSQL) e `web/` (Next.js 16 App Router, Tailwind 4)
 
@@ -15,6 +15,7 @@
 | 2 | Spec rev. 2: tipo RECEITA/DESPESA, cartões (aggregate próprio), mês de referência calculado e gravado, "Pagar fatura", novos filtros/totais/saldos com sinal, dashboard revisado, erros 422/409, tema claro/escuro. B1-B5 viraram decisões; B6/B7 adotados provisoriamente. Módulo renomeado de `entries` para `finance`. |
 | 3 | Spec rev. 3: **mês de referência no cartão = mês do vencimento da fatura**, calculado em duas etapas por função pura de domínio (`calculateInvoiceDates`) que produz `closingDate`, `dueDate` e `referenceMonth`, as três gravadas no lançamento. Formas de pagamento só `PIX` e `CARD` (remove `ACCOUNT`). Status inicial por forma: despesa PIX nasce `PAID` por padrão (campo opcional `paid`, `false` -> `PENDING`), despesa no cartão sempre `PENDING`, regras de 400 da P31. B6 e B7 resolvidas (só seletor de mês, mês obrigatório; receita futura no realizado). **B8 e B9 aprovadas pelo usuário** (PIX com data futura nasce pago; fatura exibe a maior data de fechamento e a maior de vencimento). Novos contratos: resumo do mês (`GET /api/summary`), listagens separadas de despesas e de receitas com subtotal pelos filtros da aba, faturas do mês (com `pendingCount`) e despesas de uma fatura por bloco (cartão + mês, sob demanda); resposta da criação com `referenceMonth` e `invoice.{closingDate, dueDate}`. Remove filtro por tipo, intervalo `fromMonth/toMonth`, "ver tudo" e o resumo de fatura C4. Dashboard por mês de referência reaproveita o resumo. CHECKs, índices, queries, impacto no web (abas, atalho "+ Novo cartão", URL com os nomes do design rev. 3) e plano de testes refeitos (matriz CA01-CA87). 8 tokens novos do ui-designer incluídos no tema e na matriz de contraste. |
 | 4 | B3 foi parcialmente supersedida: despesas podem ser editadas por ADMIN, sem exclusão. Campos, autorização e política de recálculo da fatura estão documentados na extensão da spec e em `docs/api/finance.md`. |
+| 5 | B3 foi novamente revista: ADMIN pode excluir definitivamente despesas próprias via `DELETE /api/entries/:id`; receitas e registros de outros proprietários continuam protegidos. A confirmação, o evento de domínio e os erros estão documentados na extensão da spec e em `docs/api/finance.md`. |
 
 ---
 
@@ -22,7 +23,7 @@
 
 ### 0.1 Decididas pelo usuário (spec, seção 3)
 
-B1 (categoria texto livre, case-insensitive), B2 (RECEITA/DESPESA, regras de pagamento, saldos realizado/previsto), B3 (decisão original de não editar/excluir, parcialmente supersedida: edição administrativa permitida, exclusão continua fora), B4 (cartões, mês de referência gravado, pagar fatura), B5 (dashboard), Design D1-D4, D5 (tema claro/escuro), **B6** (só seletor de mês, mês obrigatório, sem intervalo), **B7** (receita com data futura conta no saldo realizado), **B8** (despesa PIX com data futura nasce PAGA), **B9** (fatura exibe a maior data de fechamento e a maior de vencimento entre suas despesas), **B10** (mês de referência no cartão = mês do vencimento), **B11** (PIX e cartão; PIX pago por padrão; cartão pendente), **B12** (tela com abas), **B13** (atalho "+ Novo cartão"), **B14** (dashboard por mês de referência), DR1-DR8. Premissas P01-P36 adotadas integralmente. **Não há premissas de negócio pendentes nesta revisão.**
+B1 (categoria texto livre, case-insensitive), B2 (RECEITA/DESPESA, regras de pagamento, saldos realizado/previsto), B3 (decisão original de não editar/excluir, parcialmente supersedida: edição e exclusão definitiva de despesas permitidas a ADMIN; exclusão de receitas continua fora), B4 (cartões, mês de referência gravado, pagar fatura), B5 (dashboard), Design D1-D4, D5 (tema claro/escuro), **B6** (só seletor de mês, mês obrigatório, sem intervalo), **B7** (receita com data futura conta no saldo realizado), **B8** (despesa PIX com data futura nasce PAGA), **B9** (fatura exibe a maior data de fechamento e a maior de vencimento entre suas despesas), **B10** (mês de referência no cartão = mês do vencimento), **B11** (PIX e cartão; PIX pago por padrão; cartão pendente), **B12** (tela com abas), **B13** (atalho "+ Novo cartão"), **B14** (dashboard por mês de referência), DR1-DR8. Premissas P01-P36 adotadas integralmente. **Não há premissas de negócio pendentes nesta revisão.**
 
 ### 0.2 Como B8 e B9 entram no desenho
 
@@ -703,6 +704,7 @@ Prefixo `/api`. JSON. Instantes ISO-8601 UTC com `Z` e milissegundos; datas civi
 | E3 | `GET /api/entries/incomes` | query `month` (obrigatório), `category?`, `page?`, `pageSize?` | `200 { month, items: EntryDto[], pagination: PaginationDto, subtotal: { total } }` | `400` |
 | E4 | `POST /api/entries/:id/pay` | path UUID; sem body | `200 EntryDto` (idempotente) | `400`, `404 ENTRY_NOT_FOUND`, `422 ENTRY_NOT_PAYABLE` |
 | E5 | `POST /api/entries/pay` | body `{ ids: string[] }` (1..100, strict) | `200 { paidIds, alreadyPaidIds }` | `400`, `404 ENTRIES_NOT_FOUND`, `422 ENTRIES_NOT_PAYABLE` |
+| E7 | `DELETE /api/entries/:id` | path UUID; sem body; exige `ADMIN`, restrito ao dono autenticado | `204` | `400`, `403 FORBIDDEN`, `404 ENTRY_NOT_FOUND`, `422 ENTRY_NOT_DELETABLE` |
 | E6 | `GET /api/categories` | - | `200 { items: string[] }` | - |
 | S1 | `GET /api/summary?month=YYYY-MM` | `month` obrigatório | `200 { month, totals: TotalsDto }` (mês inteiro, sem filtros) | `400` |
 | D2 | `GET /api/dashboard/monthly-series?month=YYYY-MM` | idem | `200 { from, to, points: [{ month, totals: TotalsDto }] }` (12) | `400` |
@@ -720,7 +722,7 @@ Notas:
 - **`paid`**: `boolean` estrito (`"true"`, `1`, `null` -> `INVALID_TYPE`). Omitido para PIX = pago. Regras P31 na sec. 3.5.
 - Por que `PUT` e não `PATCH` em cartões: a edição envia os três campos com as mesmas validações do cadastro (RF03).
 - `closingDay: "10"` -> `INVALID_TYPE` (zod); `10.5` -> `NOT_INTEGER`, `0`/`32` -> `OUT_OF_RANGE` (domínio) (CA02).
-- `amount` numérico -> 400 `INVALID_TYPE` (CA17). Não há rota de estorno, `PATCH` ou `DELETE` de lançamento (CA28) nem `DELETE` de cartão.
+- `amount` numérico -> 400 `INVALID_TYPE` (CA17). Não há rota de estorno ou `PATCH` de lançamento (CA28), nem `DELETE` de cartão. E7 exclui somente despesas do dono autenticado, mesmo para ADMIN; receitas são preservadas.
 - Três chamadas no dashboard (S1, D2, D3): blocos com loading/erro independentes (RF26).
 
 ### 6.3 Formato de erro (RNF04) - decisão T2
@@ -1337,7 +1339,7 @@ Convenções: unitários `*.spec.ts`; integração `*.int-spec.ts` (`vitest.conf
 
 - C1-C3: CA01 (201, nibble de versão `7`), CA02 (`"10"` -> `INVALID_TYPE`, 10.5, 0, 32, nome 51), CA03 (409 `CARD_NAME_TAKEN` com `details.fields[0].field = "name"`), CA04, CA05 (fluxo HTTP completo com datas da fatura nas respostas), CA06.
 - E1: CA07 (`paidAt` igual ao `FixedClock` injetado no módulo de teste), CA08, B8 (data futura -> `PAID`), CA09, CA10, CA11, CA12, CA13 (404 `CARD_NOT_FOUND`), CA14 (`"CONTA"`, `"DINHEIRO"`, `"ACCOUNT"` -> 400), CA15 (`UNKNOWN_FIELD` para `status`, `referenceMonth`, `closingDate`, `dueDate`), CA16, CA17 (inclui `amount` numérico), CA18, CA19, CA20, CA21 (amostra HTTP: linhas 1, 3, 7, 8, 18, 20, 21, 22), CA22 (resposta de E1 com `referenceMonth` e `invoice.{closingDate, dueDate}`, e o mesmo item em E2), `paid: "true"`/`null` -> `INVALID_TYPE`, JSON inválido -> `MALFORMED_JSON`.
-- E4: CA24, CA25 (`paidAt` igual nas duas respostas), CA26, CA27 (422 `ENTRY_NOT_PAYABLE`, `details.incomeIds`), CA28 (`PATCH`/`DELETE /api/entries/:id` -> 404 `ROUTE_NOT_FOUND`).
+- E4: CA24, CA25 (`paidAt` igual nas duas respostas), CA26, CA27 (422 `ENTRY_NOT_PAYABLE`, `details.incomeIds`), CA28 (`PATCH /api/entries/:id` -> 404; DELETE exige ADMIN).
 - E5: CA29, CA30, CA31 (`details.missingIds` = [X, Y]), CA32 (422 `ENTRIES_NOT_PAYABLE`), CA33, CA35, CA36.
 - I3: CA38, CA39, CA40, CA41.
 - I1/I2: CA43 (inclui `pendingCount`), CA44, CA45, B9 (datas máximas), I2 por bloco com DR7 (ordem, sem paginação), I2 cartão inexistente 404 e mês inválido 400.

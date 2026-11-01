@@ -192,13 +192,22 @@ describe('GET /api/entries/initial-month - erros no formato { code, message, det
     expect(res.body.code).toBe('PASSWORD_CHANGE_REQUIRED');
   });
 
-  it('POST/PUT/DELETE nao existem nessa rota (404 ROUTE_NOT_FOUND), nem na demo', async () => {
-    for (const path of [ROUTE, DEMO_ROUTE]) {
-      for (const method of ['post', 'put', 'patch', 'delete'] as const) {
-        const res = await (e.http() as any)[method](path).set(bearer(ana)).send({});
-        expect(res.status, `${method} ${path}`).toBe(404);
-        expect(res.body.code).toBe('ROUTE_NOT_FOUND');
-      }
+  it('a rota de mes inicial so aceita GET; mutacoes nao alcançam dados (rotas genericas de entrada exigem ADMIN)', async () => {
+    for (const method of ['post', 'patch'] as const) {
+      const protectedRes = await (e.http() as any)[method](ROUTE).set(bearer(ana)).send({});
+      expect(protectedRes.status, `${method} ${ROUTE}`).toBe(404);
+      expect(protectedRes.body.code).toBe('ROUTE_NOT_FOUND');
+      const demoRes = await (e.http() as any)[method](DEMO_ROUTE).set(bearer(ana)).send({});
+      expect(demoRes.status, `${method} ${DEMO_ROUTE}`).toBe(404);
+      expect(demoRes.body.code).toBe('ROUTE_NOT_FOUND');
+    }
+    for (const method of ['put', 'delete'] as const) {
+      const protectedRes = await (e.http() as any)[method](ROUTE).set(bearer(ana)).send({});
+      expect(protectedRes.status, `${method} ${ROUTE}`).toBe(403);
+      expect(protectedRes.body.code).toBe('FORBIDDEN');
+      const demoRes = await (e.http() as any)[method](DEMO_ROUTE).set(bearer(ana)).send({});
+      expect(demoRes.status, `${method} ${DEMO_ROUTE}`).toBe(404);
+      expect(demoRes.body.code).toBe('ROUTE_NOT_FOUND');
     }
   });
 });

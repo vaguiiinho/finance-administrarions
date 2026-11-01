@@ -108,6 +108,15 @@ export class OwnedEntryRepository implements EntryRepository {
       this.store.set(entry.id.value, copyEntry(entry));
     }
   }
+  async delete(entry: Entry): Promise<void> {
+    this.assertTx();
+    const who = ownerOfAggregate(entry as never);
+    const existing = this.store.get(entry.id.value);
+    if (!existing || ownerOfAggregate(existing as never) !== who || existing.type !== 'EXPENSE') {
+      throw new Error('delete: lançamento não encontrado ou não é despesa.');
+    }
+    this.store.delete(entry.id.value);
+  }
   async deleteAllOf(ownerId: never): Promise<void> {
     const who = need(ownerId);
     for (const [id, e] of [...this.store]) if (ownerOfAggregate(e as never) === who) this.store.delete(id);

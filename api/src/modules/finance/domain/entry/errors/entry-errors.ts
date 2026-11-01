@@ -36,6 +36,15 @@ export class EntryNotEditableError extends AppError {
   }
 }
 
+export class EntryNotDeletableError extends AppError {
+  readonly code = 'ENTRY_NOT_DELETABLE';
+  readonly kind = 'business_rule' as const;
+
+  constructor(id: string) {
+    super('Somente despesas podem ser excluídas.', { id });
+  }
+}
+
 export class PaidCardExpenseDateLockedError extends AppError {
   readonly code = 'PAID_CARD_EXPENSE_DATE_LOCKED';
   readonly kind = 'business_rule' as const;

@@ -473,7 +473,7 @@ Cenário-base de 2026-10: Azul parcialmente paga (1 despesa PAGO, 1 PENDENTE) e 
 
 - **R1 - Despesas e faturas pagas escondidas.** Com o padrão Pendente, o que está pago deixa de aparecer à primeira vista nas duas abas. Quem procura uma fatura paga precisa mudar o filtro.
 - **R2 - Avanço a um mês vazio.** Quem tem cartão e nenhuma pendência abre em um mês vazio (CA08), o que pode parecer perda de dados. RF05 mitiga.
-- **R3 - Salto longo (aceito).** Uma única despesa pendente com data digitada errada (por exemplo, 2036) leva a abertura da tela para esse mês até ser paga. Como não existe edição nem exclusão de lançamento, a única saída é pagá-la. O risco foi aceito nesta feature; RF05 e "Mês atual" mitigam.
+- **R3 - Salto longo (aceito).** Uma única despesa pendente com data digitada errada (por exemplo, 2036) pode levar a abertura da tela para esse mês. ADMIN pode corrigir sua data ou excluir definitivamente a despesa; usuário sem esse nível não tem essas ações. RF05 e "Mês atual" mitigam.
 - **R4 - Pendência PIX vencida não vista.** PIX pendente em mês anterior não muda o mês inicial. Faturas antigas de cartão passam a ser selecionadas; uma referência errada ainda pode abrir a listagem em um mês histórico.
 - **R5 - Mês atual "sem pendência" esconde o que já foi pago.** O resumo inicial passa a ser de um mês futuro, não do mês corrente, para quem está em dia.
 - **R6 - Troca de mês durante o uso.** Sem o mês fixado na visita, a revalidação após pagar a última pendência trocaria o mês (CA28, T2).

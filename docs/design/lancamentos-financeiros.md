@@ -18,6 +18,7 @@
 | 4 | Fechamento (sem tela nova). Ajustados ao código conferido: combobox de categoria (3.9.1), destaque estático de recém-criado (3.9.2), gráfico estreito e movimento reduzido (5.5), destaque do donut pela legenda (5.6). Desvio 2 (tema com diálogo aberto) em 12, aprovado. Seção 13: divergências para o frontend-dev e matriz de verificação CA82/CA83/CA86. |
 | 5 | **Paleta suavizada** (aprovada pelo usuário em 2026-10-25; sem tela nem componente novo). Escuro: fundos azul-ardósia (`--bg` `#151B26`, `--surface` `#1C2330`, `--surface-2` `#252D3C`) no lugar do quase-preto, texto `#E3E7EE`, `--text-muted` `#9BA5B7` e `--accent` `#5CC8DB`. Claro: fundo `#EEF1F5` com cartões brancos, borda `#D9DEE6`, texto `#1E293B`, `--text-muted` `#4B5567`. Tokens dependentes derivados (`--surface-active`, `--input-bg`, `--header-bg`, `--border-strong`, `--text-disabled`, `--skeleton`, `--scrim`, `--tooltip-*`, `--scrollbar-*`, `--chart-axis/grid/zero-line/cursor`, `--chart-1`, `--chart-6`, `--focus-color`, `--accent-active`). Novos tokens `--shadow-color` e `--shadow-card` (sombra sutil dos cartões). Tokens semânticos e séries de gráfico sem mudança de valor, conferidos contra os novos fundos: nenhum par abaixo do mínimo. Atualizadas 1.2, 1.3, 1.9 e 13.3; `design-system.md` sincronizado. |
 | 6 | Edição administrativa de despesas: drawer de edição e ícone de lápis na coluna de ação, visível só a ADMIN; datas de compra pagas no cartão ficam bloqueadas. |
+| 7 | Exclusão administrativa definitiva de despesas: ícone de lixeira ao lado das ações da despesa e confirmação irreversível; a exclusão também remove o valor de resumos e faturas. |
 
 Este documento define estrutura visual, hierarquia, componentes, estados e interação. Não contém código. Nomes de componentes são sugestões para o frontend-dev.
 
@@ -52,6 +53,7 @@ Este documento define estrutura visual, hierarquia, componentes, estados e inter
 | D23 | **"Ainda não paguei" só aparece com Despesa + PIX**; nos outros casos é substituído por uma linha fixa "Status inicial" que diz como o lançamento nasce (pago / pendente / pendente na fatura / recebida) | Nova | Mesmo raciocínio de D12: um checkbox desabilitado permanente em compras no cartão e receitas seria ruído. A linha de status inicial atende "indisponível com explicação" (RF23, CA73) e deixa explícito que PIX nasce pago (R9). |
 | D24 | **Aviso não bloqueante para PIX com data futura**: com Despesa + PIX + data posterior a hoje (SP) e "Ainda não paguei" desmarcado, ajuda `--text-muted` "Data futura: ela será registrada como paga hoje. Marque "Ainda não paguei" se o PIX ainda não saiu." Nada é marcado automaticamente | Nova (depende de B8) | Mitiga R9 sem mudar a regra sugerida em B8 (nasce paga, sem exceção). Não calcula fatura nem mês de referência (P24). |
 | D25 | **Feedback pós-criação orientado ao mês e à aba**: o toast usa `referenceMonth` e as datas da fatura **da resposta**; se o lançamento não pertence ao mês selecionado ou à aba ativa, oferece uma ação que leva ao lugar onde ele aparece | Nova | Com o mês da fatura = mês do vencimento, quase toda compra no cartão cai no mês seguinte e "some" da tela atual; o toast explica onde ela está (CA74). |
+| D26 | **Exclusão de despesa por ADMIN**: ícone de lixeira na coluna de ações, com `alertdialog` irreversível antes da remoção definitiva | Nova | A exclusão remove valores de resumos e faturas; confirmação evita ação acidental e deixa claro que não há recuperação. |
 
 ---
 
@@ -874,6 +876,16 @@ Título ("Marcar 3 despesas como pagas?" / "Marcar "Aluguel" como pago?"), total
 
 Banner (`InlineAlert`): `--surface`, borda 1px `--danger` + esquerda 3px, ícone `--danger-text`, texto `--text`, fechar 44x44; um por vez.
 
+### 3.10.1 Exclusão administrativa de despesa
+
+Somente ADMIN vê o ícone de lixeira ao lado das ações da despesa (tabela e cards). O `alertdialog` informa que o lançamento será removido permanentemente dos resumos e das faturas e exibe o aviso irreversível padrão. O foco inicial permanece em "Cancelar".
+
+| Resposta | Comportamento |
+|---|---|
+| Sucesso | Fecha; despesa removida das listas, resumos, dashboard e totais de fatura; toast "Despesa excluída."; foco no `h2` do painel. |
+| 404 | Fecha; toast "Esta despesa não foi encontrada. A lista foi atualizada."; lista revalidada. |
+| 400 / 500 / rede | Diálogo aberto; erro inline, sem mensagem de sucesso. |
+
 ### 3.11 Paginação (Despesas e Receitas)
 
 "Mostrando 21-40 de 135 despesas" (ou receitas), números com reticências, página atual `--primary-strong` + `--primary-border` + `--on-primary` com `aria-current="page"`, controles 44x44, versão compacta < `md`, links reais, limpa seleção, oculta com 1 página, tamanho 20. Ao mudar de página, o foco vai para o `h2` do painel e a página rola até a faixa de abas.
@@ -1287,7 +1299,7 @@ O `web/` ainda é o scaffold do `create-next-app` (só `app/page.tsx`, `app/layo
 
 ## 10. Fora de escopo (UI)
 
-- Exclusão de lançamentos, exclusão de cartão, estorno, detalhe de lançamento. A edição administrativa de despesas está incluída conforme a revisão 6.
+- Exclusão de receitas, exclusão de cartão, estorno, detalhe de lançamento. A edição e exclusão administrativa de despesas estão incluídas conforme as revisões 6 e 7.
 - Filtro de intervalo de/até, "todos os períodos" e filtro de tipo (B6).
 - Seleção ou pagamento parcial dentro do bloco de fatura (DR7); status de fatura aberta/fechada/vencida; limite de crédito.
 - Pré-visualização de fatura, vencimento ou mês de referência no formulário de lançamento ou de cartão (P24).

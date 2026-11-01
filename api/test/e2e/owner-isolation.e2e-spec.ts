@@ -23,6 +23,7 @@ beforeEach(async () => {
 const get = (t: string, p: string) => e.http().get(p).set(bearer(t));
 const post = (t: string, p: string, b: object = {}) => e.http().post(p).set(bearer(t)).send(b);
 const put = (t: string, p: string, b: object) => e.http().put(p).set(bearer(t)).send(b);
+const del = (t: string, p: string) => e.http().delete(p).set(bearer(t));
 const MONTH = '2026-11';
 
 /** Ana: receita 5000, despesa PIX paga 600. Bruno: receita 123.45, despesa 50, cartao Itau (c=2) com fatura 70 pendente (e=13). */
@@ -141,6 +142,10 @@ describe('CA30 / RF25: recurso de outro dono e inexistente (404)', () => {
     });
     expect(edit.status).toBe(404);
     expect(edit.body.code).toBe('ENTRY_NOT_FOUND');
+    expect(await query(e.pool, 'SELECT * FROM entries ORDER BY id')).toEqual(before);
+    const deleteResponse = await del(vagner, `/api/entries/${entryUuid(12)}`);
+    expect(deleteResponse.status).toBe(404);
+    expect(deleteResponse.body.code).toBe('ENTRY_NOT_FOUND');
     expect(await query(e.pool, 'SELECT * FROM entries ORDER BY id')).toEqual(before);
   });
 

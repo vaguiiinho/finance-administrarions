@@ -2,9 +2,11 @@
 
 import { settleAction } from "@/lib/api/safe-action";
 import { useId, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAppMode } from "@/components/app-mode";
 import { Button, IconButton } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog } from "@/components/ui/dialogs";
 import { SessionExpiredInline, useAuthRedirect } from "@/components/session-expired";
 import { InlineAlert } from "@/components/ui/states";
 import { Money } from "@/components/ui/money";
@@ -14,7 +16,7 @@ import { formatCivilDate, formatInstant, formatInstantDate, monthLabelPtBR, mont
 import { formatBRL, sumDecimals } from "@/lib/money/decimal";
 import { countLabel, paidFeedback } from "@/lib/entries/feedback";
 import type { ActionError, EntryDto, PayEntriesResult } from "@/lib/api/types";
-import { payEntries, payEntry } from "@/app/(protected)/entries/actions";
+import { deleteExpenseEntry, payEntries, payEntry } from "@/app/(protected)/entries/actions";
 import { EntryItem, EntryRow, RecentBadge } from "./entry-drawer-context";
 import { PayConfirmDialog } from "./pay-confirm-dialog";
 import { useFocusAfterClose } from "./use-focus-after-close";
@@ -28,7 +30,7 @@ interface ExpensesListProps {
   panelTitleId: string;
   /** Filtro de status vigente: sob "Todos" a linha paga permanece (foco na propria linha/card); nos demais ela sai (foco no h2). */
   statusFilter?: StatusFilter;
-  canEditExpenses?: boolean;
+  canManageExpenses?: boolean;
   categories?: string[];
 }
 
@@ -62,11 +64,12 @@ export function ExpensesList({
   items,
   panelTitleId,
   statusFilter = "ALL",
-  canEditExpenses = false,
+  canManageExpenses = false,
   categories = [],
 }: ExpensesListProps) {
   // Na demo (so visualizacao) nada de escrita existe no DOM: sem checkbox, sem "Pagar", sem barra de lote (RF31, CA38)
   const { readOnly } = useAppMode();
+  const router = useRouter();
   const uid = useId();
   const toast = useToast();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -78,8 +81,10 @@ export function ExpensesList({
   useAuthRedirect(authError);
   const [banner, setBanner] = useState<Banner>(null);
   const [editing, setEditing] = useState<EntryDto | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<EntryDto | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const lastTrigger = useRef<HTMLElement | null>(null);
-  const focusAfterClose = useFocusAfterClose(confirm !== null);
+  const focusAfterClose = useFocusAfterClose(confirm !== null || deleteConfirm !== null);
 
   const pending = useMemo(() => items.filter((e) => e.status === "PENDING"), [items]);
   // derivado: o que foi pago por fora (revalidacao) sai da selecao sozinho
@@ -155,6 +160,41 @@ export function ExpensesList({
       return;
     }
     setError("Não foi possível marcar como pago. Nenhuma despesa foi alterada. Tente novamente.");
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm || busy) return;
+    setBusy(true);
+    setDeleteError(null);
+    setAuthError(null);
+    const deleted = deleteConfirm;
+    const result = await settleAction(() => deleteExpenseEntry(deleted.id));
+    setBusy(false);
+    if (result.ok) {
+      setDeleteConfirm(null);
+      setSelectedIds((ids) => {
+        const next = new Set(ids);
+        next.delete(deleted.id);
+        return next;
+      });
+      toast.push({ kind: "success", message: "Despesa excluída." });
+      router.refresh();
+      focusAfterClose(() => document.getElementById(panelTitleId)?.focus());
+      return;
+    }
+
+    if (result.error.code === "SESSION_EXPIRED" || result.error.code === "PASSWORD_CHANGE_REQUIRED") {
+      setAuthError(result.error);
+      return;
+    }
+    if (result.error.status === 404) {
+      setDeleteConfirm(null);
+      toast.push({ kind: "error", message: "Esta despesa não foi encontrada. A lista foi atualizada." });
+      router.refresh();
+      focusAfterClose(() => document.getElementById(panelTitleId)?.focus());
+      return;
+    }
+    setDeleteError(result.error.message || "Não foi possível excluir a despesa. Tente novamente.");
   };
 
   const batchButton = (
@@ -305,11 +345,30 @@ export function ExpensesList({
                       ) : entry.paidAt ? (
                         <span className="text-muted">Pago em {formatInstantDate(entry.paidAt)}</span>
                       ) : null}
-                      {canEditExpenses ? (
+                      {canManageExpenses ? (
                         <IconButton aria-label={`Editar despesa: ${entry.description}`} title="Editar despesa" onClick={() => setEditing(entry)}>
                           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 20h9" />
                             <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                          </svg>
+                        </IconButton>
+                      ) : null}
+                      {canManageExpenses ? (
+                        <IconButton
+                          aria-label={`Excluir despesa: ${entry.description}`}
+                          title="Excluir despesa"
+                          onClick={() => {
+                            lastTrigger.current = document.activeElement as HTMLElement | null;
+                            setDeleteError(null);
+                            setAuthError(null);
+                            setDeleteConfirm(entry);
+                          }}
+                        >
+                          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4h8v2" />
+                            <path d="m19 6-1 14H6L5 6" />
+                            <path d="M10 11v5M14 11v5" />
                           </svg>
                         </IconButton>
                       ) : null}
@@ -364,18 +423,37 @@ export function ExpensesList({
                 {readOnly ? null : (
                   <div className="mt-3 flex items-center gap-2">
                     {entry.status === "PENDING" ? (
-                      <Button className={canEditExpenses ? "flex-1" : "w-full"} onClick={() => requestPay([entry], "single")}>
+                      <Button className={canManageExpenses ? "flex-1" : "w-full"} onClick={() => requestPay([entry], "single")}>
                         Marcar como pago
                         <span className="sr-only">: {entry.description}</span>
                       </Button>
                     ) : entry.paidAt ? (
                       <p className="flex-1 text-sm text-muted">Pago em {formatInstant(entry.paidAt)}</p>
                     ) : null}
-                    {canEditExpenses ? (
+                    {canManageExpenses ? (
                       <IconButton aria-label={`Editar despesa: ${entry.description}`} title="Editar despesa" onClick={() => setEditing(entry)}>
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 20h9" />
                           <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                        </svg>
+                      </IconButton>
+                    ) : null}
+                    {canManageExpenses ? (
+                      <IconButton
+                        aria-label={`Excluir despesa: ${entry.description}`}
+                        title="Excluir despesa"
+                        onClick={() => {
+                          lastTrigger.current = document.activeElement as HTMLElement | null;
+                          setDeleteError(null);
+                          setAuthError(null);
+                          setDeleteConfirm(entry);
+                        }}
+                      >
+                        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="m19 6-1 14H6L5 6" />
+                          <path d="M10 11v5M14 11v5" />
                         </svg>
                       </IconButton>
                     ) : null}
@@ -418,6 +496,24 @@ export function ExpensesList({
             lastTrigger.current?.focus();
           }}
         />
+      ) : null}
+      {deleteConfirm ? (
+        <AlertDialog
+          title={`Excluir "${deleteConfirm.description}"?`}
+          confirmLabel="Excluir despesa"
+          busyLabel="Excluindo…"
+          busy={busy}
+          error={authError?.code === "SESSION_EXPIRED" || authError?.code === "PASSWORD_CHANGE_REQUIRED" ? <SessionExpiredInline redirectUrl={authError.redirectUrl} /> : deleteError}
+          onConfirm={() => void confirmDelete()}
+          onCancel={() => {
+            setDeleteConfirm(null);
+            setDeleteError(null);
+            setAuthError(null);
+            lastTrigger.current?.focus();
+          }}
+        >
+          <p>O lançamento será removido permanentemente dos resumos e das faturas.</p>
+        </AlertDialog>
       ) : null}
       {editing ? <EditExpenseDrawer key={editing.id} entry={editing} categories={categories} onClose={() => setEditing(null)} /> : null}
     </div>
