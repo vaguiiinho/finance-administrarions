@@ -3,6 +3,7 @@ import { RequireRole } from '@shared/presentation/auth/access-metadata.js';
 import { CurrentOwnerId } from '@shared/presentation/auth/current-principal.decorators.js';
 import { ZodValidationPipe } from '@shared/presentation/pipes/zod-validation.pipe.js';
 import { CreateEntry } from '../../application/use-cases/entries/create-entry.js';
+import { CreateInstallmentExpenses } from '../../application/use-cases/entries/create-installment-expenses.js';
 import { UpdateExpense } from '../../application/use-cases/entries/update-expense.js';
 import { DeleteExpense } from '../../application/use-cases/entries/delete-expense.js';
 import { MarkEntryAsPaid } from '../../application/use-cases/entries/mark-entry-as-paid.js';
@@ -11,9 +12,11 @@ import { FinanceReadHandlers } from './finance-read-handlers.js';
 import { presentEntry } from './presenters/entry.presenter.js';
 import {
   createEntryBodySchema,
+  createInstallmentExpensesBodySchema,
   payBatchBodySchema,
   updateExpenseBodySchema,
   type CreateEntryBody,
+  type CreateInstallmentExpensesBody,
   type PayBatchBody,
   type UpdateExpenseBody,
 } from './schemas/entry.schemas.js';
@@ -29,6 +32,7 @@ import {
 export class EntriesController {
   constructor(
     @Inject(CreateEntry) private readonly createEntry: CreateEntry,
+    @Inject(CreateInstallmentExpenses) private readonly createInstallmentExpenses: CreateInstallmentExpenses,
     @Inject(UpdateExpense) private readonly updateExpense: UpdateExpense,
     @Inject(DeleteExpense) private readonly deleteExpense: DeleteExpense,
     @Inject(MarkEntryAsPaid) private readonly markEntryAsPaid: MarkEntryAsPaid,
@@ -40,6 +44,15 @@ export class EntriesController {
   async create(@CurrentOwnerId() ownerId: string, @Body(new ZodValidationPipe(createEntryBodySchema)) body: CreateEntryBody) {
     const view = await this.createEntry.execute({ ...body, ownerId, cardId: body.cardId ?? null, paid: body.paid });
     return presentEntry(view);
+  }
+
+  @Post('installments')
+  async createInstallments(
+    @CurrentOwnerId() ownerId: string,
+    @Body(new ZodValidationPipe(createInstallmentExpensesBodySchema)) body: CreateInstallmentExpensesBody,
+  ) {
+    const items = await this.createInstallmentExpenses.execute({ ...body, ownerId, cardId: body.cardId ?? null });
+    return { items: items.map(presentEntry) };
   }
 
   @Put(':id')

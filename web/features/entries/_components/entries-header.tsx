@@ -7,7 +7,7 @@ import { createFinanceReader, type FinanceReader } from "@/lib/api/finance-reade
 import type { EntriesState } from "@/lib/filters/entries-search-params";
 import { EntriesMonthPicker } from "./entries-month-picker";
 import { HEADER_CONTROLS_ID } from "./entries-tabs-bar";
-import { NewEntryButton } from "./entry-drawer-context";
+import { NewEntryButton, NewInstallmentButton } from "./entry-drawer-context";
 
 async function SummaryBlock({ month, reader }: { month: string; reader: FinanceReader }) {
   const { totals } = await reader.getSummary(month);
@@ -24,7 +24,10 @@ export function EntriesHeader({ state, currentMonth, reader = createFinanceReade
       <div id={HEADER_CONTROLS_ID} className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h1 className="font-display text-2xl font-bold text-text md:text-[32px]">Lançamentos</h1>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
-          <NewEntryButton className="w-full lg:order-2 lg:w-auto" />
+          <div className="flex flex-col gap-2 sm:flex-row lg:order-2">
+            <NewEntryButton className="w-full sm:w-auto" />
+            <NewInstallmentButton className="w-full sm:w-auto" />
+          </div>
           <div className="lg:order-1">
             <EntriesMonthPicker state={state} currentMonth={currentMonth} />
           </div>

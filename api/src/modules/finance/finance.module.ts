@@ -22,6 +22,7 @@ import { UpdateCard } from './application/use-cases/cards/update-card.js';
 import { GetCategoryDistribution } from './application/use-cases/dashboard/get-category-distribution.js';
 import { GetMonthlySeries } from './application/use-cases/dashboard/get-monthly-series.js';
 import { CreateEntry } from './application/use-cases/entries/create-entry.js';
+import { CreateInstallmentExpenses } from './application/use-cases/entries/create-installment-expenses.js';
 import { UpdateExpense } from './application/use-cases/entries/update-expense.js';
 import { DeleteExpense } from './application/use-cases/entries/delete-expense.js';
 import { ListCategories } from './application/use-cases/entries/list-categories.js';
@@ -83,6 +84,18 @@ const USE_CASE_PROVIDERS: Provider[] = [
       publisher: DomainEventPublisher,
     ) => new CreateEntry(entries, cards, catalog, ids, clock, publisher),
     inject: [ENTRY_REPOSITORY, CARD_REPOSITORY, CATEGORY_CATALOG, ID_GENERATOR, CLOCK, DOMAIN_EVENT_PUBLISHER],
+  },
+  {
+    provide: CreateInstallmentExpenses,
+    useFactory: (
+      uow: FinanceUnitOfWork,
+      cards: CardRepository,
+      catalog: CategoryCatalog,
+      ids: IdGenerator,
+      clock: Clock,
+      publisher: DomainEventPublisher,
+    ) => new CreateInstallmentExpenses(uow, cards, catalog, ids, clock, publisher),
+    inject: [FINANCE_UNIT_OF_WORK, CARD_REPOSITORY, CATEGORY_CATALOG, ID_GENERATOR, CLOCK, DOMAIN_EVENT_PUBLISHER],
   },
   {
     provide: UpdateExpense,

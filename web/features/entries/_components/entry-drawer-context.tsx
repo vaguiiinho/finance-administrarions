@@ -9,6 +9,9 @@ interface EntryDrawerContextValue {
   open: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
+  installmentsOpen: boolean;
+  openInstallmentsDrawer: () => void;
+  closeInstallmentsDrawer: () => void;
   /** Lancamento recem-criado (destaque temporario, D25); `seq` distingue marcacoes repetidas do mesmo id. */
   recent: { id: string; seq: number } | null;
   markRecent: (id: string) => void;
@@ -34,6 +37,9 @@ export function EntryDrawerProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const openDrawer = useCallback(() => setOpen(true), []);
   const closeDrawer = useCallback(() => setOpen(false), []);
+  const [installmentsOpen, setInstallmentsOpen] = useState(false);
+  const openInstallmentsDrawer = useCallback(() => setInstallmentsOpen(true), []);
+  const closeInstallmentsDrawer = useCallback(() => setInstallmentsOpen(false), []);
   const [recent, setRecent] = useState<{ id: string; seq: number } | null>(null);
   const seqRef = useRef(0);
   const startedSeq = useRef<number | null>(null);
@@ -71,7 +77,20 @@ export function EntryDrawerProvider({ children }: { children: ReactNode }) {
     setWasNavigating(navigating);
     if (navigating) setRecent(null); // o timer pendente so zera se o `seq` ainda for o atual: inofensivo
   }
-  const value = useMemo(() => ({ open, openDrawer, closeDrawer, recent, markRecent, beginRecent }), [open, openDrawer, closeDrawer, recent, markRecent, beginRecent]);
+  const value = useMemo(
+    () => ({
+      open,
+      openDrawer,
+      closeDrawer,
+      installmentsOpen,
+      openInstallmentsDrawer,
+      closeInstallmentsDrawer,
+      recent,
+      markRecent,
+      beginRecent,
+    }),
+    [open, openDrawer, closeDrawer, installmentsOpen, openInstallmentsDrawer, closeInstallmentsDrawer, recent, markRecent, beginRecent],
+  );
   return <EntryDrawerContext.Provider value={value}>{children}</EntryDrawerContext.Provider>;
 }
 
@@ -89,6 +108,23 @@ export function NewEntryButton(props: Omit<ButtonProps, "onClick" | "children">)
   return (
     <WriteOnly>
       <NewEntryButtonImpl {...props} />
+    </WriteOnly>
+  );
+}
+
+function NewInstallmentButtonImpl({ variant = "secondary", className = "", ...props }: Omit<ButtonProps, "onClick" | "children">) {
+  const { openInstallmentsDrawer } = useEntryDrawer();
+  return (
+    <Button variant={variant} className={className} onClick={openInstallmentsDrawer} {...props}>
+      + Despesa parcelada
+    </Button>
+  );
+}
+
+export function NewInstallmentButton(props: Omit<ButtonProps, "onClick" | "children">) {
+  return (
+    <WriteOnly>
+      <NewInstallmentButtonImpl {...props} />
     </WriteOnly>
   );
 }

@@ -201,6 +201,84 @@ describe('PUT /api/entries/:id (admin)', () => {
   });
 });
 
+describe('POST /api/entries/installments', () => {
+  it('creates six monthly expenses and preserves the total to the cent', async () => {
+    const res = await e.http().post('/api/entries/installments').send({
+      description: 'Notebook',
+      category: 'Eletrônicos',
+      date: '2026-11-15',
+      amount: '350.00',
+      installments: 6,
+      paymentMethod: 'PIX',
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.items).toHaveLength(6);
+    expect(res.body.items.map((item: { date: string }) => item.date)).toEqual([
+      '2026-11-15',
+      '2026-12-15',
+      '2027-01-15',
+      '2027-02-15',
+      '2027-03-15',
+      '2027-04-15',
+    ]);
+    expect(res.body.items.map((item: { amount: string }) => item.amount)).toEqual([
+      '58.34',
+      '58.34',
+      '58.33',
+      '58.33',
+      '58.33',
+      '58.33',
+    ]);
+    expect(res.body.items.every((item: { type: string; status: string }) => item.type === 'EXPENSE' && item.status === 'PENDING')).toBe(true);
+    expect(await query(e.pool, 'SELECT id FROM entries')).toHaveLength(6);
+  });
+
+  it('rejects income fields, a total too small for every installment, and unknown fields without writes', async () => {
+    const base = {
+      description: 'Compra',
+      category: 'Mercado',
+      date: '2026-11-15',
+      amount: '10.00',
+      installments: 3,
+      paymentMethod: 'PIX',
+    };
+    const income = await e.http().post('/api/entries/installments').send({ ...base, type: 'INCOME' });
+    const tooSmall = await e.http().post('/api/entries/installments').send({ ...base, amount: '0.02' });
+    const count = await e.http().post('/api/entries/installments').send({ ...base, installments: 37 });
+
+    expect(income.status).toBe(400);
+    expect(income.body.details.fields).toContainEqual(expect.objectContaining({ field: 'type', code: 'UNKNOWN_FIELD' }));
+    expect(tooSmall.status).toBe(400);
+    expect(tooSmall.body.details.fields).toContainEqual(expect.objectContaining({ field: 'amount', code: 'INSTALLMENT_AMOUNT_TOO_SMALL' }));
+    expect(count.status).toBe(400);
+    expect(await query(e.pool, 'SELECT id FROM entries')).toHaveLength(0);
+  });
+
+  it('exige o cartão quando Cartão é escolhido e fatura cada data de compra separadamente', async () => {
+    const card = await newCard('Parcelado', 25, 5);
+    const res = await e.http().post('/api/entries/installments').send({
+      description: 'Compra',
+      category: 'Mercado',
+      date: '2026-11-26',
+      amount: '120.00',
+      installments: 3,
+      paymentMethod: 'CARD',
+      cardId: card.id,
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.items.map((item: { invoice: { closingDate: string }; referenceMonth: string }) => [
+      item.invoice.closingDate,
+      item.referenceMonth,
+    ])).toEqual([
+      ['2026-12-25', '2027-01'],
+      ['2027-01-25', '2027-02'],
+      ['2027-02-25', '2027-03'],
+    ]);
+  });
+});
+
 describe('DELETE /api/entries/:id (admin)', () => {
   it('remove uma despesa paga e atualiza os agregados', async () => {
     const exp = await create({ paid: undefined });

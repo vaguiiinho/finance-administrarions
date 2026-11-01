@@ -149,6 +149,21 @@ describe('CA30 / RF25: recurso de outro dono e inexistente (404)', () => {
     expect(await query(e.pool, 'SELECT * FROM entries ORDER BY id')).toEqual(before);
   });
 
+  it('não permite criar parcelas no cartão de outro proprietário', async () => {
+    const res = await post(ana, '/api/entries/installments', {
+      description: 'Compra',
+      category: 'Mercado',
+      date: '2026-11-05',
+      amount: '100.00',
+      installments: 2,
+      paymentMethod: 'CARD',
+      cardId: cardUuid(2),
+    });
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('CARD_NOT_FOUND');
+    expect(await query(e.pool, 'SELECT id FROM entries')).toHaveLength(5);
+  });
+
   it('o dono continua conseguindo: Bruno paga a fatura dele', async () => {
     const res = await post(bruno, `/api/cards/${cardUuid(2)}/invoices/${MONTH}/pay`);
     expect(res.status).toBe(200);

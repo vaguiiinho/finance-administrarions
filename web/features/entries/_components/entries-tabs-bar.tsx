@@ -5,7 +5,7 @@ import { useAppMode } from "@/components/app-mode";
 import { Tabs, type TabItem } from "@/components/ui/tabs";
 import { changeTab, entriesHref, type EntriesState, type EntriesTab } from "@/lib/filters/entries-search-params";
 import { EntriesMonthPicker } from "./entries-month-picker";
-import { NewEntryButton } from "./entry-drawer-context";
+import { NewEntryButton, NewInstallmentButton } from "./entry-drawer-context";
 
 const LABELS: Record<EntriesTab, string> = { expenses: "Despesas", invoices: "Faturas", income: "Receitas" };
 const ORDER: EntriesTab[] = ["expenses", "invoices", "income"];
@@ -45,7 +45,12 @@ export function EntriesTabsBar({ state, currentMonth }: { state: EntriesState; c
         <div className="min-w-0 flex-1 md:flex md:justify-center">
           <Tabs items={items} activeId={state.tab} label="Lançamentos do mês" idPrefix="entries" />
         </div>
-        {headerGone ? <NewEntryButton variant="secondary" className="hidden md:inline-flex" /> : null}
+        {headerGone ? (
+          <div className="hidden items-center gap-2 md:flex">
+            <NewInstallmentButton variant="secondary" />
+            <NewEntryButton variant="secondary" />
+          </div>
+        ) : null}
       </div>
     </div>
   );

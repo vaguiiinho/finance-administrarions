@@ -52,6 +52,7 @@ const ADMIN_ROUTES = [
 ].sort();
 const PROTECTED_FINANCE = [
   'POST /api/entries',
+  'POST /api/entries/installments',
   'GET /api/entries/expenses',
   'GET /api/entries/incomes',
   'GET /api/entries/initial-month',

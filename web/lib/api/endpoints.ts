@@ -6,6 +6,7 @@ import type {
   CardPayload,
   CategoryDistribution,
   CreateEntryPayload,
+  CreateInstallmentExpensesPayload,
   EntryDto,
   ExpensesPage,
   IncomesPage,
@@ -39,6 +40,8 @@ export const payInvoiceRequest = (cardId: string, referenceMonth: string) =>
 export const listExpenses = (query: Record<string, string>) => apiGet<ExpensesPage>("/entries/expenses", query);
 export const listIncomes = (query: Record<string, string>) => apiGet<IncomesPage>("/entries/incomes", query);
 export const createEntryRequest = (payload: CreateEntryPayload) => apiPost<EntryDto>("/entries", payload);
+export const createInstallmentExpensesRequest = (payload: CreateInstallmentExpensesPayload) =>
+  apiPost<{ items: EntryDto[] }>("/entries/installments", payload);
 export const updateExpenseRequest = (id: string, payload: UpdateExpensePayload) => apiPut<EntryDto>(`/entries/${encodeURIComponent(id)}`, payload);
 export const deleteExpenseRequest = (id: string) => apiDelete<void>(`/entries/${encodeURIComponent(id)}`);
 export const payEntryRequest = (id: string) => apiPost<EntryDto>(`/entries/${encodeURIComponent(id)}/pay`);

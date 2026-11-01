@@ -18,6 +18,7 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 | Método | Rota | Descrição | Sucesso |
 |---|---|---|---|
 | POST | `/api/entries` | Cria lançamento (receita ou despesa) | 201 |
+| POST | `/api/entries/installments` | Cria uma série de despesas mensais em uma operação atômica | 201 |
 | PUT | `/api/entries/:id` | Edita uma despesa (somente ADMIN) | 200 |
 | DELETE | `/api/entries/:id` | Exclui definitivamente uma despesa (somente ADMIN) | 204 |
 | GET | `/api/entries/initial-month` | Mês inicial sugerido para a listagem de lançamentos (sem query) | 200 |
@@ -36,7 +37,7 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 | GET | `/api/dashboard/monthly-series?month=` | 12 meses terminando em `month` | 200 |
 | GET | `/api/dashboard/category-distribution?month=` | Despesas do mês por categoria | 200 |
 
-Não existe exclusão de lançamentos nem exclusão de cartões.
+Despesas podem ser excluídas definitivamente por ADMIN; cartões não têm endpoint de exclusão.
 
 ### Objeto `Entry` (resposta de criação, listagens e pagamento)
 
@@ -128,6 +129,39 @@ POST /api/entries
 ```
 
 Erros: 400 `VALIDATION_ERROR`; 404 `CARD_NOT_FOUND` (cartão inexistente; só depois de passar a validação 400).
+
+### POST /api/entries/installments
+
+Cria exclusivamente despesas mensais. O valor informado é o total da compra, limitado ao máximo por lançamento (`9999999999.99`), dividido em 2 a 36 parcelas. A divisão é feita em centavos inteiros e preserva exatamente o total; centavos restantes são distribuídos às primeiras parcelas. A data enviada é a da primeira parcela: cada mês preserva o dia original, limitado ao último dia do mês quando necessário.
+
+Corpo estrito:
+
+| Campo | Tipo | Obrigatório | Regra |
+|---|---|---|---|
+| `description` | string | sim | 1-120 |
+| `category` | string | sim | 1-50; usa a grafia canônica do proprietário |
+| `date` | string | sim | `YYYY-MM-DD`, data existente, ano 1900-9998; toda a série deve caber na faixa |
+| `amount` | string | sim | valor total decimal positivo, até 2 casas, máximo `9999999999.99` |
+| `installments` | number | sim | inteiro entre 2 e 36; cada parcela deve ser de pelo menos `0.01` |
+| `paymentMethod` | string | sim | `PIX` ou `CARD` |
+| `cardId` | string ou null | só com `CARD` | UUID de cartão pertencente ao proprietário autenticado |
+
+Todas as parcelas nascem `PENDING`, inclusive PIX. Em cartão, cada lançamento recebe sua fatura calculada individualmente. Cada item tem ID próprio e pode depois ser pago, editado ou excluído conforme as regras normais. A criação inteira é transacional e os eventos `EntryCreated` são publicados após o commit.
+
+Resposta `201`:
+
+```json
+{
+  "items": [
+    { "id": "0192f3a4-6b1c-7d2e-8f90-a1b2c3d4e5f6", "type": "EXPENSE", "description": "Notebook",
+      "category": "Eletrônicos", "date": "2026-11-15", "amount": "58.34", "paymentMethod": "PIX",
+      "card": null, "invoice": null, "referenceMonth": "2026-11", "status": "PENDING",
+      "paidAt": null, "createdAt": "2026-10-24T13:00:00.000Z", "updatedAt": "2026-10-24T13:00:00.000Z" }
+  ]
+}
+```
+
+O exemplo mostra um item; a resposta real contém todos os lançamentos, ordenados por data. Erros: 400 `VALIDATION_ERROR` para entrada inválida ou campos desconhecidos; 404 `CARD_NOT_FOUND` para cartão inexistente ou de outro proprietário.
 
 ### PUT /api/entries/:id
 

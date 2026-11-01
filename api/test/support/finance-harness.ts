@@ -10,6 +10,7 @@ import { NOW, asDefaultOwner } from './builders.js';
 import { CreateCard } from '@finance/application/use-cases/cards/create-card.js';
 import { UpdateCard } from '@finance/application/use-cases/cards/update-card.js';
 import { CreateEntry } from '@finance/application/use-cases/entries/create-entry.js';
+import { CreateInstallmentExpenses } from '@finance/application/use-cases/entries/create-installment-expenses.js';
 import { UpdateExpense } from '@finance/application/use-cases/entries/update-expense.js';
 import { DeleteExpense } from '@finance/application/use-cases/entries/delete-expense.js';
 import { MarkEntryAsPaid } from '@finance/application/use-cases/entries/mark-entry-as-paid.js';
@@ -49,6 +50,9 @@ export function buildHarness(now: Date = NOW) {
     createCard: asDefaultOwner(new CreateCard(cards, ids, clock, publisher)),
     updateCard: asDefaultOwner(new UpdateCard(cards, clock, publisher)),
     createEntry: asDefaultOwner(new CreateEntry(entries, cards, catalog, ids, clock, publisher)),
+    createInstallmentExpenses: asDefaultOwner(
+      new CreateInstallmentExpenses(uow, cards, catalog, ids, clock, publisher),
+    ),
     updateExpense: asDefaultOwner(new UpdateExpense(uow, catalog, entryReadModel, clock, publisher)),
     deleteExpense: asDefaultOwner(new DeleteExpense(uow, clock, publisher)),
     markEntryAsPaid: asDefaultOwner(new MarkEntryAsPaid(uow, entryReadModel, clock, publisher)),

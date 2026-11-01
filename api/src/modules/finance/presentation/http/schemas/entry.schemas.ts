@@ -14,6 +14,18 @@ export const createEntryBodySchema = z.strictObject({
 
 export type CreateEntryBody = z.infer<typeof createEntryBodySchema>;
 
+export const createInstallmentExpensesBodySchema = z.strictObject({
+  description: z.string(),
+  category: z.string(),
+  date: z.string(),
+  amount: z.string(),
+  installments: z.number(),
+  paymentMethod: z.string(),
+  cardId: z.string().nullable().optional(),
+});
+
+export type CreateInstallmentExpensesBody = z.infer<typeof createInstallmentExpensesBodySchema>;
+
 export const updateExpenseBodySchema = z.strictObject({
   description: z.string(),
   category: z.string(),

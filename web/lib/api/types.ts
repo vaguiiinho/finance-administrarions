@@ -116,6 +116,16 @@ export interface CreateEntryPayload {
   paid?: boolean;
 }
 
+export interface CreateInstallmentExpensesPayload {
+  description: string;
+  category: string;
+  date: string;
+  amount: string;
+  installments: number;
+  paymentMethod: PaymentMethod;
+  cardId?: string;
+}
+
 export interface UpdateExpensePayload {
   description: string;
   category: string;

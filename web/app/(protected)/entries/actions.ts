@@ -2,14 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import { toResult } from "@/lib/api/action-result";
-import { createEntryRequest, deleteExpenseRequest, listInvoiceEntries, payEntriesRequest, payEntryRequest, payInvoiceRequest, updateExpenseRequest } from "@/lib/api/endpoints";
+import { createEntryRequest, createInstallmentExpensesRequest, deleteExpenseRequest, listInvoiceEntries, payEntriesRequest, payEntryRequest, payInvoiceRequest, updateExpenseRequest } from "@/lib/api/endpoints";
 import { invalidInput, isUuid, isYearMonthString } from "@/lib/api/validate";
-import type { ActionResult, CreateEntryPayload, EntryDto, PayEntriesResult, PayInvoiceResult, UpdateExpensePayload } from "@/lib/api/types";
+import type { ActionResult, CreateEntryPayload, CreateInstallmentExpensesPayload, EntryDto, PayEntriesResult, PayInvoiceResult, UpdateExpensePayload } from "@/lib/api/types";
 
 /** Uma mutacao re-renderiza resumo, subtotal, faturas e listas juntos (R16, CA51, CA70, CA72). */
 function revalidateEntries() {
   revalidatePath("/entries");
   revalidatePath("/dashboard");
+}
+
+export async function createInstallmentExpenses(
+  payload: CreateInstallmentExpensesPayload,
+): Promise<ActionResult<EntryDto[]>> {
+  const result = await toResult(async () => (await createInstallmentExpensesRequest(payload)).items);
+  if (result.ok) revalidateEntries();
+  return result;
 }
 
 export async function createEntry(payload: CreateEntryPayload): Promise<ActionResult<EntryDto>> {
