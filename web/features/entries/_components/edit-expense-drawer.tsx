@@ -9,8 +9,8 @@ import { TextField } from "@/components/ui/fields";
 import { InlineAlert } from "@/components/ui/states";
 import { SessionExpiredAlert, useAuthRedirect } from "@/components/session-expired";
 import { useToast } from "@/components/ui/toast";
-import { maskMoneyInput, parseMoneyInput } from "@/lib/money/decimal";
-import { mapApiFieldIssues, validateEntryForm, type EntryFormErrors, type EntryFormValues } from "@/lib/entries/form";
+import { maskMoneyInput } from "@/lib/money/decimal";
+import { buildUpdateExpensePayload, mapApiFieldIssues, validateEntryForm, type EntryFormErrors, type EntryFormValues } from "@/lib/entries/form";
 import type { ActionError, EntryDto } from "@/lib/api/types";
 import { updateExpenseEntry } from "@/app/(protected)/entries/actions";
 import { settleAction } from "@/lib/api/safe-action";
@@ -79,12 +79,10 @@ export function EditExpenseDrawer({ entry, categories, onClose }: EditExpenseDra
       return;
     }
 
-    const decimalAmount = parseMoneyInput(amount);
-    if (!decimalAmount) return;
+    // validateEntryForm ja garantiu um valor valido acima; o builder so lanca RangeError se isso for violado
+    const payload = buildUpdateExpensePayload(values);
     setBusy(true);
-    const result = await settleAction(() =>
-      updateExpenseEntry(entry.id, { description: description.trim(), category: category.trim(), date, amount: decimalAmount }),
-    );
+    const result = await settleAction(() => updateExpenseEntry(entry.id, payload));
     setBusy(false);
 
     if (result.ok) {

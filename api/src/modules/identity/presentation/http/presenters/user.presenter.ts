@@ -6,6 +6,8 @@ export const presentCurrentUser = (view: CurrentUserView) => ({
   email: view.email,
   role: view.role,
   mustChangePassword: view.mustChangePassword,
+  accountKind: view.accountKind,
+  capabilities: view.capabilities,
 });
 
 export const presentAuthResult = (result: AuthResult) => ({

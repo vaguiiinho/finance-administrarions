@@ -108,6 +108,15 @@ export class OwnedEntryRepository implements EntryRepository {
       this.store.set(entry.id.value, copyEntry(entry));
     }
   }
+  async update(entry: Entry): Promise<void> {
+    this.assertTx();
+    const who = ownerOfAggregate(entry as never);
+    const existing = this.store.get(entry.id.value);
+    if (!existing || ownerOfAggregate(existing as never) !== who || existing.type !== 'EXPENSE') {
+      throw new Error('update: lançamento não encontrado ou não é despesa.');
+    }
+    this.store.set(entry.id.value, copyEntry(entry));
+  }
   async delete(entry: Entry): Promise<void> {
     this.assertTx();
     const who = ownerOfAggregate(entry as never);

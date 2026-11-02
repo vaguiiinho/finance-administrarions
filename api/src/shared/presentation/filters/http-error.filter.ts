@@ -10,6 +10,7 @@ const STATUS_BY_KIND: Record<ErrorKind, number> = {
   unauthenticated: 401,
   forbidden: 403,
   rate_limited: 429,
+  upgrade_required: 426,
 };
 
 interface ErrorBody {

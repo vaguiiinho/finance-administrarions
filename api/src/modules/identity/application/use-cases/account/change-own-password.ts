@@ -4,10 +4,13 @@ import type { FieldViolation } from '@shared/domain/app-error.js';
 import { UserSessionsRevoked } from '../../../domain/session/events/session-events.js';
 import { SessionId } from '../../../domain/session/value-objects/session-id.js';
 import {
+  ForbiddenError,
   TooManyAttemptsError,
   UnauthenticatedError,
   UserValidationError,
 } from '../../../domain/user/errors/user-errors.js';
+import { AccountCapabilities } from '../../../domain/user/account-capabilities.js';
+import type { UserRepository } from '../../../domain/user/user.repository.js';
 import { PlainPassword } from '../../../domain/user/value-objects/plain-password.js';
 import { UserId } from '../../../domain/user/value-objects/user-id.js';
 import { toCurrentUserView } from '../../mappers/user-view.mapper.js';
@@ -32,6 +35,7 @@ export class ChangeOwnPassword {
     private readonly audit: IdentityAuditLog,
     private readonly clock: Clock,
     private readonly publisher: DomainEventPublisher,
+    private readonly users: UserRepository,
   ) {}
 
   async execute(input: {
@@ -41,6 +45,12 @@ export class ChangeOwnPassword {
     newPassword: unknown;
     clientIp: string;
   }): Promise<CurrentUserView> {
+    // B8/CA48 (defesa em profundidade; a rota já barra por @RequireCapability): primeiro passo, antes de qualquer
+    // validação, do hasher ou do limitador. Usuário inexistente segue o fluxo normal (401 adiante).
+    const requester = UserId.create(input.userId);
+    const account = requester.ok ? await this.users.findById(requester.value) : null;
+    if (account && !AccountCapabilities.of(account).has('CHANGE_OWN_PASSWORD')) throw new ForbiddenError();
+
     const violations: FieldViolation[] = [];
     if (typeof input.currentPassword !== 'string' || input.currentPassword === '') {
       violations.push({ field: 'currentPassword', code: 'REQUIRED', message: REQUIRED });

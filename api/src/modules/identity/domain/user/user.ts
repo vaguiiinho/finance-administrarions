@@ -1,10 +1,12 @@
 import { AggregateRoot } from '@shared/domain/aggregate-root.js';
 import { InvariantViolationError } from '@shared/domain/app-error.js';
-import { FIRST_ADMIN_ID, DEMO_USER_ID } from '@shared/domain/well-known-ids.js';
+import { FIRST_ADMIN_ID, DEMO_USER_ID, SHOWCASE_USER_ID } from '@shared/domain/well-known-ids.js';
 import { unwrapPersisted } from '@shared/domain/unwrap.js';
 import {
   FirstAdminBootstrapped,
   PasswordChanged,
+  ShowcaseAccountProvisioned,
+  ShowcasePasswordReplaced,
   UserCreated,
   UserDeactivated,
   UserPasswordReset,
@@ -12,6 +14,8 @@ import {
   UserUpdated,
   type UserDomainEvent,
 } from './events/user-events.js';
+import { AuthenticationEligibility } from './authentication-eligibility.js';
+import { ShowcaseAccount } from './showcase-account.js';
 import { EmailAddress } from './value-objects/email-address.js';
 import type { PasswordHash } from './value-objects/password-hash.js';
 import { UserId } from './value-objects/user-id.js';
@@ -86,6 +90,23 @@ export class User extends AggregateRoot<UserDomainEvent> {
     });
   }
 
+  static showcase(p: { passwordHash: PasswordHash; now: Date }): User {
+    const user = User.restore({
+      id: unwrapPersisted(UserId.create(ShowcaseAccount.id), 'wellKnown'),
+      name: unwrapPersisted(UserName.create(ShowcaseAccount.name), 'wellKnown'),
+      email: unwrapPersisted(EmailAddress.create(ShowcaseAccount.email), 'wellKnown'),
+      passwordHash: p.passwordHash,
+      kind: 'SHOWCASE',
+      role: 'USER',
+      status: 'ACTIVE',
+      mustChangePassword: false,
+      createdAt: p.now,
+      updatedAt: p.now,
+    });
+    user.record(new ShowcaseAccountProvisioned(user.id.value, p.now));
+    return user;
+  }
+
   static firstAdmin(p: { name: UserName; email: EmailAddress; temporaryPasswordHash: PasswordHash; now: Date }): User {
     const user = new User({
       id: unwrapPersisted(UserId.create(FIRST_ADMIN_ID), 'wellKnown'),
@@ -112,6 +133,18 @@ export class User extends AggregateRoot<UserDomainEvent> {
     }
     if (kind === 'PENDING_FIRST_ADMIN' && (passwordHash !== null || id.value !== FIRST_ADMIN_ID)) {
       throw new InvariantViolationError('Marcador do primeiro administrador exige passwordHash nulo e FIRST_ADMIN_ID.');
+    }
+    if (kind === 'SHOWCASE') {
+      const { email, mustChangePassword } = snapshot;
+      if (
+        passwordHash === null ||
+        role !== 'USER' ||
+        id.value !== SHOWCASE_USER_ID ||
+        email.value !== ShowcaseAccount.email ||
+        mustChangePassword
+      ) {
+        throw new InvariantViolationError('User SHOWCASE exige as constantes da conta de demonstração.');
+      }
     }
     if (updatedAt.getTime() < createdAt.getTime()) throw new InvariantViolationError('updatedAt anterior a createdAt.');
     return new User({ ...snapshot });
@@ -148,6 +181,7 @@ export class User extends AggregateRoot<UserDomainEvent> {
   }
 
   rename(name: UserName, now: Date): boolean {
+    this.assertNotShowcase('rename');
     if (name.value === this.state.name.value) return false;
     this.state = { ...this.state, name, updatedAt: now };
     this.record(new UserUpdated(this.state.id.value, ['name'], now));
@@ -173,13 +207,25 @@ export class User extends AggregateRoot<UserDomainEvent> {
     this.record(new UserPasswordReset(this.state.id.value, now));
   }
 
+  /** Só para SHOWCASE: usado pelo seed quando a senha configurada muda. Não mexe em status. */
+  replaceShowcasePassword(hash: PasswordHash, now: Date): void {
+    if (this.state.kind !== 'SHOWCASE') throw new InvariantViolationError('replaceShowcasePassword só vale para a conta de demonstração.');
+    this.state = { ...this.state, passwordHash: hash, updatedAt: now };
+    this.record(new ShowcasePasswordReplaced(this.state.id.value, now));
+  }
+
   changePassword(hash: PasswordHash, now: Date): void {
+    this.assertNotShowcase('changePassword');
     this.state = { ...this.state, passwordHash: hash, mustChangePassword: false, updatedAt: now };
     this.record(new PasswordChanged(this.state.id.value, now));
   }
 
   canAuthenticate(): boolean {
-    return this.state.kind === 'REGULAR' && this.state.status === 'ACTIVE';
+    return AuthenticationEligibility.canAuthenticate(this.state.kind, this.state.status);
+  }
+
+  private assertNotShowcase(operation: string): void {
+    if (this.state.kind === 'SHOWCASE') throw new InvariantViolationError(`${operation} não vale para a conta de demonstração.`);
   }
 
   isActiveAdmin(): boolean {

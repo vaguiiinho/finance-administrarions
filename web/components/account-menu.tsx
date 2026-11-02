@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useFormStatus } from "react-dom";
 import { logoutAction } from "@/app/(auth)/actions";
-import type { CurrentUserDto } from "@/lib/api/types";
+import type { Capability, CurrentUserDto } from "@/lib/api/types";
 import { Icon } from "./ui/status";
 import { useOptionalToast } from "./ui/toast";
 import { UserAvatar } from "./user-avatar";
@@ -42,13 +42,14 @@ export function AccountMenu({ user }: { user: CurrentUserDto }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  const can = (capability: Capability) => user.capabilities?.includes(capability) ?? false;
   const restricted = user.mustChangePassword;
   const links = restricted
     ? []
     : [
-        { href: "/account", label: "Meu perfil", icon: "person" as const },
-        { href: "/account/password", label: "Trocar senha", icon: "key" as const },
-        ...(user.role === "ADMIN" ? [{ href: "/admin/users", label: "Usuários", icon: "group" as const }] : []),
+        ...(can("UPDATE_OWN_PROFILE") ? [{ href: "/account", label: "Meu perfil", icon: "person" as const }] : []),
+        ...(can("CHANGE_OWN_PASSWORD") ? [{ href: "/account/password", label: "Trocar senha", icon: "key" as const }] : []),
+        ...(can("MANAGE_USERS") ? [{ href: "/admin/users", label: "Usuários", icon: "group" as const }] : []),
       ];
 
   // navegar fecha o menu (ajuste durante a renderizacao)

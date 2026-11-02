@@ -15,7 +15,7 @@ export default defineConfig({
     include: ["**/*.spec.{ts,tsx}"],
     exclude: ["node_modules/**", ".next/**", "e2e/**/*.pw.ts"],
     setupFiles: ["./vitest.setup.ts"],
-    env: { TZ: "America/Sao_Paulo" },
+    env: { TZ: "America/Sao_Paulo", SUPPORT_EMAIL: "suporte@example.com" },
     coverage: {
       provider: "v8",
       include: ["lib/**/*.ts", "components/**/*.{ts,tsx}", "features/**/*.{ts,tsx}", "app/**/_components/**/*.{ts,tsx}", "app/**/actions.ts"],

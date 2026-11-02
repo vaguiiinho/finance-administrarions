@@ -1,5 +1,5 @@
 import { toCents, parseMoneyInput } from "@/lib/money/decimal";
-import type { CardPayload, CreateEntryPayload, EntryType, FieldIssue, PaymentMethod } from "@/lib/api/types";
+import type { CardPayload, CreateEntryPayload, EntryType, FieldIssue, PaymentMethod, UpdateExpensePayload } from "@/lib/api/types";
 
 /**
  * Regras de UI do formulario "Novo lancamento" (design 3.9). A API e a fonte da verdade: aqui so ha
@@ -89,6 +89,13 @@ export function buildCreateEntryPayload(form: EntryFormValues): CreateEntryPaylo
     ...(isCardExpense(form) ? { cardId: form.cardId } : {}),
     ...(isPixExpense(form) && form.notPaid ? { paid: false } : {}),
   };
+}
+
+/** Payload de E3 (editar despesa): so descricao, categoria, data e valor (ADR 0011 6.5, DM12). Extraido do EditExpenseDrawer. */
+export function buildUpdateExpensePayload(form: Pick<EntryFormValues, "description" | "category" | "date" | "amount">): UpdateExpensePayload {
+  const amount = parseMoneyInput(form.amount);
+  if (amount === null) throw new RangeError("valor invalido");
+  return { description: form.description.trim(), category: form.category.trim(), date: form.date, amount };
 }
 
 /** Mapeia os campos do 400 da API (ADR 6.3) para os campos do formulario; o que nao mapeia vai para o resumo. */

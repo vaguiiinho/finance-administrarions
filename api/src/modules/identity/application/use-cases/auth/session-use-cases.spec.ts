@@ -13,7 +13,13 @@ describe('AuthenticateSession (RF03, RF04, T16, CA27)', () => {
     h.users.seed(vagner());
     const { token, sessionId } = h.openSession(vagner());
     const principal = await h.authenticate.execute({ token });
-    expect(principal).toEqual({ userId: vagner().id.value, sessionId, role: 'ADMIN', mustChangePassword: false });
+    expect(principal).toEqual({
+      userId: vagner().id.value,
+      sessionId,
+      role: 'ADMIN',
+      mustChangePassword: false,
+      capabilities: ['CHANGE_OWN_PASSWORD', 'MANAGE_EXPENSES', 'MANAGE_USERS', 'UPDATE_OWN_PROFILE'],
+    });
   });
 
   it.each(['', 'lixo', 'tok-', 'Bearer tok-1', 'tok-999999'])('token invalido ou desconhecido (%j) -> 401 UNAUTHENTICATED', async (token) => {
@@ -83,6 +89,8 @@ describe('GetCurrentUser (RF03)', () => {
       email: 'carla@exemplo.com',
       role: 'USER',
       mustChangePassword: true,
+      accountKind: 'REGULAR',
+      capabilities: ['CHANGE_OWN_PASSWORD', 'MANAGE_EXPENSES', 'UPDATE_OWN_PROFILE'],
     });
   });
 

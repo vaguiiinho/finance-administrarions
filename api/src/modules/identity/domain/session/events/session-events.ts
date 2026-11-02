@@ -9,7 +9,7 @@ export class SessionRevoked implements DomainEvent {
 export class UserSessionsRevoked implements DomainEvent {
   constructor(
     readonly userId: string,
-    readonly reason: 'deactivated' | 'password-reset' | 'password-changed',
+    readonly reason: 'deactivated' | 'password-reset' | 'password-changed' | 'showcase-reconfigured',
     readonly count: number,
     readonly occurredAt: Date,
   ) {}

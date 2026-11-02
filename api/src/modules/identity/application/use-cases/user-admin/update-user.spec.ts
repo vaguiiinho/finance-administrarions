@@ -77,6 +77,12 @@ describe('UpdateUser (RF13, CA19)', () => {
     ]);
   });
 
+  it('I4/D5: editar o e-mail para um reservado (.invalid) -> 400 e nada muda', async () => {
+    const error = await rejected(update(ana().id.value, { email: 'demo@showcase.invalid' }));
+    expect(error.details.fields[0]).toMatchObject({ field: 'email', code: 'INVALID_FORMAT' });
+    expect(h.users.get(ana().id.value)!.email.value).toBe('ana@exemplo.com');
+  });
+
   it('campos desconhecidos como password nao existem no input (o schema HTTP devolve UNKNOWN_FIELD)', async () => {
     await update(ana().id.value, { name: 'Ana Lima', password: 'Hack1234' } as never);
     expect(h.users.get(ana().id.value)!.passwordHash?.value).toBe('$fake$segredo123');

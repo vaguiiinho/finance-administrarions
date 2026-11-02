@@ -69,12 +69,20 @@ describe('CreateUser (RF12, CA16)', () => {
   it.each([
     ['ativo (caixa diferente)', 'ANA@exemplo.com'],
     ['inativo', 'bruno@exemplo.com'],
-    ['usuario demo (CA17: 409, nao 400)', 'demo@finance.invalid'],
   ])('CA17: e-mail de usuario %s -> 409 EMAIL_TAKEN com details.fields[0] = email', async (_l, email) => {
     const error = await rejected(create({ email }));
     expect(error).toMatchObject({ code: 'EMAIL_TAKEN', kind: 'conflict' });
     expect(error.details.fields[0]).toMatchObject({ field: 'email', code: 'EMAIL_TAKEN', message: expect.any(String) });
     expect(h.users.all().filter((u) => u.email.value === email.toLowerCase())).toHaveLength(1);
+    expect(h.publisher.published).toEqual([]);
+  });
+
+  it.each(['demo@finance.invalid', 'demo@showcase.invalid'])('I4/D5: e-mail reservado %s -> 400 VALIDATION_ERROR (substitui o 409 antigo), nada criado', async (email) => {
+    const before = h.users.all().length;
+    const error = await rejected(create({ email }));
+    expect(error).toMatchObject({ code: 'VALIDATION_ERROR', kind: 'validation' });
+    expect(error.details.fields).toEqual([expect.objectContaining({ field: 'email', code: 'INVALID_FORMAT' })]);
+    expect(h.users.all()).toHaveLength(before);
     expect(h.publisher.published).toEqual([]);
   });
 

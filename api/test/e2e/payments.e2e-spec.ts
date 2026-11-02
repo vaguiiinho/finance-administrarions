@@ -93,17 +93,19 @@ describe('E4 POST /api/entries/:id/pay', () => {
     expect((await rowOf(income.id)).status).toBe('RECEIVED');
   });
 
-  it('CA28: PATCH continua indisponivel e PUT/DELETE exigem ADMIN', async () => {
+  it('CA28: PATCH e unpay continuam indisponiveis; PUT/DELETE sao permitidos ao dono (B6) e validam o corpo', async () => {
     const exp = await create({ paid: undefined });
     const patch = await e.http().patch(`/api/entries/${exp.id}`);
     expect(patch.status).toBe(404);
     expect(patch.body.code).toBe('ROUTE_NOT_FOUND');
-    const deleteDenied = await e.http().delete(`/api/entries/${exp.id}`);
-    expect(deleteDenied.status).toBe(403);
-    expect(deleteDenied.body.code).toBe('FORBIDDEN');
     expect((await e.http().post(`/api/entries/${exp.id}/unpay`)).status).toBe(404);
-    expect((await e.http().put(`/api/entries/${exp.id}`).send({})).status).toBe(403);
+    const putInvalid = await e.http().put(`/api/entries/${exp.id}`).send({});
+    expect(putInvalid.status).toBe(400);
+    expect(putInvalid.body.code).not.toBe('FORBIDDEN');
     expect((await rowOf(exp.id)).status).toBe('PAID');
+    const del = await e.http().delete(`/api/entries/${exp.id}`);
+    expect(del.status).toBe(204);
+    expect(await rowOf(exp.id)).toBeUndefined();
   });
 });
 

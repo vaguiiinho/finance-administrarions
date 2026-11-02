@@ -1,0 +1,118 @@
+# CI do app mobile (ADR 0011 11.2, 11.3).
+#
+# Segredos necessarios (Settings > Secrets and variables > Actions):
+#   - EXPO_TOKEN: token de acesso do EAS (expo.dev > Account settings > Access tokens). Cadastre-o como
+#     segredo do ENVIRONMENT `production` (Settings > Environments > production > Environment secrets), nao
+#     como segredo do repositorio. Usado so no job `eas-build`, que roda em tags `mobile-v*`.
+#     Nenhum outro segredo e usado neste workflow.
+#   - Environment `production`: configure "Required reviewers" (revisores obrigatorios) nele no GitHub, para
+#     que todo build/submissao de producao exija aprovacao manual. Restrinja tambem as tags permitidas.
+#   As credenciais da Apple (certificados, App Store Connect) ficam gerenciadas no proprio EAS
+#   (`eas credentials`); `ascAppId` e `appleTeamId` vem de mobile/eas.json.
+name: Mobile CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "mobile-v*" ]
+    paths:
+      - "mobile/**"
+      - "web/lib/**"
+      - ".github/workflows/mobile.yml"
+  pull_request:
+    paths:
+      - "mobile/**"
+      - "web/lib/**"
+      - ".github/workflows/mobile.yml"
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Rules tests (Vitest)
+        run: npm run test:coverage
+
+      - name: UI tests (Jest)
+        run: npm run test:ui
+
+      # Compara mobile/src/lib com web/lib (por isso o checkout inclui o web e o script roda da raiz).
+      - name: Check shared rules
+        working-directory: .
+        run: node mobile/scripts/check-shared-rules.mjs
+
+  eas-build:
+    if: startsWith(github.ref, 'refs/tags/mobile-v')
+    needs: checks
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # A tag so pode gerar build de producao se o commit ja estiver em main.
+      - name: Verify tag commit is contained in origin/main
+        working-directory: .
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::O commit da tag ($GITHUB_SHA) nao esta contido em origin/main."
+            exit 1
+          fi
+
+      # Impede publicar com placeholders de configuracao.
+      - name: Fail on placeholder configuration
+        working-directory: .
+        run: |
+          if grep -nE 'REPLACE-WITH|example\.com' mobile/eas.json mobile/app.config.ts; then
+            echo "::error::mobile/eas.json ou mobile/app.config.ts ainda contem REPLACE-WITH ou example.com."
+            exit 1
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Set up EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: 27.2.0
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: EAS build and submit (iOS, production)
+        run: eas build --platform ios --profile production --non-interactive --auto-submit

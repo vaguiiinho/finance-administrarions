@@ -5,6 +5,37 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+### App mobile iOS, conta de demonstração e capacidades (ADR 0011)
+
+#### Added
+
+- `mobile/`: app iOS em Expo SDK 58 / React Native 0.88 / Expo Router (iOS 16.4+, iPhone, retrato). Login, lançamentos (criar, parcelar, editar, excluir com "Desfazer", pagar, pagar em lote, pagar fatura), cartões, faturas, resumo e dashboard (react-native-gifted-charts), troca de senha, token no Keychain (`expo-secure-store`), TanStack Query em memória e tratamento global de 426. Setup, perfis do EAS e publicação: `mobile/README.md`.
+- Scripts do mobile: `test:rules`, `test:ui`, `test:coverage`, `check:shared`, `sync:shared`, `check:all`. Regras puras compartilhadas com o web por cópia byte a byte (`mobile/scripts/shared-files.mjs`; edite em `web/lib/` e rode `sync:shared`).
+- CI: `.github/workflows/mobile.yml` (lint, typecheck, testes, verificação de deriva; build e submit no EAS em tags `mobile-v*`, com o segredo `EXPO_TOKEN`).
+- API: cabeçalho `X-Client` (`mobile/<semver>`; ausente = web). Malformado: 400 `VALIDATION_ERROR` (`header.X-Client`, `INVALID_FORMAT`). Abaixo de `MOBILE_MIN_VERSION`: 426 `APP_UPDATE_REQUIRED` com `details: { minimumVersion, storeUrl }`, em toda rota casada, inclusive públicas.
+- API: `accountKind` (`REGULAR` | `SHOWCASE`) e `capabilities` (`MANAGE_USERS`, `MANAGE_EXPENSES`, `CHANGE_OWN_PASSWORD`, `UPDATE_OWN_PROFILE`) em `POST /api/auth/login` e `GET /api/auth/me`.
+- API: conta de demonstração `demo@showcase.invalid` (senha em `SHOWCASE_ACCOUNT_PASSWORD`; sem a variável a conta fica desligada), com lançamentos e cartões apagados todo dia às 03:00 America/Sao_Paulo. Não troca senha nem renomeia (403 `FORBIDDEN`).
+- API: variáveis `MOBILE_MIN_VERSION`, `MOBILE_STORE_URL` e `SHOWCASE_ACCOUNT_PASSWORD` (`api/.env.example`).
+- Web: páginas públicas `/privacy` e `/support`; `SUPPORT_EMAIL` (`web/.env.example`).
+- Docs: `docs/api/identity.md` (autenticação, `X-Client`, capacidades, erros), `mobile/README.md`, seção "Deploy" no README, seção 12.3 do ADR 0011.
+
+#### Changed
+
+- API: `PUT` e `DELETE /api/entries/:id` passam a exigir a capacidade `MANAGE_EXPENSES` em vez do nível ADMIN. Qualquer conta autenticada (USER, ADMIN, demonstração) edita e exclui os **próprios** lançamentos; lançamento de outro dono responde 404 `ENTRY_NOT_FOUND` (antes, USER recebia 403).
+- API: `POST /api/auth/login` e `GET /api/auth/me` respondem `Cache-Control: no-store`.
+- API: 403 `FORBIDDEN` passa a trazer sempre `details: {}`.
+- API: criar ou editar usuário com e-mail `.invalid` (reservado) responde 400 `INVALID_FORMAT` (antes, para o e-mail demo, 409 `EMAIL_TAKEN`). Dívida D5 resolvida; spec de autenticação (P06, CA17) atualizada.
+- API: em `NODE_ENV=production`, `TRUST_PROXY` é obrigatória (inclusive no seed) e só aceita o IP/sub-rede do nginx; `true`, número de saltos, `loopback`, `uniquelocal` ou ausência derrubam o boot. `MAINTENANCE_INTERVAL_MS=0` agora desliga também a limpeza diária.
+- API: autorização por capacidade (`@RequireCapability`) no lugar de `@RequireRole`; pré-políticas de cliente no `AccessControlGuard`; manutenção por tarefas (`interval` e `daily`).
+- Web: "Editar" e "Excluir" despesas aparecem para quem tem `MANAGE_EXPENSES` (inclui USER); menu de conta usa `capabilities`.
+- CLAUDE.md: gráficos passam a "Recharts (web)" e react-native-gifted-charts no mobile.
+
+#### Notes
+
+- Pendências (ADR 0011, 12.3): fluxos Maestro não executados e stub do web sem `X-Client`/426/showcase (I7); validação manual de gráficos, VoiceOver, Dynamic Type, Keychain real e `/diagnostics` com outro fuso; placeholders de ícone, splash, `ascAppId`, `appleTeamId`, `projectId` do EAS e URLs reais.
+- Desvios de UI aceitos na v1: sem swipe nem menu de contexto, data `dd/mm/aaaa` sem date picker, sem SF Symbols nem háptica, sem barra "Concluído", "Sair" sem confirmação, categoria e cartão no formulário, iOS 16.4 (não 16.0), rótulo "Trocar senha", e "Trocar senha" visível e desabilitado na conta demo.
+- Deploy: `SUPPORT_EMAIL` obrigatório no web; nginx N1-N10 (bloquear `/api/admin/*` e `/api/demo/*` no acesso público; web pela API via listener interno). Sem mudança de schema.
+
 ### Mês inicial pela fatura pendente mais antiga (ADR 0009)
 
 #### Changed

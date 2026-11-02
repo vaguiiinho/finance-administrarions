@@ -1,0 +1,6 @@
+# Copias sincronizadas do web (ADR 0011 10.3): byte a byte, nunca reformatar
+src/lib/
+# Testes escritos pelo tester
+**/*.spec.ts
+__tests__/
+node_modules/

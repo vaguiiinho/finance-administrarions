@@ -1,0 +1,7 @@
+appId: br.com.finance.app
+---
+# 401 -> login com a mensagem; 426 -> tela de atualizar (stub: usuario "expirada@exemplo.com" e cabecalho de versao antiga)
+- launchApp: { clearState: true, arguments: { stub: "expire-session" } }
+- assertVisible: "Sua sessão expirou. Entre novamente."
+- launchApp: { clearState: true, arguments: { stub: "min-version-2" } }
+- assertVisible: "Atualize o aplicativo para continuar."

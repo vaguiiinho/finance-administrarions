@@ -34,8 +34,9 @@ describe('parseNewUser (RF12, CA16, CA18)', () => {
     expect(codesOf(error)).toEqual(['email:REQUIRED', 'name:REQUIRED', 'password:REQUIRED', 'role:REQUIRED']);
   });
 
-  it('ADR nota 1: e-mail .invalid NAO e rejeitado por formato (o 409 vem do findByEmail)', () => {
-    expect(() => parseNewUser({ name: 'X', email: 'demo@finance.invalid', role: 'USER', password: 'Temp1234' })).not.toThrow();
+  it.each(['demo@finance.invalid', 'demo@showcase.invalid', 'first-admin@finance.invalid'])('I4/D5: e-mail reservado %s -> email:INVALID_FORMAT', (email) => {
+    const error = thrown(() => parseNewUser({ name: 'X', email, role: 'USER', password: 'Temp1234' }));
+    expect(codesOf(error)).toEqual(['email:INVALID_FORMAT']);
   });
 
   it('a mensagem do erro nunca contem a senha', () => {
@@ -54,6 +55,11 @@ describe('parseUserDetails (RF13)', () => {
     const error = thrown(() => parseUserDetails({ name: '', email: 'ana@', role: 'ROOT' }));
     expect(error).toBeInstanceOf(UserValidationError);
     expect(codesOf(error)).toEqual(['email:INVALID_FORMAT', 'name:REQUIRED', 'role:INVALID_VALUE']);
+  });
+
+  it('I4/D5: e-mail reservado (.invalid) -> email:INVALID_FORMAT', () => {
+    const error = thrown(() => parseUserDetails({ name: 'Ana', email: 'demo@showcase.invalid', role: 'USER' }));
+    expect(codesOf(error)).toEqual(['email:INVALID_FORMAT']);
   });
 });
 

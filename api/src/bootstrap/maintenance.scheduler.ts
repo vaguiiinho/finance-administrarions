@@ -1,41 +1,81 @@
-import { Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { DEMO_USER_ID } from '@shared/domain/well-known-ids.js';
-import type { RefreshDemoDataset } from '../modules/finance/application/demo/refresh-demo-dataset.js';
-import type { PurgeExpiredSessions } from '../modules/identity/application/use-cases/auth/purge-expired-sessions.js';
-import type { EnsureDemoUser } from '../modules/identity/application/use-cases/bootstrap/ensure-demo-user.js';
+import { Logger, type OnModuleDestroy } from '@nestjs/common';
+import type { Clock } from '@shared/application/ports/clock.js';
+import type { DailyTimeCalculator } from '@shared/application/ports/daily-time-calculator.js';
+import type { MaintenanceTask } from './maintenance-task.js';
 
-/** Manutenção periódica (ADR 0005 7.6): mantém a demo no mês corrente e apaga sessões expiradas. `0` desliga. */
-export class MaintenanceScheduler implements OnModuleInit, OnModuleDestroy {
+type DailyTask = MaintenanceTask & { schedule: { kind: 'daily' } };
+
+/**
+ * Manutenção (ADR 0005 7.6, ADR 0011 5.4): tarefas `interval` num único setInterval e tarefas `daily` num setTimeout
+ * para o próximo horário de São Paulo. `intervalMs <= 0` desliga tudo. Cada tarefa tem o próprio try/catch.
+ */
+export class MaintenanceScheduler implements OnModuleDestroy {
   private readonly logger = new Logger(MaintenanceScheduler.name);
-  private timer: NodeJS.Timeout | null = null;
+  private interval: NodeJS.Timeout | null = null;
+  private readonly dailyTimers = new Map<string, NodeJS.Timeout>();
+  private stopped = false;
+  private started = false;
 
   constructor(
     private readonly intervalMs: number,
-    private readonly ensureDemoUser: EnsureDemoUser,
-    private readonly refreshDemoDataset: RefreshDemoDataset,
-    private readonly purgeExpiredSessions: PurgeExpiredSessions,
+    private readonly tasks: readonly MaintenanceTask[],
+    private readonly clock: Clock,
+    private readonly dailyTime: DailyTimeCalculator,
   ) {}
 
-  onModuleInit(): void {
-    if (this.intervalMs <= 0) return;
-    this.timer = setInterval(() => void this.runOnce(), this.intervalMs);
-    this.timer.unref();
+  /**
+   * Início EXPLÍCITO: chamado só pelo `main.ts` (processo HTTP). Contextos sem HTTP (`run-seed`, `recover-admin`) criam o
+   * `AppModule` mas nunca chamam `start()`, então não registram nem executam tarefas (ADR 0011 5.4).
+   */
+  start(): void {
+    if (this.started || this.intervalMs <= 0) return;
+    this.started = true;
+    const intervalTasks = this.tasks.filter((t) => t.schedule.kind === 'interval');
+    if (intervalTasks.length > 0) {
+      this.interval = setInterval(() => void this.runAll(intervalTasks), this.intervalMs);
+      this.interval.unref();
+    }
+    const dailyTasks = this.tasks.filter((t): t is DailyTask => t.schedule.kind === 'daily');
+    // Recuperação no boot: segura porque a tarefa diária usa um corte e é idempotente.
+    if (dailyTasks.length > 0) void this.runAll(dailyTasks);
+    for (const task of dailyTasks) this.scheduleDaily(task);
   }
 
   onModuleDestroy(): void {
-    if (this.timer) clearInterval(this.timer);
-    this.timer = null;
+    this.stopped = true;
+    if (this.interval) clearInterval(this.interval);
+    this.interval = null;
+    for (const timer of this.dailyTimers.values()) clearTimeout(timer);
+    this.dailyTimers.clear();
   }
 
-  /** Nunca lança: uma falha numa passada não derruba o processo nem impede a próxima. */
+  /** Roda as tarefas `interval` uma vez, na ordem. Nunca lança. */
   async runOnce(): Promise<void> {
+    await this.runAll(this.tasks.filter((t) => t.schedule.kind === 'interval'));
+  }
+
+  private scheduleDaily(task: DailyTask): void {
+    if (this.stopped) return;
+    const now = this.clock.now();
+    const delay = Math.max(0, this.dailyTime.nextOccurrence(now, task.schedule.at).getTime() - now.getTime());
+    const timer = setTimeout(() => {
+      void this.runTask(task).finally(() => this.scheduleDaily(task));
+    }, delay);
+    timer.unref();
+    this.dailyTimers.set(task.name, timer);
+  }
+
+  private async runAll(tasks: readonly MaintenanceTask[]): Promise<void> {
+    for (const task of tasks) await this.runTask(task);
+  }
+
+  /** Nunca lança: uma falha não derruba o processo nem impede as outras tarefas ou a próxima execução. */
+  private async runTask(task: MaintenanceTask): Promise<void> {
     try {
-      await this.ensureDemoUser.execute({});
-      await this.refreshDemoDataset.execute({ ownerId: DEMO_USER_ID });
-      const { deleted } = await this.purgeExpiredSessions.execute({});
-      if (deleted > 0) this.logger.log(`Sessões expiradas removidas: ${deleted}`);
+      const summary = await task.run();
+      if (summary) this.logger.log(`${task.name}: ${summary}`);
     } catch (error) {
-      this.logger.error(`Manutenção periódica falhou: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Manutenção "${task.name}" falhou: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

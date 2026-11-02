@@ -3,7 +3,7 @@ import type { SessionTokenDigest } from '../../domain/session/value-objects/sess
 export interface SessionPrincipalRecord {
   sessionId: string;
   userId: string;
-  kind: 'REGULAR' | 'DEMO' | 'PENDING_FIRST_ADMIN';
+  kind: 'REGULAR' | 'DEMO' | 'PENDING_FIRST_ADMIN' | 'SHOWCASE';
   role: 'ADMIN' | 'USER';
   status: 'ACTIVE' | 'INACTIVE';
   mustChangePassword: boolean;

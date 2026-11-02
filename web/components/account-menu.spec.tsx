@@ -13,9 +13,9 @@ vi.mock("@/app/(auth)/actions", () => logout);
 
 import { AccountMenu } from "./account-menu";
 
-const ANA: CurrentUserDto = { id: "u1", name: "Ana Souza", email: "ana@exemplo.com", role: "USER", mustChangePassword: false };
-const VAGNER: CurrentUserDto = { id: "u0", name: "Vagner", email: "vagner@exemplo.com", role: "ADMIN", mustChangePassword: false };
-const CARLA: CurrentUserDto = { id: "u3", name: "Carla Dias", email: "carla@exemplo.com", role: "USER", mustChangePassword: true };
+const ANA: CurrentUserDto = { id: "u1", name: "Ana Souza", email: "ana@exemplo.com", role: "USER", mustChangePassword: false, accountKind: "REGULAR", capabilities: ["CHANGE_OWN_PASSWORD", "MANAGE_EXPENSES", "UPDATE_OWN_PROFILE"] };
+const VAGNER: CurrentUserDto = { id: "u0", name: "Vagner", email: "vagner@exemplo.com", role: "ADMIN", mustChangePassword: false, accountKind: "REGULAR", capabilities: ["CHANGE_OWN_PASSWORD", "MANAGE_EXPENSES", "MANAGE_USERS", "UPDATE_OWN_PROFILE"] };
+const CARLA: CurrentUserDto = { id: "u3", name: "Carla Dias", email: "carla@exemplo.com", role: "USER", mustChangePassword: true, accountKind: "REGULAR", capabilities: ["CHANGE_OWN_PASSWORD", "MANAGE_EXPENSES", "UPDATE_OWN_PROFILE"] };
 
 const tree = (user: CurrentUserDto) => (
   <AllProviders>

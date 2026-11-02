@@ -84,7 +84,7 @@ export function buildIdentityHarness(now: Date = NOW) {
     logout: new Logout(tokens, sessions, clock, publisher),
     quota: new CheckAuthRequestQuota(limiter, audit, clock),
     purge: new PurgeExpiredSessions(sessions, clock),
-    changePassword: new ChangeOwnPassword(uow, hasher, limiter, audit, clock, publisher),
+    changePassword: new ChangeOwnPassword(uow, hasher, limiter, audit, clock, publisher, users),
     updateProfile: new UpdateOwnProfile(users, clock, publisher),
     listUsers: new ListUsers(users),
     getUser: new GetUser(users),

@@ -7,6 +7,7 @@ import { PASSWORD_HASHER, type PasswordHasher } from '@identity/application/port
 import { SESSION_TOKEN_ISSUER, type SessionTokenIssuer } from '@identity/application/ports/session-token-issuer.js';
 import { PlainPassword } from '@identity/domain/user/value-objects/plain-password.js';
 import { unwrap } from './result.js';
+import { DEMO_USER_ID } from '@shared/domain/well-known-ids.js';
 
 export interface IdentityE2e extends E2eApp {
   resetAll: () => Promise<void>;
@@ -43,6 +44,8 @@ export async function startIdentityE2e(): Promise<IdentityE2e> {
       const kind = row.kind ?? 'REGULAR';
       const id = await insertUser(e.pool, {
         ...row,
+        // O usuario DEMO tem id fixo (ADR 0005 2.3); sem isto os testes que inserem dados do dataset publico violam a FK.
+        id: row.id ?? (kind === 'DEMO' ? DEMO_USER_ID : undefined),
         passwordHash: row.passwordHash !== undefined ? row.passwordHash : kind === 'REGULAR' ? await hashFor(password) : null,
       });
       return { id, email: row.email ?? `user${row.n}@exemplo.com`, password };

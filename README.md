@@ -1,6 +1,6 @@
 # Finance Administrations
 
-Aplicação de finanças pessoais com `api` (NestJS 12, Prisma 7, PostgreSQL) e `web` (Next.js 16 App Router, Tailwind 4, Recharts).
+Aplicação de finanças pessoais com `api` (NestJS 12, Prisma 7, PostgreSQL), `web` (Next.js 16 App Router, Tailwind 4, Recharts) e `mobile` (app iOS em Expo SDK 58 / React Native, iOS 16.4+).
 
 ## O que a feature "Lançamentos financeiros" faz
 
@@ -29,6 +29,7 @@ Decisão e divergências: [`docs/adr/0007-listagem-mes-e-status-padrao.md`](docs
 |---|---|
 | `api/` | API HTTP sob `/api`, módulo `src/modules/finance` (domain, application, infrastructure, presentation) |
 | `web/` | Interface Next.js; só o servidor chama a API (`API_URL`) |
+| `mobile/` | App iOS (Expo SDK 58, iOS 16.4+); chama a API direto, com Bearer token no Keychain. Ver [`mobile/README.md`](mobile/README.md) |
 | `docs/specs/` | Especificação de negócio |
 | `docs/adr/` | Decisões de arquitetura (ADR 0001) |
 | `docs/design/` | Design da feature e design system |
@@ -66,6 +67,20 @@ API_URL=http://127.0.0.1:3001 npm run dev    # ver web/.env.example
 
 `API_URL` é lida só no servidor Next; o padrão do código é `http://127.0.0.1:3001`. Abra http://localhost:3000.
 
+`SUPPORT_EMAIL` (só servidor) é o contato exibido em `/support`; em produção é **obrigatória** (a App Store exige um contato acessível). Sem ela, `next build` em produção apenas avisa, e `/support` fica sem e-mail. Páginas públicas novas: `/privacy` e `/support`.
+
+### 3. Mobile (iOS)
+
+```bash
+cd mobile
+npm install
+npx expo start      # precisa de simulador iOS (macOS) ou dev client
+```
+
+URLs da API e do web em `mobile/.env.example` (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_WEB_URL`). Setup completo, perfis do EAS, TestFlight/App Store, conta demo e pendências: [`mobile/README.md`](mobile/README.md).
+
+**Código compartilhado com o web.** As regras puras (dinheiro, datas, formulário, parcelas, feedback de pagamento, dados de gráfico, tipos da API) têm fonte da verdade em `web/lib/` e cópia byte a byte em `mobile/src/lib/`. A lista está em `mobile/scripts/shared-files.mjs`. Edite **no web** e rode `cd mobile && npm run sync:shared`; `npm run check:shared` (e o CI) falha se houver deriva. Nunca edite a cópia no mobile.
+
 ## Testes
 
 ### api (`cd api`)
@@ -93,6 +108,27 @@ API_URL=http://127.0.0.1:3001 npm run dev    # ver web/.env.example
 
 O Playwright sobe sozinho o stub (porta 4010) e um **build de produção** do web (`next build && next start`, porta 3100); não usa a API real nem o banco, e não deve rodar com um `next dev` ativo no mesmo diretório. As portas podem ser trocadas com `PW_WEB_PORT` e `PW_STUB_PORT` (variáveis só da execução dos testes, lidas em `web/playwright.config.ts`). Para rodar um comando do Playwright direto com as bibliotecas de `pw:deps` (sem root): `cd web && bash scripts/pw-deps.sh run npx playwright test`. Detalhes em [`web/README.md`](web/README.md). Medição de desempenho (opt-in): `cd api && npm run perf:rnf06`.
 
+### mobile (`cd mobile`)
+
+| Comando | O que roda |
+|---|---|
+| `npm run test:rules` | Vitest das regras puras |
+| `npm run test:ui` | Jest + Testing Library (`TZ=America/Sao_Paulo`) |
+| `npm run test:coverage` | Vitest com cobertura |
+| `npm test` | `test:rules` + `test:ui` |
+| `npm run check:shared` | Verifica deriva entre `web/lib` e `mobile/src/lib` |
+| `npm run sync:shared` | Copia os arquivos compartilhados do web para o mobile |
+| `npm run check:all` | lint + typecheck + check:shared + testes |
+
+Os fluxos Maestro (`mobile/e2e/maestro`) ainda não foram executados (pendência I7 do ADR 0011).
+
+## Deploy (produção)
+
+- **API:** `TRUST_PROXY` é obrigatória com `NODE_ENV=production` (inclusive ao rodar o seed): apenas o IP do nginx, por exemplo `"172.30.0.10"`. `true`, número de saltos, `loopback`, `uniquelocal` ou ausência derrubam o boot. Também: `MOBILE_MIN_VERSION`, `MOBILE_STORE_URL`, `SHOWCASE_ACCOUNT_PASSWORD` (vazia desliga a conta demo) e `MAINTENANCE_INTERVAL_MS` diferente de `0` (senão a limpeza diária da conta demo não roda).
+- **Web:** `SUPPORT_EMAIL` obrigatória; `API_URL` aponta para o listener **interno** do nginx.
+- **nginx** (requisitos N1-N10, detalhe no ADR 0011, seção 6.1): TLS 1.2+ e HSTS (N1); `X-Forwarded-For $remote_addr` sobrescrevendo, nunca `$proxy_add_x_forwarded_for` (N2); listener interno não publicado, com `set_real_ip_from <IP do web>`, para o web (N3); no listener **público**, `location ^~ /api/admin/` e `^~ /api/demo/` respondem 404 (N4); só `/api/` roteado (N5); `client_max_body_size 128k` e `proxy_read_timeout 30s` (N6); log sem `Authorization` e `server_tokens off` (N7); `limit_req` no login recomendado (N8); IP fixo do nginx igual ao de `TRUST_PROXY` (N9); `X-Client` e `Authorization` repassados (N10).
+- Ordem do primeiro deploy: nginx, API, web, teste manual (CA31 e `/api/admin/*` = 404 no host público), app.
+
 ## Regras de negócio resumidas
 
 - Valores monetários trafegam como string decimal (`"1234.56"`); banco `numeric(12,2)`.
@@ -108,7 +144,8 @@ Detalhes, diagramas (camadas, aggregates, pagamento em lote) e exemplos de paylo
 
 ## Documentação
 
-- API: [`docs/api/finance.md`](docs/api/finance.md)
+- API: [`docs/api/finance.md`](docs/api/finance.md) e [`docs/api/identity.md`](docs/api/identity.md) (autenticação, conta, `X-Client`, capacidades)
+- App mobile: [`mobile/README.md`](mobile/README.md), [`docs/adr/0011-app-mobile-ios.md`](docs/adr/0011-app-mobile-ios.md), [`docs/specs/mobile-app.md`](docs/specs/mobile-app.md) e [`docs/design/mobile-app.md`](docs/design/mobile-app.md)
 - ADR: [`docs/adr/0001-lancamentos-financeiros.md`](docs/adr/0001-lancamentos-financeiros.md)
 - Fundo em gradiente nos temas claro e escuro: [`docs/adr/0003-fundo-gradiente-temas.md`](docs/adr/0003-fundo-gradiente-temas.md), [`docs/specs/fundo-gradiente-temas.md`](docs/specs/fundo-gradiente-temas.md) e [`docs/design/fundo-gradiente-temas.md`](docs/design/fundo-gradiente-temas.md)
 - Mês inicial e status padrão da listagem de lançamentos: [`docs/adr/0007-listagem-mes-e-status-padrao.md`](docs/adr/0007-listagem-mes-e-status-padrao.md), [`docs/specs/listagem-mes-e-status-padrao.md`](docs/specs/listagem-mes-e-status-padrao.md) e [`docs/design/listagem-mes-e-status-padrao.md`](docs/design/listagem-mes-e-status-padrao.md)

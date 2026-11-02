@@ -1,0 +1,25 @@
+appId: br.com.finance.app
+---
+# CA44/CA46/CA48: conta demo comeca vazia, tem todas as acoes e ve "Trocar senha" desabilitado com motivo (B8).
+- launchApp: { clearState: true }
+- tapOn: "E-mail"
+- inputText: "demo@showcase.invalid"
+- tapOn: "Senha"
+- inputText: "demo"
+- tapOn: "Entrar"
+- assertVisible: "Dashboard"
+- tapOn: "Ajustes"
+# B8: a linha existe (nao fica oculta), esta desabilitada e explica o motivo.
+- assertVisible:
+    text: "Trocar senha"
+    enabled: false
+- assertVisible: "Indisponível na conta de demonstração"
+- assertVisible: ".*03:00.*"
+- tapOn: "Finanças"
+- tapOn: "Selecionar"
+- tapOn: "Cancelar"
+- tapOn: "Excluir despesa: Cinema"
+- tapOn: "Excluir"
+- assertVisible: "Despesa excluída."
+- tapOn: "Desfazer"
+- assertVisible: "Cinema"

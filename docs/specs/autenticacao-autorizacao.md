@@ -342,8 +342,9 @@ O pedido, já com as decisões do usuário:
 
 **CA17 - E-mail duplicado (RF12, RF13)**
 - Given os usuários "ana@exemplo.com" (ativa) e "bruno@exemplo.com" (inativo)
-- When o administrador cria um usuário com "ANA@exemplo.com", ou outro com "bruno@exemplo.com", ou edita Carla para "ana@exemplo.com", ou cria um usuário com o e-mail do usuário demo
+- When o administrador cria um usuário com "ANA@exemplo.com", ou outro com "bruno@exemplo.com", ou edita Carla para "ana@exemplo.com"
 - Then a API responde 409 `EMAIL_TAKEN` com `details.fields[0] = { field: "email", code: "EMAIL_TAKEN", ... }`, o formulário mostra "Este e-mail já está em uso." no campo E-mail, e nada muda.
+- Nota (ADR 0011, D5 resolvida): criar ou editar um usuário com o e-mail do usuário demo, ou com qualquer e-mail `.invalid`, responde 400 `VALIDATION_ERROR` com `details.fields[0] = { field: "email", code: "INVALID_FORMAT", ... }`, e não mais `EMAIL_TAKEN`.
 
 **CA18 - Validação ao criar usuário (RF12)**
 - Given o formulário "Novo usuário"
@@ -599,7 +600,7 @@ As técnicas T1-T11 da rev. 1 já têm resposta no ADR 0005 (seção 12). Com as
 - **P03** A sessão dura **24 horas** a partir do login, sem renovação deslizante e sem "lembrar de mim". Quando expira, é preciso entrar de novo.
 - **P04** Recurso financeiro de outro dono responde 404, não 403, conforme a decisão padrão "id inexistente → 404" e o RNF05. Falta de nível para a gestão responde 403 `FORBIDDEN`, porque a rota existe e o usuário está autenticado.
 - **P05** A inicial é o primeiro grafema do nome, em maiúscula pelo locale pt-BR. A cor de fundo do avatar é um token fixo do tema e não é derivada do nome.
-- **P06** O usuário demo é reservado: login com o e-mail dele responde `INVALID_CREDENTIALS`, o e-mail usa um domínio reservado (`.invalid`), conta como já usado na criação de usuários (`EMAIL_TAKEN`) e não aparece nem é endereçável na gestão (`USER_NOT_FOUND`).
+- **P06** O usuário demo é reservado: login com o e-mail dele responde `INVALID_CREDENTIALS`, o e-mail usa um domínio reservado (`.invalid`), é recusado na criação e na edição de usuários (400 `INVALID_FORMAT` no campo `email`; antes respondia 409 `EMAIL_TAKEN`, alterado pelo ADR 0011, D5) e não aparece nem é endereçável na gestão (`USER_NOT_FOUND`).
 - **P07** O usuário logado pode ver a demo (RF36). Não há redirecionamento forçado de `/demo/*` para as rotas protegidas.
 - **P08** Os query params das telas da demo seguem os das telas protegidas, e o mês inicial da demo é o mês atual em America/Sao_Paulo.
 - **P09** Os novos códigos de erro são: `UNAUTHENTICATED` (401), `INVALID_CREDENTIALS` (401), `FORBIDDEN` (403), `PASSWORD_CHANGE_REQUIRED` (403), `USER_NOT_FOUND` (404), `EMAIL_TAKEN` (409), `CANNOT_TARGET_SELF` (422), `LAST_ADMIN` (422), `TOO_MANY_ATTEMPTS` (429), e os códigos de campo `TOO_SHORT`, `EMAIL_TAKEN`, `INCORRECT` (senha atual) e `SAME_AS_CURRENT` (nova senha). Os demais códigos continuam os da spec de origem.

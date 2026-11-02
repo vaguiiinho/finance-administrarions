@@ -1,0 +1,6 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": { "strict": true, "types": ["vitest/globals", "node"], "paths": { "@/*": ["./src/*"] } },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}

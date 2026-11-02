@@ -20,6 +20,8 @@ beforeEach(async () => {
 
 const login = (email: string, password: string, ip = e.freshIp()) =>
   e.http().post('/api/auth/login').set('X-Forwarded-For', ip).send({ email, password });
+// B6 (ADR 0011 3.4): USER comum tem MANAGE_EXPENSES; capacidades vem ordenadas.
+const USER_CAPS = ['CHANGE_OWN_PASSWORD', 'MANAGE_EXPENSES', 'UPDATE_OWN_PROFILE'];
 const fields = (res: { body: any }) => res.body.details.fields as { field: string; code: string }[];
 
 describe('A1 POST /api/auth/login', () => {
@@ -27,7 +29,7 @@ describe('A1 POST /api/auth/login', () => {
     const res = await login('ana@exemplo.com', 'segredo123');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
-      user: { id: idOf(1), name: 'Ana Souza', email: 'ana@exemplo.com', role: 'USER', mustChangePassword: false },
+      user: { id: idOf(1), name: 'Ana Souza', email: 'ana@exemplo.com', role: 'USER', mustChangePassword: false, accountKind: 'REGULAR', capabilities: USER_CAPS },
       session: { token: expect.any(String), expiresAt: '2026-10-06T13:00:00.000Z' },
     });
     expect(res.headers['set-cookie']).toBeUndefined();
@@ -134,7 +136,7 @@ describe('A2 POST /api/auth/logout', () => {
 describe('A3 GET /api/auth/me', () => {
   it('RF03: 200 com id, nome, e-mail, nivel e mustChangePassword; sem hash', async () => {
     const res = await e.http().get('/api/auth/me').set(bearer(await e.sessionFor(idOf(1))));
-    expect(res.body).toEqual({ id: idOf(1), name: 'Ana Souza', email: 'ana@exemplo.com', role: 'USER', mustChangePassword: false });
+    expect(res.body).toEqual({ id: idOf(1), name: 'Ana Souza', email: 'ana@exemplo.com', role: 'USER', mustChangePassword: false, accountKind: 'REGULAR', capabilities: USER_CAPS });
   });
 
   it('liberada na troca obrigatoria', async () => {
@@ -160,7 +162,7 @@ describe('A4 PUT /api/account/password', () => {
     const current = await e.sessionFor(idOf(3));
     const res = await change(current, { currentPassword: 'Temp1234', newPassword: 'MinhaSenha9' });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: idOf(3), name: 'Carla Dias', email: 'carla@exemplo.com', role: 'USER', mustChangePassword: false });
+    expect(res.body).toEqual({ id: idOf(3), name: 'Carla Dias', email: 'carla@exemplo.com', role: 'USER', mustChangePassword: false, accountKind: 'REGULAR', capabilities: USER_CAPS });
     expect((await e.http().get('/api/auth/me').set(bearer(other))).status).toBe(401);
     expect((await e.http().get('/api/auth/me').set(bearer(current))).status).toBe(200);
     expect((await login('carla@exemplo.com', 'Temp1234')).status).toBe(401);

@@ -5,7 +5,8 @@ export type ErrorKind =
   | 'business_rule'
   | 'unauthenticated'
   | 'forbidden'
-  | 'rate_limited';
+  | 'rate_limited'
+  | 'upgrade_required';
 
 export interface FieldViolation {
   field: string;

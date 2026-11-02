@@ -47,9 +47,9 @@ const ADMIN_ROUTES = [
   'POST /api/admin/users/:id/deactivate',
   'POST /api/admin/users/:id/reactivate',
   'POST /api/admin/users/:id/password-reset',
-  'PUT /api/entries/:id',
-  'DELETE /api/entries/:id',
 ].sort();
+// B6 (ADR 0011): editar/excluir lancamento exige a capacidade MANAGE_EXPENSES, que toda conta autenticada tem;
+// o escopo por dono (404) e coberto em entries-manage-authz.e2e-spec.ts. Deixam de ser rotas exclusivas de ADMIN.
 const PROTECTED_FINANCE = [
   'POST /api/entries',
   'POST /api/entries/installments',
@@ -59,6 +59,7 @@ const PROTECTED_FINANCE = [
   'POST /api/entries/pay',
   'POST /api/entries/:id/pay',
   'PUT /api/entries/:id',
+  'DELETE /api/entries/:id',
   'GET /api/categories',
   'POST /api/cards',
   'GET /api/cards',
@@ -158,7 +159,7 @@ describe('RF10: 403 FORBIDDEN nas rotas de gestao (nivel verificado a cada requi
     for (const r of ADMIN_ROUTES.map((l) => ({ method: l.split(' ')[0], path: l.split(' ')[1] }))) {
       const res = await call(r, tokens.ana);
       expect(res.status, label(r)).toBe(403);
-      expect(res.body, label(r)).toEqual({ code: 'FORBIDDEN', message: 'Você não tem permissão para esta ação.', details: null });
+      expect(res.body, label(r)).toEqual({ code: 'FORBIDDEN', message: 'Você não tem permissão para esta ação.', details: {} });
     }
   });
 

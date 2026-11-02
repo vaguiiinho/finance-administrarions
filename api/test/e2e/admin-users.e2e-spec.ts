@@ -85,12 +85,18 @@ describe('U3 POST /api/admin/users (RF12, CA16-CA18)', () => {
   it.each([
     ['ativa (caixa diferente)', 'ANA@exemplo.com'],
     ['inativo', 'bruno@exemplo.com'],
-    ['usuario demo', 'demo@finance.invalid'],
   ])('CA17: e-mail %s -> 409 EMAIL_TAKEN com details.fields[0]', async (_l, email) => {
     const res = await create({ name: 'Outra', email, role: 'USER', password: 'Temp1234' });
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('EMAIL_TAKEN');
     expect(res.body.details.fields[0]).toMatchObject({ field: 'email', code: 'EMAIL_TAKEN', message: expect.any(String) });
+  });
+
+  it.each(['demo@finance.invalid', 'demo@showcase.invalid'])('I4/D5: e-mail reservado %s -> 400 VALIDATION_ERROR (email:INVALID_FORMAT)', async (email) => {
+    const res = await create({ name: 'Outra', email, role: 'USER', password: 'Temp1234' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('VALIDATION_ERROR');
+    expect(res.body.details.fields[0]).toMatchObject({ field: 'email', code: 'INVALID_FORMAT' });
   });
 });
 

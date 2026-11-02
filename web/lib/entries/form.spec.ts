@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCardPayload,
   buildCreateEntryPayload,
+  buildUpdateExpensePayload,
   initialEntryForm,
   initialStatusText,
   mapApiFieldIssues,
@@ -150,5 +151,19 @@ describe("cartao (painel embutido e /cards) - RF01", () => {
     ]);
     expect(fields.name).toBe("Já existe um cartão com esse nome.");
     expect(unmapped).toEqual(["z"]);
+  });
+});
+
+describe("buildUpdateExpensePayload (E3)", () => {
+  it("envia so descricao, categoria, data e valor, aparados e com valor decimal", () => {
+    expect(buildUpdateExpensePayload(base({ date: "2026-10-10" }))).toEqual({
+      description: "Mercado",
+      category: "Alimentação",
+      date: "2026-10-10",
+      amount: "1234.56",
+    });
+  });
+  it("valor invalido lanca RangeError", () => {
+    expect(() => buildUpdateExpensePayload(base({ amount: "" }))).toThrow(RangeError);
   });
 });

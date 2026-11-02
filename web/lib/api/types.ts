@@ -163,12 +163,17 @@ export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: Action
 
 /** Identidade e acesso (ADR 0005 6.2). */
 export type Role = "ADMIN" | "USER";
+/** Capacidades informadas pela API em `me` (ADR 0011 B6/B8): a UI decide por elas, nao por `role` nem e-mail. */
+export type Capability = "CHANGE_OWN_PASSWORD" | "MANAGE_EXPENSES" | "MANAGE_USERS" | "UPDATE_OWN_PROFILE";
+export type AccountKind = "REGULAR" | "SHOWCASE";
 export interface CurrentUserDto {
   id: string;
   name: string;
   email: string;
   role: Role;
   mustChangePassword: boolean;
+  accountKind: AccountKind;
+  capabilities: Capability[];
 }
 export interface AuthResponse {
   user: CurrentUserDto;

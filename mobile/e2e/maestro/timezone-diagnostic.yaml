@@ -1,0 +1,7 @@
+appId: br.com.finance.app
+---
+# CA15/CA18: tela de diagnostico (so no perfil e2e) com TZ=UTC e TZ=Asia/Tokyo.
+- launchApp: { clearState: true, arguments: { route: "/diagnostics", now: "2026-12-01T01:30:00Z" } }
+- assertVisible: "mes: 2026-11"
+- assertVisible: "hoje: 2026-11-30"
+- assertVisible: "01/11/2026"

@@ -1,9 +1,15 @@
+import type { Capability } from '../domain/user/account-capabilities.js';
+
 export interface CurrentUserView {
   id: string;
   name: string;
   email: string;
   role: 'ADMIN' | 'USER';
   mustChangePassword: boolean;
+  /** Sinal "conta demo" (P-ADR5). Só contas que autenticam são expostas. */
+  accountKind: 'REGULAR' | 'SHOWCASE';
+  /** Ordenado. */
+  capabilities: Capability[];
 }
 
 export interface AdminUserView {
@@ -32,4 +38,5 @@ export interface PrincipalView {
   sessionId: string;
   role: 'ADMIN' | 'USER';
   mustChangePassword: boolean;
+  capabilities: Capability[];
 }

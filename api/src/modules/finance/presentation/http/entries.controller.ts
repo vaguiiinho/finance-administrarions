@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Put, Query } from '@nestjs/common';
-import { RequireRole } from '@shared/presentation/auth/access-metadata.js';
+import { RequireCapability } from '@shared/presentation/auth/access-metadata.js';
 import { CurrentOwnerId } from '@shared/presentation/auth/current-principal.decorators.js';
 import { ZodValidationPipe } from '@shared/presentation/pipes/zod-validation.pipe.js';
 import { CreateEntry } from '../../application/use-cases/entries/create-entry.js';
@@ -57,7 +57,7 @@ export class EntriesController {
 
   @Put(':id')
   @HttpCode(200)
-  @RequireRole('ADMIN')
+  @RequireCapability('MANAGE_EXPENSES')
   async update(
     @CurrentOwnerId() ownerId: string,
     @Param('id') id: string,
@@ -68,7 +68,7 @@ export class EntriesController {
 
   @Delete(':id')
   @HttpCode(204)
-  @RequireRole('ADMIN')
+  @RequireCapability('MANAGE_EXPENSES')
   async delete(@CurrentOwnerId() ownerId: string, @Param('id') id: string): Promise<void> {
     await this.deleteExpense.execute({ ownerId, id });
   }

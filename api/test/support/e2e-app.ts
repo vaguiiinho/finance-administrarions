@@ -38,7 +38,8 @@ export async function startE2eApp(
   const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication();
   configureApp(app);
-  await app.init();
+  // Servidor ja escutando: o supertest nao abre/fecha o socket a cada requisicao (evita corrida em `e.http().x(await y())`).
+  await app.listen(0);
   const pool = createPool();
   return {
     app,

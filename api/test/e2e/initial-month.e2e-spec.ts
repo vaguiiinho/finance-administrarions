@@ -192,7 +192,7 @@ describe('GET /api/entries/initial-month - erros no formato { code, message, det
     expect(res.body.code).toBe('PASSWORD_CHANGE_REQUIRED');
   });
 
-  it('a rota de mes inicial so aceita GET; mutacoes nao alcançam dados (rotas genericas de entrada exigem ADMIN)', async () => {
+  it('a rota de mes inicial so aceita GET; mutacoes nao alcançam dados (PUT/DELETE caem nas rotas por id e rejeitam o id invalido)', async () => {
     for (const method of ['post', 'patch'] as const) {
       const protectedRes = await (e.http() as any)[method](ROUTE).set(bearer(ana)).send({});
       expect(protectedRes.status, `${method} ${ROUTE}`).toBe(404);
@@ -203,8 +203,9 @@ describe('GET /api/entries/initial-month - erros no formato { code, message, det
     }
     for (const method of ['put', 'delete'] as const) {
       const protectedRes = await (e.http() as any)[method](ROUTE).set(bearer(ana)).send({});
-      expect(protectedRes.status, `${method} ${ROUTE}`).toBe(403);
-      expect(protectedRes.body.code).toBe('FORBIDDEN');
+      // B6: USER pode editar/excluir os proprios lancamentos; 'initial-month' nao e UUID, logo a rota generica valida o id/corpo (400), nunca 403 nem dados.
+      expect(protectedRes.status, `${method} ${ROUTE}`).toBe(400);
+      expect(protectedRes.body.code).toBe('VALIDATION_ERROR');
       const demoRes = await (e.http() as any)[method](DEMO_ROUTE).set(bearer(ana)).send({});
       expect(demoRes.status, `${method} ${DEMO_ROUTE}`).toBe(404);
       expect(demoRes.body.code).toBe('ROUTE_NOT_FOUND');

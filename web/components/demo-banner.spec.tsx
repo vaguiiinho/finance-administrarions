@@ -7,7 +7,7 @@ vi.mock("next/link", () => ({ default: ({ children, href, scroll, prefetch, ...r
 
 import { DemoBanner } from "./demo-banner";
 
-const ANA: CurrentUserDto = { id: "u1", name: "Ana Souza", email: "ana@exemplo.com", role: "USER", mustChangePassword: false };
+const ANA: CurrentUserDto = { id: "u1", name: "Ana Souza", email: "ana@exemplo.com", role: "USER", mustChangePassword: false, accountKind: "REGULAR", capabilities: ["CHANGE_OWN_PASSWORD", "MANAGE_EXPENSES", "UPDATE_OWN_PROFILE"] };
 
 describe("DemoBanner (RF32, RF36, CA38, CA42, design 2.5)", () => {
   it("visitante: texto exato e UNICA acao 'Entrar' com next equivalente", () => {

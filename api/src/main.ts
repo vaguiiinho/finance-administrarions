@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { MaintenanceScheduler } from './bootstrap/maintenance.scheduler.js';
 import { AppModule } from './app.module.js';
 import { configureApp } from './bootstrap/configure-app.js';
 import { EnvError, loadEnv } from './bootstrap/env.js';
@@ -22,5 +23,7 @@ async function bootstrap() {
   await app.init();
   await runFirstAdminBootstrap(app, env, (code) => process.exit(code));
   await app.listen(env.port);
+  // Manutenção periódica só no processo HTTP; seed e recover-admin usam createApplicationContext e não a iniciam.
+  app.get(MaintenanceScheduler).start();
 }
 await bootstrap();

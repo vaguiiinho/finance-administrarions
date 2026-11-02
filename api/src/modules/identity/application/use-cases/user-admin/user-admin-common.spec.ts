@@ -37,6 +37,7 @@ describe.each(ops)('$name: autorizacao do ator e alvo', (op) => {
   it('ator USER -> 403 FORBIDDEN (o 403 existe tambem dentro do use case, nao so no guard)', async () => {
     const error = await rejected(op.run(h, actorOf(ana()), bruno().id.value));
     expect(error).toMatchObject({ code: 'FORBIDDEN', kind: 'forbidden' });
+    expect((error as { details: unknown }).details).toEqual({});
   });
 
   it('ator INATIVO -> 401 UNAUTHENTICATED', async () => {

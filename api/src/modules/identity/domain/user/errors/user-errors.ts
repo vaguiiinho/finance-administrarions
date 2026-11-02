@@ -45,8 +45,9 @@ export class PasswordChangeRequiredError extends AppError {
 export class ForbiddenError extends AppError {
   readonly code = 'FORBIDDEN';
   readonly kind = 'forbidden' as const;
+  /** `details` é sempre `{}` (ADR 0011 3.7/6.2), inclusive nas rotas de gestão. */
   constructor() {
-    super('Você não tem permissão para esta ação.', null);
+    super('Você não tem permissão para esta ação.', {});
   }
 }
 
@@ -88,5 +89,14 @@ export class FirstAdminConfigError extends AppError {
   readonly kind = 'validation' as const;
   constructor(variables: { name: string; code: string }[]) {
     super('Configuração do primeiro administrador ausente ou inválida.', { variables });
+  }
+}
+
+/** Só no boot, nunca HTTP. Nunca carrega o valor da senha. */
+export class ShowcaseConfigError extends AppError {
+  readonly code = 'SHOWCASE_CONFIG_INVALID';
+  readonly kind = 'validation' as const;
+  constructor(variable: string, reason: string) {
+    super('Configuração da conta de demonstração inválida.', { variable, reason });
   }
 }

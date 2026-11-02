@@ -13,7 +13,7 @@ vi.mock("next/link", () => ({ default: ({ children, href, scroll, prefetch, ...r
 
 import { ProfileForm } from "./profile-form";
 
-const ANA: CurrentUserDto = { id: "u1", name: "Ana Souza", email: "ana@exemplo.com", role: "USER", mustChangePassword: false };
+const ANA: CurrentUserDto = { id: "u1", name: "Ana Souza", email: "ana@exemplo.com", role: "USER", mustChangePassword: false, accountKind: "REGULAR", capabilities: ["CHANGE_OWN_PASSWORD", "MANAGE_EXPENSES", "UPDATE_OWN_PROFILE"] };
 const setup = (user = ANA) => render(<AllProviders><ProfileForm user={user} /></AllProviders>);
 const name = () => screen.getByLabelText("Nome", { selector: "input" }) as HTMLInputElement;
 const save = () => screen.getByRole("button", { name: /^Salvar$|^Salvando/ });

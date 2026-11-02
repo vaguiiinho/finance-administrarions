@@ -14,6 +14,7 @@ import {
   MONTHLY_SUMMARY_READ_MODEL,
   type MonthlySummaryReadModel,
 } from './application/ports/monthly-summary-read-model.js';
+import { SHOWCASE_DATA_PURGER } from './application/ports/showcase-data-purger.js';
 import { DEMO_DATASET_STORE, type DemoDatasetStore } from './application/demo/demo-dataset-store.js';
 import { RefreshDemoDataset } from './application/demo/refresh-demo-dataset.js';
 import { CreateCard } from './application/use-cases/cards/create-card.js';
@@ -182,6 +183,6 @@ const USE_CASE_PROVIDERS: Provider[] = [
     DemoController,
   ],
   providers: [...FINANCE_INFRASTRUCTURE_PROVIDERS, ...USE_CASE_PROVIDERS, FinanceReadHandlers],
-  exports: [RefreshDemoDataset],
+  exports: [RefreshDemoDataset, SHOWCASE_DATA_PURGER],
 })
 export class FinanceModule {}

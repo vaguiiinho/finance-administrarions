@@ -11,7 +11,7 @@ vi.mock("@/app/(auth)/actions", () => ({ logoutAction: vi.fn() }));
 import { AppHeader } from "./app-header";
 import { DEMO_MODE, PROTECTED_MODE } from "./app-mode";
 
-const ANA: CurrentUserDto = { id: "u1", name: "Ana Souza", email: "ana@exemplo.com", role: "USER", mustChangePassword: false };
+const ANA: CurrentUserDto = { id: "u1", name: "Ana Souza", email: "ana@exemplo.com", role: "USER", mustChangePassword: false, accountKind: "REGULAR", capabilities: ["CHANGE_OWN_PASSWORD", "MANAGE_EXPENSES", "UPDATE_OWN_PROFILE"] };
 const CARLA: CurrentUserDto = { ...ANA, id: "u3", name: "Carla Dias", email: "carla@exemplo.com", mustChangePassword: true };
 
 beforeEach(() => {

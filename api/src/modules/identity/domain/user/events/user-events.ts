@@ -21,6 +21,12 @@ export class PasswordChanged implements DomainEvent {
 export class FirstAdminBootstrapped implements DomainEvent {
   constructor(readonly userId: string, readonly receivedLegacyData: boolean, readonly occurredAt: Date) {}
 }
+export class ShowcaseAccountProvisioned implements DomainEvent {
+  constructor(readonly userId: string, readonly occurredAt: Date) {}
+}
+export class ShowcasePasswordReplaced implements DomainEvent {
+  constructor(readonly userId: string, readonly occurredAt: Date) {}
+}
 export type UserDomainEvent =
   | UserCreated
   | UserUpdated
@@ -28,4 +34,6 @@ export type UserDomainEvent =
   | UserReactivated
   | UserPasswordReset
   | PasswordChanged
-  | FirstAdminBootstrapped;
+  | FirstAdminBootstrapped
+  | ShowcaseAccountProvisioned
+  | ShowcasePasswordReplaced;

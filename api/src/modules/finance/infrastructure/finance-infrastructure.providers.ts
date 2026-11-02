@@ -12,6 +12,8 @@ import { MONTHLY_SUMMARY_READ_MODEL } from '../application/ports/monthly-summary
 import { CARD_REPOSITORY } from '../domain/card/card.repository.js';
 import { CATEGORY_CATALOG } from '../domain/entry/category-catalog.js';
 import { ENTRY_REPOSITORY } from '../domain/entry/entry.repository.js';
+import { SHOWCASE_DATA_PURGER } from '../application/ports/showcase-data-purger.js';
+import { PrismaShowcaseDataPurger } from './maintenance/prisma-showcase-data-purger.js';
 import { PrismaDemoDatasetStore } from './demo/prisma-demo-dataset-store.js';
 import { PrismaFinanceUnitOfWork } from './prisma-finance-unit-of-work.js';
 import { PrismaCardReadModel } from './read-models/card-read-model.prisma.js';
@@ -44,5 +46,6 @@ export const FINANCE_INFRASTRUCTURE_PROVIDERS: Provider[] = [
   fromPrisma(CATEGORY_READ_MODEL, (prisma) => new PrismaCategoryReadModel(prisma)),
   fromPrisma(DASHBOARD_READ_MODEL, (prisma) => new PrismaDashboardReadModel(prisma)),
   fromPrisma(PENDING_OVERVIEW_READ_MODEL, (prisma) => new PrismaPendingOverviewReadModel(prisma)),
+  fromPrisma(SHOWCASE_DATA_PURGER, (prisma) => new PrismaShowcaseDataPurger(prisma)),
   fromPrisma(DEMO_DATASET_STORE, (prisma) => new PrismaDemoDatasetStore(prisma)),
 ];

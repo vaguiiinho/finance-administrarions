@@ -1,5 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { currentYearMonthSP, formatCivilDate, formatInstant, monthLabelPtBR, monthLongPtBR } from "./format";
+import {
+  currentYearMonthSP,
+  formatCivilDate,
+  formatInstant,
+  formatInstantDate,
+  isYearMonth,
+  monthLabelPtBR,
+  monthLongPtBR,
+  shiftMonth,
+  todaySP,
+} from "./format";
 
 const originalTz = process.env.TZ;
 afterEach(() => {
@@ -65,5 +75,53 @@ describe("rotulos de mes (tabela fixa pt-BR)", () => {
     expect(monthLabelPtBR("2026-11")).toBe("nov/26");
     expect(monthLongPtBR("2026-11")).toBe("novembro de 2026");
     expect(monthLabelPtBR("2027-01")).toBe("jan/27");
+  });
+});
+
+describe("isYearMonth", () => {
+  it.each(["2026-01", "2026-12", "1999-06"])("aceita %s", (v) => expect(isYearMonth(v)).toBe(true));
+  it.each(["2026-00", "2026-13", "2026-1", "26-11", "2026-11-01", "", "abcd-ef"])("rejeita %j", (v) => expect(isYearMonth(v)).toBe(false));
+});
+
+describe("monthLongPtBR", () => {
+  it("escreve o mes por extenso", () => {
+    expect(monthLongPtBR("2026-11")).toBe("novembro de 2026");
+    expect(monthLongPtBR("2026-03")).toBe("março de 2026");
+    expect(monthLongPtBR("2027-01")).toBe("janeiro de 2027");
+  });
+  it("rejeita mes invalido", () => expect(() => monthLongPtBR("2026-13")).toThrow(RangeError));
+  it("monthLabelPtBR tambem rejeita mes invalido", () => expect(() => monthLabelPtBR("nov/26")).toThrow(RangeError));
+});
+
+describe("shiftMonth", () => {
+  it.each([
+    ["2026-11", 1, "2026-12"],
+    ["2026-12", 1, "2027-01"],
+    ["2026-01", -1, "2025-12"],
+    ["2026-11", 0, "2026-11"],
+    ["2026-11", 14, "2028-01"],
+    ["2026-03", -15, "2024-12"],
+  ])("%s %i -> %s", (m, d, expected) => expect(shiftMonth(m, d)).toBe(expected));
+  it("rejeita mes invalido", () => expect(() => shiftMonth("2026-00", 1)).toThrow(RangeError));
+});
+
+describe("formatCivilDate: entrada invalida", () => {
+  it.each(["", "2026-11", "05/11/2026", "2026-11-05T00:00:00Z"])("rejeita %j", (v) => expect(() => formatCivilDate(v)).toThrow(RangeError));
+});
+
+describe("formatInstantDate e todaySP (America/Sao_Paulo)", () => {
+  it("formatInstantDate usa o dia de Sao Paulo, nao o de UTC", () => {
+    expect(formatInstantDate("2026-11-01T02:30:00.000Z")).toBe("31/10/2026");
+    expect(formatInstantDate("2026-11-01T03:00:00.000Z")).toBe("01/11/2026");
+  });
+  it("todaySP vira o dia as 03:00 UTC, independente do TZ do processo", () => {
+    process.env.TZ = "Asia/Tokyo";
+    expect(todaySP(new Date("2026-11-01T02:59:00.000Z"))).toBe("2026-10-31");
+    expect(todaySP(new Date("2026-11-01T03:00:00.000Z"))).toBe("2026-11-01");
+  });
+  it("todaySP sem argumento usa o relogio atual", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-01-01T02:30:00.000Z"));
+    expect(todaySP()).toBe("2026-12-31");
   });
 });

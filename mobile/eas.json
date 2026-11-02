@@ -1,0 +1,40 @@
+{
+  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": { "simulator": true },
+      "env": {
+        "APP_VARIANT": "development",
+        "EXPO_PUBLIC_API_URL": "http://localhost:3001",
+        "EXPO_PUBLIC_WEB_URL": "http://localhost:3000"
+      }
+    },
+    "e2e": {
+      "extends": "development",
+      "env": { "APP_VARIANT": "e2e", "EXPO_PUBLIC_E2E": "1" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_API_URL": "https://api-staging.example.com",
+        "EXPO_PUBLIC_WEB_URL": "https://staging.example.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_API_URL": "https://api.example.com",
+        "EXPO_PUBLIC_WEB_URL": "https://app.example.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": { "ascAppId": "REPLACE-WITH-APP-STORE-CONNECT-APP-ID", "appleTeamId": "REPLACE-WITH-APPLE-TEAM-ID" }
+    }
+  }
+}

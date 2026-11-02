@@ -102,3 +102,24 @@ describe("parsing/mascara do campo de valor do drawer", () => {
     expect(maskMoneyInput("a1b2")).toBe("0,12");
   });
 });
+
+describe("toCents: entradas invalidas", () => {
+  it.each(["", "abc", "1,50", "1.234", "--1", "1.", ".5", "1e3"])("rejeita %j", (v) => expect(() => toCents(v)).toThrow(RangeError));
+  it("aceita espacos nas pontas", () => expect(toCents(" 12.5 ")).toBe(1250n));
+});
+
+describe("maskMoneyInput: bordas", () => {
+  it("vazio e sem digitos -> vazio", () => {
+    expect(maskMoneyInput("")).toBe("");
+    expect(maskMoneyInput("abc")).toBe("");
+  });
+  it("somente zeros -> 0,00", () => expect(maskMoneyInput("000")).toBe("0,00"));
+  it("um e dois digitos preenchem os centavos", () => {
+    expect(maskMoneyInput("5")).toBe("0,05");
+    expect(maskMoneyInput("50")).toBe("0,50");
+  });
+  it("agrupa milhares e ignora zeros a esquerda", () => {
+    expect(maskMoneyInput("123456")).toBe("1.234,56");
+    expect(maskMoneyInput("0012345678")).toBe("123.456,78");
+  });
+});

@@ -1,0 +1,41 @@
+name: Web CI
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # Regras puras compartilhadas web/lib <-> mobile/src/lib (ADR 0011 10.3). Script sem dependencias: nao precisa de npm ci no mobile.
+      - name: Check shared rules (web <-> mobile)
+        run: node mobile/scripts/check-shared-rules.mjs
+
+      - name: Install
+        working-directory: web
+        run: npm ci
+
+      - name: Lint
+        working-directory: web
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: web
+        run: npx tsc --noEmit
+
+      - name: Test
+        working-directory: web
+        run: npm test

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { CurrentUserDto } from "@/lib/api/types";
 import { decideAdminLayout, decideProtectedLayout, decideRoute } from "./route-policy";
 
-const user = (over: Partial<CurrentUserDto> = {}): CurrentUserDto => ({ id: "u1", name: "Ana Souza", email: "ana@exemplo.com", role: "USER", mustChangePassword: false, ...over });
+const user = (over: Partial<CurrentUserDto> = {}): CurrentUserDto => ({ id: "u1", name: "Ana Souza", email: "ana@exemplo.com", role: "USER", mustChangePassword: false, accountKind: "REGULAR", capabilities: ["CHANGE_OWN_PASSWORD", "MANAGE_EXPENSES", "UPDATE_OWN_PROFILE"], ...over });
 
 describe("decideRoute: visitante sem cookie (CA40, RF34)", () => {
   it.each([

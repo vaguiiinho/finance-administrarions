@@ -19,8 +19,8 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 |---|---|---|---|
 | POST | `/api/entries` | Cria lançamento (receita ou despesa) | 201 |
 | POST | `/api/entries/installments` | Cria uma série de despesas mensais em uma operação atômica | 201 |
-| PUT | `/api/entries/:id` | Edita uma despesa (somente ADMIN) | 200 |
-| DELETE | `/api/entries/:id` | Exclui definitivamente uma despesa (somente ADMIN) | 204 |
+| PUT | `/api/entries/:id` | Edita uma despesa própria (capacidade `MANAGE_EXPENSES`) | 200 |
+| DELETE | `/api/entries/:id` | Exclui definitivamente uma despesa própria (capacidade `MANAGE_EXPENSES`) | 204 |
 | GET | `/api/entries/initial-month` | Mês inicial sugerido para a listagem de lançamentos (sem query) | 200 |
 | GET | `/api/entries/expenses` | Despesas de um mês de referência, com filtros, paginação e subtotal | 200 |
 | GET | `/api/entries/incomes` | Receitas de um mês de referência, com filtro de categoria, paginação e subtotal | 200 |
@@ -37,7 +37,7 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 | GET | `/api/dashboard/monthly-series?month=` | 12 meses terminando em `month` | 200 |
 | GET | `/api/dashboard/category-distribution?month=` | Despesas do mês por categoria | 200 |
 
-Despesas podem ser excluídas definitivamente por ADMIN; cartões não têm endpoint de exclusão.
+Despesas podem ser editadas e excluídas definitivamente por qualquer conta autenticada, mas só as próprias (capacidade `MANAGE_EXPENSES`); cartões não têm endpoint de exclusão. O app mobile usa os mesmos endpoints, com `Authorization: Bearer` e `X-Client: mobile/<versão>` (ver `docs/api/identity.md`; versão abaixo da mínima gera 426 `APP_UPDATE_REQUIRED` em qualquer rota).
 
 ### Objeto `Entry` (resposta de criação, listagens e pagamento)
 
@@ -165,7 +165,7 @@ O exemplo mostra um item; a resposta real contém todos os lançamentos, ordenad
 
 ### PUT /api/entries/:id
 
-Exige o nível `ADMIN`. O escopo continua sendo o dono autenticado: a rota não permite que um administrador altere lançamentos de outro usuário.
+Exige a capacidade `MANAGE_EXPENSES`, que hoje toda conta autenticada possui (USER, ADMIN e a conta de demonstração); antes só ADMIN podia. O escopo é sempre o dono autenticado: lançamento de outro usuário responde 404 `ENTRY_NOT_FOUND` para qualquer nível, inclusive ADMIN (a existência não é revelada).
 
 Corpo estrito:
 
@@ -185,11 +185,11 @@ PUT /api/entries/0192f3a4-6b1c-7d2e-8f90-a1b2c3d4e5f6
 { "description": "Mercado", "category": "Alimentação", "date": "2026-10-15", "amount": "230.50" }
 ```
 
-Erros: 400 `VALIDATION_ERROR`; 403 `FORBIDDEN` para usuário sem nível ADMIN; 404 `ENTRY_NOT_FOUND`; 422 `ENTRY_NOT_EDITABLE` para receitas e `PAID_CARD_EXPENSE_DATE_LOCKED` quando se tenta mudar a data de uma compra paga no cartão.
+Erros: 400 `VALIDATION_ERROR`; 403 `FORBIDDEN` (`details: {}`) só para conta sem `MANAGE_EXPENSES` (hoje nenhuma); 404 `ENTRY_NOT_FOUND` (inexistente ou de outro dono); 422 `ENTRY_NOT_EDITABLE` para receitas e `PAID_CARD_EXPENSE_DATE_LOCKED` quando se tenta mudar a data de uma compra paga no cartão.
 
 ### DELETE /api/entries/:id
 
-Exige o nível `ADMIN`, mas só alcança despesas do proprietário autenticado. Remove definitivamente despesas pendentes ou pagas; receitas não podem ser excluídas por esta rota. A exclusão atualiza listas, resumos, dashboard e totais das faturas. Não há recuperação.
+Exige a capacidade `MANAGE_EXPENSES` (toda conta autenticada) e só alcança despesas do proprietário autenticado. Remove definitivamente despesas pendentes ou pagas; receitas não podem ser excluídas por esta rota. A exclusão atualiza listas, resumos, dashboard e totais das faturas. Não há recuperação.
 
 Sem corpo. Sucesso: `204 No Content`.
 
@@ -197,7 +197,7 @@ Sem corpo. Sucesso: `204 No Content`.
 DELETE /api/entries/0192f3a4-6b1c-7d2e-8f90-a1b2c3d4e5f6
 ```
 
-Erros: 400 `VALIDATION_ERROR`; 403 `FORBIDDEN` para usuário sem nível ADMIN; 404 `ENTRY_NOT_FOUND` para id inexistente ou de outro proprietário; 422 `ENTRY_NOT_DELETABLE` para receitas.
+Erros: 400 `VALIDATION_ERROR`; 403 `FORBIDDEN` (`details: {}`) só para conta sem `MANAGE_EXPENSES` (hoje nenhuma); 404 `ENTRY_NOT_FOUND` para id inexistente ou de outro proprietário; 422 `ENTRY_NOT_DELETABLE` para receitas.
 
 ### GET /api/entries/initial-month
 
@@ -385,6 +385,8 @@ Formato único: `{ "code": string, "message": string, "details": unknown }`. `me
 |---|---|---|---|
 | 400 | `VALIDATION_ERROR` | Corpo, query, path param ou regra de entrada inválidos | `{ fields: [...] }` |
 | 400 | `MALFORMED_JSON` | JSON do corpo ilegível | `null` |
+| 403 | `FORBIDDEN` | Capacidade ausente (ver `identity.md`) | `{}` |
+| 426 | `APP_UPDATE_REQUIRED` | `X-Client: mobile/<v>` abaixo da mínima | `{ minimumVersion, storeUrl }` |
 | 404 | `ROUTE_NOT_FOUND` | Rota inexistente | `{ method, path }` |
 | 404 | `ENTRY_NOT_FOUND` | Lançamento inexistente em pagamento, edição ou exclusão | `{ id }` |
 | 404 | `ENTRIES_NOT_FOUND` | Algum id do lote inexistente | `{ missingIds }` |

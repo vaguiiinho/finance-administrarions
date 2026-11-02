@@ -27,6 +27,8 @@ describe('LoginWithPassword: sucesso (RF01, CA01)', () => {
       email: 'ana@exemplo.com',
       role: 'USER',
       mustChangePassword: false,
+      accountKind: 'REGULAR',
+      capabilities: ['CHANGE_OWN_PASSWORD', 'MANAGE_EXPENSES', 'UPDATE_OWN_PROFILE'],
     });
     expect(result.session.token).toEqual(expect.any(String));
     expect(result.session.expiresAt).toEqual(new Date(NOW.getTime() + H24));

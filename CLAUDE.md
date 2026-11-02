@@ -5,7 +5,7 @@
 ## Decisões padrão (não perguntar)
 - Valores monetários trafegam como string decimal ("1234.56"); Decimal(12,2) no banco.
 - Datas em UTC no banco/API; exibição em America/Sao_Paulo.
-- Gráficos: Recharts.
+- Gráficos: Recharts (web). No app mobile (React Native), react-native-gifted-charts — ver ADR 0011.
 - Erros HTTP no formato { code, message, details }; id inexistente → 404.
 - IDs: UUID v7.
 

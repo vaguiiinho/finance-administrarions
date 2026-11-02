@@ -33,6 +33,7 @@ enum UserKind {
   REGULAR
   DEMO
   PENDING_FIRST_ADMIN
+  SHOWCASE
 
   @@map("user_kind")
 }

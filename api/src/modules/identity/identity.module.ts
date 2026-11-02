@@ -1,9 +1,10 @@
-import { Module, type Provider } from '@nestjs/common';
+import { Logger, Module, type Provider } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { CLOCK, type Clock } from '@shared/application/ports/clock.js';
 import { DOMAIN_EVENT_PUBLISHER, type DomainEventPublisher } from '@shared/application/ports/domain-event-publisher.js';
 import { ID_GENERATOR, type IdGenerator } from '@shared/application/ports/id-generator.js';
 import { ATTEMPT_LIMITER, type AttemptLimiter } from './application/ports/attempt-limiter.js';
+import { CLIENT_COMPATIBILITY_CONFIG, type ClientCompatibilityConfig } from './application/ports/client-compatibility-config.js';
 import { IDENTITY_AUDIT_LOG, type IdentityAuditLog } from './application/ports/identity-audit-log.js';
 import { IDENTITY_UNIT_OF_WORK, type IdentityUnitOfWork } from './application/ports/identity-unit-of-work.js';
 import { PASSWORD_HASHER, type PasswordHasher } from './application/ports/password-hasher.js';
@@ -12,12 +13,14 @@ import { SESSION_TOKEN_ISSUER, type SessionTokenIssuer } from './application/por
 import { ChangeOwnPassword } from './application/use-cases/account/change-own-password.js';
 import { UpdateOwnProfile } from './application/use-cases/account/update-own-profile.js';
 import { AuthenticateSession } from './application/use-cases/auth/authenticate-session.js';
+import { CheckClientCompatibility } from './application/use-cases/auth/check-client-compatibility.js';
 import { CheckAuthRequestQuota } from './application/use-cases/auth/check-auth-request-quota.js';
 import { GetCurrentUser } from './application/use-cases/auth/get-current-user.js';
 import { LoginWithPassword } from './application/use-cases/auth/login-with-password.js';
 import { Logout } from './application/use-cases/auth/logout.js';
 import { PurgeExpiredSessions } from './application/use-cases/auth/purge-expired-sessions.js';
 import { BootstrapFirstAdmin } from './application/use-cases/bootstrap/bootstrap-first-admin.js';
+import { EnsureShowcaseAccount } from './application/use-cases/bootstrap/ensure-showcase-account.js';
 import { EnsureDemoUser } from './application/use-cases/bootstrap/ensure-demo-user.js';
 import { RecoverAdminAccess } from './application/use-cases/bootstrap/recover-admin-access.js';
 import { CreateUser } from './application/use-cases/user-admin/create-user.js';
@@ -31,11 +34,12 @@ import { SESSION_REPOSITORY, type SessionRepository } from './domain/session/ses
 import { USER_REPOSITORY, type UserRepository } from './domain/user/user.repository.js';
 import { IDENTITY_INFRASTRUCTURE_PROVIDERS } from './infrastructure/identity-infrastructure.providers.js';
 import { AccessControlGuard } from './presentation/guards/access-control.guard.js';
-import { ACCESS_POLICIES, type AccessPolicy } from './presentation/guards/access-policy.js';
+import { ACCESS_POLICIES, ACCESS_PRE_POLICIES, type AccessPolicy } from './presentation/guards/access-policy.js';
 import { AuthQuotaGuard } from './presentation/guards/auth-quota.guard.js';
 import { AuthenticationPolicy } from './presentation/guards/authentication.policy.js';
 import { PasswordChangePolicy } from './presentation/guards/password-change.policy.js';
-import { RolePolicy } from './presentation/guards/role.policy.js';
+import { CapabilityPolicy } from './presentation/guards/capability.policy.js';
+import { ClientContextPolicy } from './presentation/guards/client-context.policy.js';
 import { AccountController } from './presentation/http/account.controller.js';
 import { AdminUsersController } from './presentation/http/admin-users.controller.js';
 import { AuthController } from './presentation/http/auth.controller.js';
@@ -100,8 +104,17 @@ const USE_CASE_PROVIDERS: Provider[] = [
       audit: IdentityAuditLog,
       clock: Clock,
       publisher: DomainEventPublisher,
-    ) => new ChangeOwnPassword(uow, hasher, limiter, audit, clock, publisher),
-    inject: [IDENTITY_UNIT_OF_WORK, PASSWORD_HASHER, ATTEMPT_LIMITER, IDENTITY_AUDIT_LOG, CLOCK, DOMAIN_EVENT_PUBLISHER],
+      users: UserRepository,
+    ) => new ChangeOwnPassword(uow, hasher, limiter, audit, clock, publisher, users),
+    inject: [
+      IDENTITY_UNIT_OF_WORK,
+      PASSWORD_HASHER,
+      ATTEMPT_LIMITER,
+      IDENTITY_AUDIT_LOG,
+      CLOCK,
+      DOMAIN_EVENT_PUBLISHER,
+      USER_REPOSITORY,
+    ],
   },
   {
     provide: UpdateOwnProfile,
@@ -175,6 +188,17 @@ const USE_CASE_PROVIDERS: Provider[] = [
     inject: [IDENTITY_UNIT_OF_WORK, PASSWORD_HASHER, CLOCK, DOMAIN_EVENT_PUBLISHER, IDENTITY_AUDIT_LOG],
   },
   {
+    provide: CheckClientCompatibility,
+    useFactory: (config: ClientCompatibilityConfig) => new CheckClientCompatibility(config),
+    inject: [CLIENT_COMPATIBILITY_CONFIG],
+  },
+  {
+    provide: EnsureShowcaseAccount,
+    useFactory: (uow: IdentityUnitOfWork, hasher: PasswordHasher, clock: Clock, publisher: DomainEventPublisher) =>
+      new EnsureShowcaseAccount(uow, hasher, clock, publisher, (message) => new Logger('Seed').warn(message)),
+    inject: [IDENTITY_UNIT_OF_WORK, PASSWORD_HASHER, CLOCK, DOMAIN_EVENT_PUBLISHER],
+  },
+  {
     provide: EnsureDemoUser,
     useFactory: (users: UserRepository, clock: Clock) => new EnsureDemoUser(users, clock),
     inject: [USER_REPOSITORY, CLOCK],
@@ -187,14 +211,20 @@ const GUARD_PROVIDERS: Provider[] = [
     useFactory: (authenticate: AuthenticateSession): AccessPolicy[] => [
       new AuthenticationPolicy(authenticate),
       new PasswordChangePolicy(),
-      new RolePolicy(),
+      new CapabilityPolicy(),
     ],
     inject: [AuthenticateSession],
   },
   {
+    provide: ACCESS_PRE_POLICIES,
+    useFactory: (compatibility: CheckClientCompatibility): AccessPolicy[] => [new ClientContextPolicy(compatibility)],
+    inject: [CheckClientCompatibility],
+  },
+  {
     provide: APP_GUARD,
-    useFactory: (reflector: Reflector, policies: AccessPolicy[]) => new AccessControlGuard(reflector, policies),
-    inject: [Reflector, ACCESS_POLICIES],
+    useFactory: (reflector: Reflector, pre: AccessPolicy[], policies: AccessPolicy[]) =>
+      new AccessControlGuard(reflector, pre, policies),
+    inject: [Reflector, ACCESS_PRE_POLICIES, ACCESS_POLICIES],
   },
   AuthQuotaGuard,
 ];
@@ -207,6 +237,7 @@ const GUARD_PROVIDERS: Provider[] = [
     SESSION_TOKEN_ISSUER,
     IDENTITY_AUDIT_LOG,
     EnsureDemoUser,
+    EnsureShowcaseAccount,
     BootstrapFirstAdmin,
     RecoverAdminAccess,
     PurgeExpiredSessions,

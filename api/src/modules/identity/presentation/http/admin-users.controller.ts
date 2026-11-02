@@ -1,5 +1,5 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, Post, Put } from '@nestjs/common';
-import { RequireRole } from '@shared/presentation/auth/access-metadata.js';
+import { RequireCapability } from '@shared/presentation/auth/access-metadata.js';
 import { ClientIp } from '@shared/presentation/auth/client-ip.decorator.js';
 import { CurrentPrincipal } from '@shared/presentation/auth/current-principal.decorators.js';
 import type { AuthenticatedPrincipal } from '@shared/presentation/auth/principal.js';
@@ -24,7 +24,7 @@ import {
 
 const actorOf = (principal: AuthenticatedPrincipal, clientIp: string): Actor => ({ userId: principal.userId, clientIp });
 
-@RequireRole('ADMIN')
+@RequireCapability('MANAGE_USERS')
 @Controller('admin/users')
 export class AdminUsersController {
   constructor(

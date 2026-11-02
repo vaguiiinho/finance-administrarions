@@ -23,6 +23,16 @@ export class PlainPassword {
   }
 
   /**
+   * Único caminho da senha curta (ADR 0011 3.5): 1-72 code points, sem mínimo de 8.
+   * Uso restrito ao `ensure-showcase-account.ts` (teste de arquitetura).
+   */
+  static forShowcaseAccount(raw: string): Result<PlainPassword, 'REQUIRED' | 'TOO_LONG'> {
+    if (typeof raw !== 'string' || raw.length === 0) return err('REQUIRED');
+    if (codePointLength(raw) > MAX) return err('TOO_LONG');
+    return ok(new PlainPassword(raw));
+  }
+
+  /**
    * Para CONFERIR uma senha já existente (login, senha atual): as regras de tamanho só valem ao DEFINIR (D13).
    * Limita o tamanho para não custar CPU com entradas absurdas.
    */

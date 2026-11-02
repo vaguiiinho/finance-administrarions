@@ -2,6 +2,7 @@ import type { Provider } from '@nestjs/common';
 import { CLOCK, type Clock } from '@shared/application/ports/clock.js';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service.js';
 import { ATTEMPT_LIMITER } from '../application/ports/attempt-limiter.js';
+import { CLIENT_COMPATIBILITY_CONFIG } from '../application/ports/client-compatibility-config.js';
 import { IDENTITY_AUDIT_LOG } from '../application/ports/identity-audit-log.js';
 import { IDENTITY_UNIT_OF_WORK } from '../application/ports/identity-unit-of-work.js';
 import { PASSWORD_HASHER } from '../application/ports/password-hasher.js';
@@ -10,6 +11,7 @@ import { SESSION_TOKEN_ISSUER } from '../application/ports/session-token-issuer.
 import { SESSION_REPOSITORY } from '../domain/session/session.repository.js';
 import { USER_REPOSITORY } from '../domain/user/user.repository.js';
 import { Argon2PasswordHasher } from './argon2-password-hasher.js';
+import { loadClientCompatibilityConfig } from './client-compatibility-config.js';
 import { HmacSessionTokenIssuer } from './hmac-session-token-issuer.js';
 import { InMemoryAttemptLimiter } from './in-memory-attempt-limiter.js';
 import { LoggerIdentityAuditLog } from './logger-identity-audit-log.js';
@@ -24,6 +26,7 @@ export const IDENTITY_INFRASTRUCTURE_PROVIDERS: Provider[] = [
   { provide: PASSWORD_HASHER, useFactory: () => new Argon2PasswordHasher() },
   { provide: SESSION_TOKEN_ISSUER, useFactory: () => new HmacSessionTokenIssuer(requireSessionSecret()) },
   { provide: ATTEMPT_LIMITER, useFactory: (clock: Clock) => new InMemoryAttemptLimiter(clock), inject: [CLOCK] },
+  { provide: CLIENT_COMPATIBILITY_CONFIG, useFactory: () => loadClientCompatibilityConfig() },
   { provide: IDENTITY_AUDIT_LOG, useFactory: () => new LoggerIdentityAuditLog() },
   { provide: USER_REPOSITORY, useFactory: (prisma: PrismaService) => new PrismaUserRepository(prisma), inject: [PrismaService] },
   {

@@ -1,5 +1,5 @@
 import { Body, Controller, HttpCode, Inject, Put, UseGuards } from '@nestjs/common';
-import { AllowDuringPasswordChange } from '@shared/presentation/auth/access-metadata.js';
+import { AllowDuringPasswordChange, RequireCapability } from '@shared/presentation/auth/access-metadata.js';
 import { ClientIp } from '@shared/presentation/auth/client-ip.decorator.js';
 import { CurrentPrincipal } from '@shared/presentation/auth/current-principal.decorators.js';
 import type { AuthenticatedPrincipal } from '@shared/presentation/auth/principal.js';
@@ -23,6 +23,7 @@ export class AccountController {
   ) {}
 
   @AllowDuringPasswordChange()
+  @RequireCapability('CHANGE_OWN_PASSWORD')
   @UseGuards(AuthQuotaGuard)
   @Put('password')
   @HttpCode(200)
@@ -36,6 +37,7 @@ export class AccountController {
     );
   }
 
+  @RequireCapability('UPDATE_OWN_PROFILE')
   @Put('profile')
   @HttpCode(200)
   async updateProfile(

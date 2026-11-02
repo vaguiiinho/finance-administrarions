@@ -1,0 +1,20 @@
+# Fluxo Maestro (nao executado agora). Build `e2e` contra a API stub (web/e2e/stub-api, ADR 0011 10.12).
+appId: br.com.finance.app
+---
+- launchApp: { clearState: true }
+- tapOn: "E-mail"
+- inputText: "ana@exemplo.com"
+- tapOn: "Senha"
+- inputText: "segredo123"
+- tapOn: "Entrar"
+- assertVisible: "Dashboard"
+- tapOn: "Novo"
+- tapOn: "Despesa"
+- tapOn: "Descrição"
+- inputText: "Aluguel"
+- tapOn: "Categoria"
+- inputText: "Moradia"
+- tapOn: "Valor"
+- inputText: "1234,5"
+- tapOn: "Salvar"
+- assertVisible: "Despesa criada."
