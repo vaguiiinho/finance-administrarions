@@ -61,6 +61,8 @@ const SCENARIOS = {
   // ({ now?, cards?, entries?, demo?: { cards, entries } }); `initial-month-error` so derruba GET .../entries/initial-month (500);
   // `initial-month-slow` atrasa so essa leitura (o web aborta em 1,5 s e cai em M).
   custom: { failMode: null, custom: true },
+  "category-distribution-error": { failMode: "category-distribution" },
+  "monthly-evolution-error": { failMode: "monthly-evolution" },
   "initial-month-error": { failMode: "initial-month", custom: true },
   "initial-month-slow": { failMode: null, custom: true, initialMonthDelayMs: 2600 },
 };
@@ -474,6 +476,8 @@ createServer(async (req, res) => {
     if (isDataQuery && state.holdQueries) await waitGate();
     if (isApi && (req.method === "POST" || req.method === "PUT") && state.holdMutations) await waitGate();
     if (state.failMode === "all" && isApi) return err(res, 500, "INTERNAL_ERROR");
+    if (req.method === "GET" && state.failMode === "category-distribution" && /\/dashboard\/category-distribution$/.test(path)) return err(res, 500, "INTERNAL_ERROR");
+    if (req.method === "GET" && state.failMode === "monthly-evolution" && /\/dashboard\/monthly-series$/.test(path)) return err(res, 500, "INTERNAL_ERROR");
     for (const r of ROUTES) {
       if (r.method !== req.method) continue;
       const m = r.pattern.exec(path);

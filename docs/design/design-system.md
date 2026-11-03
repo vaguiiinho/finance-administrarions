@@ -254,3 +254,10 @@ O mesmo conjunto opaco é repetido em três blocos idênticos (travado por `lib/
 - Breakpoints: sm 640 / md 768 / lg 1024 / xl 1280
 - Grid de 4 colunas (mobile), 8 (tablet), 12 (desktop)
 - Alvos de toque ≥ 44px
+
+### Container queries (ADR 0012)
+- Primeira container query do projeto (Tailwind 4 nativo: `@container`, variantes `@3xl:` etc., sem plugin). Use quando o arranjo de um componente depende da largura do card onde ele está, não da viewport.
+- Dashboard: os blocos são empilhados, um por linha, em largura total (`DashboardLayout`). "Despesas por categoria" fica abaixo de "Evolução mensal".
+- Rosca + legenda: empilhados abaixo de `@3xl` (48rem de largura do contêiner), lado a lado a partir dele. Legenda com `max-w-md`. Classes e alturas compartilhadas com os skeletons em `web/features/dashboard/_components/chart-layout.ts` (módulo sem `"use client"`).
+- Item da legenda: só o nome encolhe e trunca; valor e percentual são `shrink-0` e `whitespace-nowrap`.
+- Total no centro da rosca: fonte pelo `length` de `formatBRL`: até 13 `text-lg`; até 15 `text-base`; até 17 `text-sm`; acima `text-xs` (`.money` usa JetBrains Mono, 0,6em por caractere; furo da rosca ~149,6 px).

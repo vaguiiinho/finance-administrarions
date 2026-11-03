@@ -11,6 +11,7 @@ import { usePrefersReducedMotion } from "@/lib/hooks/reduced-motion";
 import { formatAxisTick, isSeriesEmpty, niceScale, scrollLeftForMonth, toChartPoints, type ChartPoint } from "@/lib/dashboard/chart-data";
 import type { MonthlySeries } from "@/lib/api/types";
 import { ChartCard, type ChartView } from "./chart-card";
+import { MONTHLY_CHART_HEIGHT } from "./chart-layout";
 
 const MONTH_WIDTH = 56; // >= 44px por mes (alvo minimo) no modo estreito
 const AXIS_WIDTH = 76;
@@ -303,7 +304,7 @@ export function MonthlyChart({ series, selectedMonth }: { series: MonthlySeries;
   const description = current
     ? `Evolução mensal de ${subtitle}. Em ${monthLongPtBR(current.month)}: receitas ${formatBRL(current.totals.income)}, despesas ${formatBRL(current.totals.expenses.total)}, saldo realizado ${formatBRL(current.totals.balance.realized)}, saldo previsto ${formatBRL(current.totals.balance.projected)}.`
     : "Sem dados.";
-  const height = "h-[260px] md:h-[280px] lg:h-[320px]";
+  const height = MONTHLY_CHART_HEIGHT;
 
   return (
     <ChartCard title="Evolução mensal" subtitle={subtitle} view={view} onViewChange={setView} description={description}>
