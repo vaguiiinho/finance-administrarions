@@ -22,6 +22,7 @@ COPY --chown=node:node --from=build /app/package.json ./package.json
 COPY --chown=node:node --from=build /app/dist ./dist
 COPY --chown=node:node --from=build /app/prisma ./prisma
 COPY --chown=node:node --from=build /app/prisma.config.ts ./prisma.config.ts
+COPY --chown=node:node --from=build /app/healthcheck.js ./healthcheck.js
 RUN mkdir -p /app/uploads && chown node:node /app/uploads
 USER node
 EXPOSE 3001

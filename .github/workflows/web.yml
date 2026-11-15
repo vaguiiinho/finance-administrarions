@@ -34,7 +34,8 @@ jobs:
 
       - name: Typecheck
         working-directory: web
-        run: npx tsc --noEmit
+        # PageProps/LayoutProps são gerados pelo Next (.next/types); sem o typegen o tsc não os encontra.
+        run: npx next typegen && npx tsc --noEmit
 
       - name: Test
         working-directory: web
