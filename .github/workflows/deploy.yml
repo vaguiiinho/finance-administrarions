@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0 # precisa das tags
 
@@ -61,10 +61,10 @@ jobs:
           echo "version=$next" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
@@ -73,7 +73,7 @@ jobs:
       # BUILD E PUSH DA API (NestJS)
       # ==========================================
       - name: Build and push API image (NestJS)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./api
           file: ./api/Dockerfile
@@ -88,7 +88,7 @@ jobs:
       # BUILD E PUSH DO WEB (NextJS)
       # ==========================================
       - name: Build and push Web image (NextJS)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./web
           file: ./web/Dockerfile
