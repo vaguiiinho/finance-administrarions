@@ -163,4 +163,3 @@ Detalhes, diagramas (camadas, aggregates, pagamento em lote) e exemplos de paylo
 - Fundo em gradiente nos temas claro e escuro: [`docs/adr/0003-fundo-gradiente-temas.md`](docs/adr/0003-fundo-gradiente-temas.md), [`docs/specs/fundo-gradiente-temas.md`](docs/specs/fundo-gradiente-temas.md) e [`docs/design/fundo-gradiente-temas.md`](docs/design/fundo-gradiente-temas.md)
 - Mês inicial e status padrão da listagem de lançamentos: [`docs/adr/0007-listagem-mes-e-status-padrao.md`](docs/adr/0007-listagem-mes-e-status-padrao.md), [`docs/specs/listagem-mes-e-status-padrao.md`](docs/specs/listagem-mes-e-status-padrao.md) e [`docs/design/listagem-mes-e-status-padrao.md`](docs/design/listagem-mes-e-status-padrao.md)
 - Design: [`docs/design/lancamentos-financeiros.md`](docs/design/lancamentos-financeiros.md) e [`docs/design/design-system.md`](docs/design/design-system.md)
-- Histórico de mudanças: [`CHANGELOG.md`](CHANGELOG.md)
