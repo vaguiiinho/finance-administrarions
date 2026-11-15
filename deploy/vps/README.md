@@ -30,13 +30,25 @@ nunca é tocado.
 
 ## Configuração (uma vez)
 
-1. Na VPS, gere uma chave só para o deploy e autorize-a:
-   `ssh-keygen -t ed25519 -N '' -f ~/.ssh/finance_deploy && cat ~/.ssh/finance_deploy.pub >> ~/.ssh/authorized_keys`
-2. No GitHub (Settings > Secrets and variables > Actions):
-   - Secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (conteúdo de `~/.ssh/finance_deploy`), `VPS_KNOWN_HOSTS`
-     (saída de `ssh-keyscan -p <porta> <host>`, rodado da sua máquina).
+Tudo na **sua máquina** (a chave privada nunca vai para a VPS nem para o repositório):
+
+1. Gere um par de chaves só para o deploy (sem senha: o Actions não tem como digitá-la):
+   `ssh-keygen -t ed25519 -C "github-deploy-finance" -N '' -f ~/.ssh/finance_deploy`
+2. Autorize a chave pública no usuário de `VPS_USER`:
+   `ssh-copy-id -i ~/.ssh/finance_deploy.pub -p <porta> <usuário>@<host>`
+3. Teste: `ssh -i ~/.ssh/finance_deploy -p <porta> <usuário>@<host> "docker compose version"` (não pode pedir senha).
+4. Pegue a identidade da VPS: `ssh-keyscan -p <porta> <host>`. Use o mesmo `<host>` de `VPS_HOST` (IP ou domínio).
+   Confira as impressões digitais: `ssh-keyscan -p <porta> <host> 2>/dev/null | ssh-keygen -lf -` na sua máquina deve
+   bater com `for f in /etc/ssh/ssh_host_*_key.pub; do ssh-keygen -lf "$f"; done` na VPS.
+5. No GitHub (Settings > Secrets and variables > Actions):
+   - Secrets:
+     - `VPS_HOST`, `VPS_USER`;
+     - `VPS_SSH_KEY`: conteúdo inteiro de `~/.ssh/finance_deploy`, com as linhas `-----BEGIN/END OPENSSH PRIVATE KEY-----`;
+     - `VPS_KNOWN_HOSTS`: as linhas do passo 4 como saíram (com o host no início; sem as que começam com `#`).
    - Variables: `DEPLOY_ENABLED=true`; opcionais `VPS_PORT` e `VPS_PATH`.
-3. Apague a chave privada da VPS depois de copiá-la: `rm ~/.ssh/finance_deploy`.
+
+Para revogar o acesso (chave vazada, por exemplo), apague a linha `github-deploy-finance` do `~/.ssh/authorized_keys`
+da VPS.
 
 ## Rollback
 
