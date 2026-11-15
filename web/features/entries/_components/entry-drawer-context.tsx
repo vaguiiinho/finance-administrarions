@@ -3,7 +3,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { useOptionalNav } from "@/components/navigation";
-import { WriteOnly } from "@/components/read-only";
 
 interface EntryDrawerContextValue {
   open: boolean;
@@ -94,7 +93,7 @@ export function EntryDrawerProvider({ children }: { children: ReactNode }) {
   return <EntryDrawerContext.Provider value={value}>{children}</EntryDrawerContext.Provider>;
 }
 
-function NewEntryButtonImpl({ variant = "primary", className = "", ...props }: Omit<ButtonProps, "onClick" | "children">) {
+export function NewEntryButton({ variant = "primary", className = "", ...props }: Omit<ButtonProps, "onClick" | "children">) {
   const { openDrawer } = useEntryDrawer();
   return (
     <Button variant={variant} className={className} onClick={openDrawer} {...props}>
@@ -103,29 +102,12 @@ function NewEntryButtonImpl({ variant = "primary", className = "", ...props }: O
   );
 }
 
-/** "+ Novo lançamento": o foco volta a este botao ao fechar o drawer (comportamento nativo do <dialog>). Na demo nao existe (RF31). */
-export function NewEntryButton(props: Omit<ButtonProps, "onClick" | "children">) {
-  return (
-    <WriteOnly>
-      <NewEntryButtonImpl {...props} />
-    </WriteOnly>
-  );
-}
-
-function NewInstallmentButtonImpl({ variant = "secondary", className = "", ...props }: Omit<ButtonProps, "onClick" | "children">) {
+export function NewInstallmentButton({ variant = "secondary", className = "", ...props }: Omit<ButtonProps, "onClick" | "children">) {
   const { openInstallmentsDrawer } = useEntryDrawer();
   return (
     <Button variant={variant} className={className} onClick={openInstallmentsDrawer} {...props}>
       + Despesa parcelada
     </Button>
-  );
-}
-
-export function NewInstallmentButton(props: Omit<ButtonProps, "onClick" | "children">) {
-  return (
-    <WriteOnly>
-      <NewInstallmentButtonImpl {...props} />
-    </WriteOnly>
   );
 }
 

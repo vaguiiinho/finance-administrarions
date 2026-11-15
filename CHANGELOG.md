@@ -5,6 +5,64 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+### Remoção da demonstração pública, login com dica e rotina da conta demo (ADR 0013)
+
+#### Added
+
+- API: `POST /api/auth/login` aceita o alias `demo` no campo `email` (sem diferenciar maiúsculas de minúsculas, ignorando espaços nas pontas), equivalente a `demo@showcase.invalid`. Valor de domínio `LoginIdentifier`; a chave do limite por identificador e a auditoria usam o e-mail canônico. Qualquer outro texto sem `@` continua 401 `INVALID_CREDENTIALS`.
+- API: rotina da conta demo (`DemoAccountResetRoutine`, tarefa `reset-demo-account`) diária às 03:00 America/Sao_Paulo: apaga lançamentos e cartões da conta e restaura o dataset de exemplo (conta desativada: só apaga), sem revogar sessões. Na subida do processo roda como recuperação, só se não houve redefinição desde o último 03:00 (condição avaliada sob advisory lock). Tudo ou nada.
+- API: `npm run demo:reset` (execução manual dentro do container, sem HTTP, redefine sempre; saída legível e JSON, código 1 em falha). Use case `ResetOwnerData`, port `OwnerDataResetStore` e tabela `owner_data_resets`.
+- API: o seed grava o dataset de exemplo na conta demo quando ela está ativa (`sample-stale`).
+- Web: dica da conta demo na tela de login ("Para testar, use o usuário demo e a senha demo.") controlada por `DEMO_ACCOUNT_HINT=on` (server-only, desligada por padrão); com a dica, o primeiro campo vira "E-mail ou usuário". Deve andar junto com `SHOWCASE_ACCOUNT_PASSWORD=demo` na API.
+- Docs: ADR 0013, spec e design da feature; seção "Conta demo" no README raiz.
+
+#### Changed
+
+- Web: `/` sem sessão vai para `/login` e "Sair" leva a `/login` (antes `/demo/entries`). O primeiro campo do login passa a `type="text"` com `autoComplete="username"`.
+- Web: textos da conta demo (`/privacy`, dica) e `DEMO_CLEANUP_TEXT` do app passam a dizer que a conta é "redefinida todos os dias às 03:00 (horário de Brasília)". O app mobile não ganhou dica nem mudou de rótulo; `demo`/`demo` funciona sem nova versão.
+- Mobile/docs: credencial das notas de revisão da App Store passa a `demo`/`demo`, com dados de exemplo; rodar `npm run demo:reset` antes de enviar.
+- Nginx: a regra de `/api/demo/` deixa de ser requisito do checklist (N4 exige só `/api/admin/`).
+- Conta demo: estado inicial passa a ser o dataset de exemplo (antes, vazia).
+
+#### Removed
+
+- API: rotas públicas `GET /api/demo/*` (10 rotas) e o `DemoController`; passam a responder 404 `ROUTE_NOT_FOUND`. Saem `EnsureDemoUser`, `User.demo`, `DEMO_USER_ID`, `RefreshDemoDataset`, `PurgeShowcaseData`, `DemoDatasetStore`, `ShowcaseDataPurger` e `EntryRepository.deleteAllOf`.
+- Web: telas `/demo/*`, `DemoBanner`, chip "Demonstração", botão "Entrar" da navbar, modo somente leitura (`WriteOnly`), `AppMode`/`basePath` e o link "Ver demonstração".
+
+#### Migration
+
+- `20261114000001_remove_public_demo_user`: exclui (uma vez, idempotente) o usuário da demonstração pública e as sessões, lançamentos, cartões e registro de dataset dele; passa a proibir `users.kind = 'DEMO'` por CHECK (o valor segue no enum do banco). Faça backup antes do deploy.
+- `20261114000002_owner_data_resets`: `demo_datasets` vira `owner_data_resets` (`last_reset_at`, âncora e versão anuláveis, FK para `users`).
+
+#### Notes
+
+- **Primeiro deploy:** a conta demo é redefinida uma vez. Suba a API (migrations e seed) antes do web; entre os dois, o web antigo recebe 404 em `/demo/*`.
+- Divergências entre o ADR e o código final: ADR 0013, seção 17. Notas de atualização nos ADRs 0005 (§6.5) e 0011 (§5.4).
+
+### Dashboard: "Despesas por categoria" abaixo da evolução mensal (ADR 0012)
+
+#### Changed
+
+- Web: em `/dashboard` e `/demo/dashboard`, o card "Despesas por categoria" passa a ficar abaixo de "Evolução mensal", em largura total, em todas as larguras de tela (antes, grid 8/4 em `lg`). Pilha única e ordem fixa em `DashboardLayout`, usada pela tela e pelo skeleton de carregamento. Espaço entre os cards: 16 px até 767 px e 24 px a partir de 768 px.
+- Web: rosca e legenda escolhem o arranjo pela largura do card (container query `@3xl`, 48rem), não pela viewport: empilhados abaixo, lado a lado a partir dele. Legenda com `max-w-md`.
+- Web: no item da legenda, só o nome encolhe e trunca; valor e percentual não encolhem nem quebram (`shrink-0`, `whitespace-nowrap`).
+- Web: o total no centro da rosca reduz a fonte conforme o comprimento do valor (`text-lg` até 13 caracteres, `text-base` até 15, `text-sm` até 17, `text-xs` acima), para caber no furo.
+- Web: o nome da categoria no tooltip da fatia quebra com `break-words`.
+
+#### Fixed
+
+- Web: legenda do donut que transbordava o card em `xl`.
+- Web: skeletons divergiam da tela (rosca de 200 px em vez de 220 px, altura das barras sem o passo `md`, padding e cabeçalho diferentes). Passam a usar as constantes de `web/features/dashboard/_components/chart-layout.ts`.
+
+#### Tests
+
+- 4 specs vitest novos (`dashboard-layout`, `dashboard-loading`, `dashboard-screen`, `category-donut-layout`) e `web/e2e/dashboard-layout.pw.ts` (68 testes). Stub e2e: cenários `category-distribution-error` e `monthly-evolution-error`.
+
+#### Notes
+
+- Pendência de verificação: o Playwright não rodou no ambiente de desenvolvimento (falta `libnspr4.so`); executar `dashboard-layout.pw.ts` em CI ou em máquina com as dependências do Chromium.
+- Sem mudança em `api/`, contratos HTTP, schema ou `mobile/`. Primeira container query do projeto, registrada em `docs/design/design-system.md`.
+
 ### App mobile iOS, conta de demonstração e capacidades (ADR 0011)
 
 #### Added

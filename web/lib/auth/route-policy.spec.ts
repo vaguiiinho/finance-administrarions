@@ -24,7 +24,8 @@ describe("decideRoute: visitante sem cookie (CA40, RF34)", () => {
 });
 
 describe("decideRoute: rotas publicas e desconhecidas passam (CA07, CA38)", () => {
-  it.each(["/demo/entries", "/demo/dashboard", "/demo/cards", "/login", "/register", "/qualquer-coisa", "/entriesx", "/accountant"])("%s sem cookie segue", (pathname) => {
+  // ADR 0013 / P04: /demo/* deixou de existir; o proxy nao redireciona (segue) e o not-found global responde 404 (CA09).
+  it.each(["/demo", "/demo/entries", "/demo/dashboard", "/demo/cards", "/login", "/register", "/privacy", "/support", "/qualquer-coisa", "/entriesx", "/accountant"])("%s sem cookie segue", (pathname) => {
     expect(decideRoute(pathname, "", false).kind).not.toBe("redirect");
   });
 
@@ -39,14 +40,20 @@ describe("decideRoute: rotas publicas e desconhecidas passam (CA07, CA38)", () =
     }
   });
 
-  it("demo com cookie tambem segue (RF36)", () => {
-    expect(decideRoute("/demo/entries", "", true)).toEqual({ kind: "next" });
+  it("CA09: /demo/* nao e rota conhecida: com ou sem cookie o proxy deixa seguir para o 404 global (sem redirect para /login)", () => {
+    for (const p of ["/demo", "/demo/entries", "/demo/dashboard", "/demo/cards", "/demo/qualquer"]) {
+      expect(decideRoute(p, "", true)).toEqual({ kind: "next" });
+      expect(decideRoute(p, "", false)).toEqual({ kind: "next" });
+    }
   });
 });
 
-describe("decideRoute: raiz (CA41)", () => {
-  it("visitante -> /demo/entries", () => expect(decideRoute("/", "", false)).toEqual({ kind: "redirect", to: "/demo/entries" }));
-  it("logado -> /entries", () => expect(decideRoute("/", "", true)).toEqual({ kind: "redirect", to: "/entries" }));
+describe("decideRoute: raiz (RF06, CA06, CA07; substitui o CA41 da spec de autenticacao)", () => {
+  it("CA06: visitante sem cookie -> /login (sem `next`)", () => expect(decideRoute("/", "", false)).toEqual({ kind: "redirect", to: "/login" }));
+  it("CA06: visitante com query na raiz tambem -> /login puro, sem next nem passar por /demo", () => {
+    expect(decideRoute("/", "?utm=1", false)).toEqual({ kind: "redirect", to: "/login" });
+  });
+  it("CA07: logado -> /entries", () => expect(decideRoute("/", "", true)).toEqual({ kind: "redirect", to: "/entries" }));
 });
 
 describe("decideRoute: /login com cookie (RF05, CA07, CA08)", () => {

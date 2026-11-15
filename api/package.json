@@ -12,6 +12,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "seed": "node dist/bootstrap/seed/run-seed.js",
     "admin:recover": "node dist/bootstrap/scripts/recover-admin.js",
+    "demo:reset": "node dist/bootstrap/scripts/reset-demo-account.js",
     "prebuild": "prisma generate",
     "build": "nest build",
     "deploy": "nest deploy",

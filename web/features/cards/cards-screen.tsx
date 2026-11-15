@@ -1,6 +1,4 @@
 import { Suspense } from "react";
-import { type AppMode } from "@/lib/app-mode";
-import { AppModeProvider } from "@/components/app-mode";
 import { UpdatingRegion } from "@/components/navigation";
 import { BlockErrorBoundary } from "@/components/ui/block-error-boundary";
 import { EmptyState } from "@/components/ui/states";
@@ -22,10 +20,9 @@ async function Cards({ reader }: { reader: FinanceReader }) {
   return <CardsList cards={items} currentMonth={currentYearMonthSP()} />;
 }
 
-/** Tela de cartoes (ADR 0005 9.6): a mesma no protegido e na demo; "+ Novo cartao" e "Editar" so existem fora da demo. */
-export function CardsScreen({ mode, reader }: { mode: AppMode; reader: FinanceReader }) {
+/** Tela de cartoes (ADR 0005 9.6): sempre autenticada. */
+export function CardsScreen({ reader }: { reader: FinanceReader }) {
   return (
-    <AppModeProvider mode={mode}>
       <CardDrawerProvider>
         <div className="flex flex-col gap-4 md:gap-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -42,6 +39,5 @@ export function CardsScreen({ mode, reader }: { mode: AppMode; reader: FinanceRe
           </UpdatingRegion>
         </div>
       </CardDrawerProvider>
-    </AppModeProvider>
   );
 }

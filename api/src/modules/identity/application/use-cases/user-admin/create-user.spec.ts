@@ -1,5 +1,5 @@
 import { NOW, rejected } from '@test/support/builders.js';
-import { actorOf, ana, bruno, demoUser, vagner } from '@test/support/identity-builders.js';
+import { actorOf, ana, bruno, vagner } from '@test/support/identity-builders.js';
 import { buildIdentityHarness, type IdentityHarness } from '@test/support/identity-harness.js';
 
 let h: IdentityHarness;
@@ -8,7 +8,6 @@ beforeEach(() => {
   h.users.seed(vagner());
   h.users.seed(ana());
   h.users.seed(bruno({ status: 'INACTIVE' }));
-  h.users.seed(demoUser());
 });
 const create = (o: Record<string, unknown> = {}, actor = actorOf(vagner())) =>
   h.createUser.execute({ actor, name: 'Carla Dias', email: 'carla@exemplo.com', role: 'USER', password: 'Temp1234', ...o });

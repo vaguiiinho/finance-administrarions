@@ -6,7 +6,7 @@ export const INVALID_CREDENTIALS_TEXT = 'E-mail ou senha inválidos.';
 export const GENERIC_ERROR_TEXT = 'Algo deu errado. Tente novamente.';
 export const PASSWORD_PENDING_NOTICE =
   'Você precisa definir uma nova senha antes do primeiro acesso. Troque a senha pelo site e depois entre no app com a nova senha.';
-export const DEMO_CLEANUP_TEXT = 'Os dados desta conta de demonstração são apagados todos os dias às 03:00 (horário de Brasília).';
+export const DEMO_CLEANUP_TEXT = 'Esta conta de demonstração é compartilhada e redefinida todos os dias às 03:00 (horário de Brasília): o que for criado ou alterado é descartado e os dados de exemplo voltam.';
 export const DEMO_PASSWORD_UNAVAILABLE_TEXT = 'Indisponível na conta de demonstração';
 export const PASSWORD_UNAVAILABLE_TEXT = 'Indisponível para esta conta';
 export const RATE_LIMITED_TEXT = (minutes: number) => `Muitas tentativas. Tente novamente em ${minutes} min.`;

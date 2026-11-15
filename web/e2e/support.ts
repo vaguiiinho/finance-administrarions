@@ -32,7 +32,7 @@ export interface ScenarioOptions {
   /** Cenario `custom`: dados do proprio teste (ver `e2e/entries-data.ts`). */
   cards?: unknown[];
   entries?: unknown[];
-  /** Cenario `custom`: dados da demo (`/api/demo/*`). Padrao: dataset de exemplo do stub. */
+  /** (legado) dados da antiga demonstracao publica; removido com ela (ADR 0013 9.5). */
   demo?: { cards: unknown[]; entries: unknown[] };
 }
 

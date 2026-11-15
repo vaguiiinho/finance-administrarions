@@ -31,14 +31,28 @@ describe("proxy.ts (ADR 9.3): visitante", () => {
     expect(location(res)).toBe(to);
   });
 
-  it("CA41: / -> /demo/entries", async () => {
-    expect(location(await proxy(req("/")))).toBe("/demo/entries");
+  it("CA06 (RF06): / sem cookie -> /login, sem passar por /demo", async () => {
+    const res = await proxy(req("/"));
+    expect(res.status).toBeGreaterThanOrEqual(300);
+    expect(res.status).toBeLessThan(400);
+    expect(location(res)).toBe("/login");
+  });
+
+  it("CA08 (RF07): rota protegida com query sem cookie -> /login?next=<caminho+query> (mantido)", async () => {
+    expect(location(await proxy(req("/dashboard?month=2026-11")))).toBe("/login?next=%2Fdashboard%3Fmonth%3D2026-11");
   });
 
   it("rotas publicas e /register passam (o not-found global responde /register, CA07)", async () => {
-    for (const p of ["/demo/entries", "/login", "/register"]) {
+    for (const p of ["/login", "/register", "/privacy", "/support"]) {
       const res = await proxy(req(p));
       expect(res.headers.get("location")).toBeNull();
+    }
+  });
+
+  it("CA09 (RF02): /demo/* nao e mais rota: o proxy nao redireciona (o 404 global responde), com ou sem cookie", async () => {
+    for (const p of ["/demo", "/demo/entries", "/demo/dashboard", "/demo/cards"]) {
+      expect((await proxy(req(p))).headers.get("location"), p).toBeNull();
+      expect((await proxy(req(p, "tok"))).headers.get("location"), p).toBeNull();
     }
   });
 
@@ -50,7 +64,7 @@ describe("proxy.ts (ADR 9.3): visitante", () => {
 });
 
 describe("proxy.ts: com cookie", () => {
-  it("CA41: / -> /entries", async () => {
+  it("CA07 (RF06): / com cookie -> /entries", async () => {
     expect(location(await proxy(req("/", "tok")))).toBe("/entries");
   });
 

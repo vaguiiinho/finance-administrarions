@@ -17,14 +17,13 @@ describe("AppFooter (design 17.8, PL3)", () => {
     expect(screen.getByRole("contentinfo")).not.toHaveTextContent("undefined");
   });
 
-  it("'Ver demonstracao' aponta para /demo/entries so quando showDemoLink", () => {
-    const { rerender } = render(<AppFooter year={2026} version="0.1.0" showDemoLink />);
-    expect(screen.getByRole("link", { name: "Ver demonstração" })).toHaveAttribute("href", "/demo/entries");
-    rerender(<AppFooter year={2026} version="0.1.0" />);
+  it("RF03: o rodape nao tem link nenhum (sem 'Ver demonstração' nem href para /demo)", () => {
+    render(<AppFooter year={2026} version="0.1.0" />);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    expect(screen.queryByText(/demonstra/i)).not.toBeInTheDocument();
   });
 
-  it("nao mostra dados pessoais nem 'Entrar' (demo: o banner e a navbar ja oferecem)", () => {
+  it("nao mostra dados pessoais nem 'Entrar' ", () => {
     render(<AppFooter year={2026} version="0.1.0" />);
     expect(screen.queryByRole("link", { name: "Entrar" })).not.toBeInTheDocument();
     expect(screen.getByRole("contentinfo")).not.toHaveTextContent(/@/);

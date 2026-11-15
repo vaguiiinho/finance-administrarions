@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import Link from "next/link";
-import { useAppMode } from "@/components/app-mode";
 import { Money } from "@/components/ui/money";
 import { monthLongPtBR } from "@/lib/dates/format";
 import { formatBRL } from "@/lib/money/decimal";
@@ -32,7 +31,6 @@ export function DonutTooltip({ active, payload }: { active?: boolean; payload?: 
 
 /** Despesas por categoria (RF17, D4): ate 5 categorias + "Outras", legenda propria, centro com o total e tabela alternativa. */
 export function CategoryDonut({ distribution }: { distribution: CategoryDistribution }) {
-  const { basePath } = useAppMode();
   const [view, setView] = useState<ChartView>("chart");
   const [active, setActive] = useState<number | null>(null);
   const reduced = usePrefersReducedMotion();
@@ -56,7 +54,7 @@ export function CategoryDonut({ distribution }: { distribution: CategoryDistribu
             <Money value="0.00" />
           </p>
           <p className="text-muted">Nenhuma despesa em {monthLabel}</p>
-          <Link href={`${basePath}/entries?month=${distribution.month}`} className="btn">
+          <Link href={`/entries?month=${distribution.month}`} className="btn">
             Ir para lançamentos
           </Link>
         </div>

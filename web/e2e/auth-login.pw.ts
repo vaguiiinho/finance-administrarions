@@ -1,4 +1,4 @@
-import { STUB_USERS, banner, expect, openLogin, signIn, test } from "./auth-support";
+import { STUB_USERS, expect, openLogin, signIn, test } from "./auth-support";
 import { releaseMutations, setScenario } from "./support";
 
 /**
@@ -12,13 +12,14 @@ test.beforeEach(async () => {
 const { ana, bruno, vagner } = STUB_USERS;
 
 test.describe("tela /login (RF41, design 3)", () => {
-  test("estrutura: h1 'Entrar', campos, orientacao, 'Ver demonstracao' e nenhum 'Criar conta'", async ({ page }) => {
+  test("estrutura: h1 'Entrar', campos, orientacao, sem 'Ver demonstracao' e nenhum 'Criar conta' (CA10)", async ({ page }) => {
     await openLogin(page);
     await expect(page.getByRole("heading", { level: 1, name: "Entrar" })).toBeVisible();
-    await expect(page.getByLabel("E-mail")).toBeVisible();
+    await expect(page.getByLabel("E-mail ou usuário")).toBeVisible();
     await expect(page.getByLabel("Senha", { exact: true })).toBeVisible();
     await expect(page.getByText("Não tem acesso ou esqueceu a senha? Fale com um administrador.")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Ver demonstração" }).first()).toHaveAttribute("href", "/demo/entries");
+    await expect(page.getByText("Ver demonstração")).toHaveCount(0);
+    await expect(page.locator("a[href^='/demo']")).toHaveCount(0);
     await expect(page.getByText(/Criar conta/i)).toHaveCount(0);
     await expect(page).toHaveTitle("Entrar | Finanças");
   });
@@ -45,7 +46,7 @@ test.describe("tela /login (RF41, design 3)", () => {
   test("validacao de presenca no envio vazio, com foco no e-mail", async ({ page }) => {
     await openLogin(page);
     await page.getByRole("button", { name: "Entrar", exact: true }).click();
-    await expect(page.getByText("Informe o e-mail.")).toBeVisible();
+    await expect(page.getByText("Informe o e-mail ou usuário.")).toBeVisible();
     await expect(page.getByText("Informe a senha.")).toBeVisible();
     await expect(page.getByLabel("E-mail")).toBeFocused();
   });
@@ -76,7 +77,7 @@ test.describe("login e next (CA01, CA02, RF35)", () => {
     expect(session!.expires * 1000 - Date.now()).toBeGreaterThan(23 * 3600_000);
   });
 
-  for (const [label, next] of [["protocolo relativo", "//evil.com"], ["URL absoluta", "https://evil.com"], ["rota publica", "/demo/entries"]] as const) {
+  for (const [label, next] of [["protocolo relativo", "//evil.com"], ["URL absoluta", "https://evil.com"], ["rota publica", "/privacy"], ["rota removida", "/demo/entries"]] as const) {
     test(`CA02: next malicioso (${label}) -> /entries`, async ({ page }) => {
       await signIn(page, "ana", next);
       await expect(page).toHaveURL(/\/entries(\?.*)?$/);
@@ -124,19 +125,19 @@ test.describe("credenciais e bloqueio (CA03, CA04)", () => {
 });
 
 test.describe("logout e sessao (CA05, CA06)", () => {
-  test("CA05: Sair leva a /demo/entries com 'Entrar' e DemoBanner; /entries pede login; voltar + recarregar tambem", async ({ authenticatedPage }) => {
+  test("CA05 (ADR 0013): Sair leva a /login; /entries pede login; voltar + recarregar tambem", async ({ authenticatedPage }) => {
     const page = await authenticatedPage("ana");
     await page.goto("/entries");
     await page.getByRole("button", { name: "Conta de Ana Souza" }).click();
     await page.getByRole("menuitem", { name: "Sair" }).click();
-    await page.waitForURL("**/demo/entries");
-    await expect(page.getByRole("banner").getByRole("link", { name: "Entrar" })).toBeVisible();
-    await expect(page.getByText("Você está vendo dados de exemplo.")).toBeVisible();
+    await page.waitForURL("**/login");
+    await expect(page.getByRole("heading", { level: 1, name: "Entrar" })).toBeVisible();
+    await expect(page.getByText("Você está vendo dados de exemplo.")).toHaveCount(0);
     await page.goto("/entries");
     await expect(page).toHaveURL(/\/login\?next=%2Fentries/);
     await page.goBack();
     await page.reload();
-    await expect(page).toHaveURL(/\/login\?next=%2Fentries|\/demo\/entries/);
+    await expect(page).toHaveURL(/\/login(\?next=%2Fentries)?$/);
     await expect(page.getByRole("heading", { name: /Lançamentos/ })).toHaveCount(0);
   });
 
@@ -203,25 +204,14 @@ test.describe("rotas do web (CA07, CA40, CA41, CA42)", () => {
     });
   }
 
-  test("CA41: / leva visitante a /demo/entries e logado a /entries", async ({ page }) => {
+  test("CA06/CA07 (ADR 0013): / leva visitante a /login (sem next, sem passar por /demo) e logado a /entries", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveURL(/\/demo\/entries/);
+    await expect(page).toHaveURL(/\/login$/);
+    expect(new URL(page.url()).search).toBe("");
     await signIn(page, "vagner");
     await page.goto("/");
     await expect(page).toHaveURL(/\/entries/);
     expect(new URL(page.url()).pathname).toBe("/entries");
-  });
-
-  test("CA42: logada, /demo/entries mostra dados de exemplo (nao os dela), avatar e 'Ir para meus dados'", async ({ authenticatedPage }) => {
-    const page = await authenticatedPage("ana");
-    await page.goto("/demo/cards");
-    await expect(page.getByText("Cartão Demo")).toBeVisible();
-    await expect(page.getByText("Nubank")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Conta de Ana Souza" })).toBeVisible();
-    await expect(page.getByRole("banner").getByRole("link", { name: "Entrar" })).toHaveCount(0);
-    const link = banner(page).getByRole("link", { name: "Ir para meus dados" });
-    await expect(link).toHaveAttribute("href", "/entries");
-    await expect(banner(page).getByRole("link", { name: "Entrar" })).toHaveCount(0);
   });
 
   test("CA15 + RF35: USER com next=/admin/users entra e ve nao encontrado (404), sem item 'Usuarios' no menu", async ({ page }) => {
@@ -239,11 +229,11 @@ test.describe("rotas do web (CA07, CA40, CA41, CA42)", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Usuários" })).toBeVisible();
   });
 
-  test("CA47: o navegador nunca chama a API diretamente (login, telas protegidas e demo)", async ({ page, apiRequests }) => {
+  test("CA47: o navegador nunca chama a API diretamente (login e telas protegidas)", async ({ page, apiRequests }) => {
     await signIn(page, "ana");
     await page.goto("/dashboard?month=2026-11");
-    await page.goto("/demo/entries");
-    await page.waitForURL(/\/demo\/entries\?month=/); // o redirecionamento do mes inicial termina antes da proxima navegacao
+    await page.goto("/entries");
+    await page.waitForURL(/\/entries\?month=/); // o redirecionamento do mes inicial termina antes da proxima navegacao
     await page.goto("/cards");
     expect(apiRequests).toEqual([]);
   });

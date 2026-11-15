@@ -1,6 +1,4 @@
 import { Suspense } from "react";
-import { type AppMode } from "@/lib/app-mode";
-import { AppModeProvider } from "@/components/app-mode";
 import { UpdatingRegion } from "@/components/navigation";
 import { BlockErrorBoundary } from "@/components/ui/block-error-boundary";
 import type { FinanceReader } from "@/lib/api/finance-reader";
@@ -29,17 +27,14 @@ const TAB_ERRORS: Record<EntriesTab, string> = {
 type SearchParams = Record<string, string | string[] | undefined>;
 
 /**
- * Tela de lancamentos (ADR 0005 9.6): a mesma no protegido e na demo. O drawer de "Novo lancamento" (escrita) so e montado
- * fora da demo; os botoes de escrita somem sozinhos em `readOnly` (`WriteOnly`).
+ * Tela de lancamentos (ADR 0005 9.6, ADR 0013 9.4): sempre autenticada, com o drawer de "Novo lancamento".
  */
 export function EntriesScreen({
   searchParams,
-  mode,
   reader,
   canManageExpenses = false,
 }: {
   searchParams: SearchParams;
-  mode: AppMode;
   reader: FinanceReader;
   canManageExpenses?: boolean;
 }) {
@@ -47,7 +42,6 @@ export function EntriesScreen({
   const currentMonth = currentYearMonthSP();
 
   return (
-    <AppModeProvider mode={mode}>
       <EntryDrawerProvider>
         <MonthAdvanceNotice signal={parseAdvanceSignal(searchParams, state.month)} month={state.month} />
         {state.monthWasInvalid ? <MonthNotice /> : null}
@@ -61,17 +55,14 @@ export function EntriesScreen({
             <BlockErrorBoundary key={state.tab} message={TAB_ERRORS[state.tab]}>
               {/* Primeira visita a outra aba: skeleton so do painel (key por aba); mes/filtro/pagina mantem o conteudo ate chegar o novo */}
               <Suspense key={state.tab} fallback={state.tab === "invoices" ? <InvoicesPanelSkeleton /> : <ListPanelSkeleton />}>
-                {state.tab === "expenses" ? <ExpensesPanel state={state} reader={reader} mode={mode} canManageExpenses={canManageExpenses} /> : state.tab === "invoices" ? <InvoicesPanel state={state} reader={reader} mode={mode} /> : <IncomePanel state={state} reader={reader} mode={mode} />}
+                {state.tab === "expenses" ? <ExpensesPanel state={state} reader={reader} canManageExpenses={canManageExpenses} /> : state.tab === "invoices" ? <InvoicesPanel state={state} reader={reader} /> : <IncomePanel state={state} reader={reader} />}
               </Suspense>
             </BlockErrorBoundary>
           </UpdatingRegion>
         </section>
-        {mode.readOnly ? null : (
-          <Suspense fallback={null}>
-            <EntryDrawerHost state={state} reader={reader} />
-          </Suspense>
-        )}
+        <Suspense fallback={null}>
+          <EntryDrawerHost state={state} reader={reader} />
+        </Suspense>
       </EntryDrawerProvider>
-    </AppModeProvider>
   );
 }

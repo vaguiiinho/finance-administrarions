@@ -5,7 +5,6 @@ import { createContext, useContext, useId, useRef, useState, type ReactNode } fr
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
 import { InlineAlert } from "@/components/ui/states";
-import { WriteOnly } from "@/components/read-only";
 import { SessionExpiredAlert, useAuthRedirect } from "@/components/session-expired";
 import { useToast } from "@/components/ui/toast";
 import { buildCardPayload, mapCardFieldIssues, validateCardForm, type CardFormErrors, type CardFormValues } from "@/lib/entries/form";
@@ -34,7 +33,7 @@ export function CardDrawerProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function NewCardButtonImpl({ variant, className }: { variant: "primary" | "secondary"; className: string }) {
+export function NewCardButton({ variant = "primary", className = "" }: { variant?: "primary" | "secondary"; className?: string }) {
   const { openNew } = useCardDrawer();
   return (
     <Button variant={variant} className={className} onClick={openNew}>
@@ -43,29 +42,12 @@ function NewCardButtonImpl({ variant, className }: { variant: "primary" | "secon
   );
 }
 
-/** Na demo (so visualizacao) o botao nao existe (RF31, CA38). */
-export function NewCardButton({ variant = "primary", className = "" }: { variant?: "primary" | "secondary"; className?: string }) {
-  return (
-    <WriteOnly>
-      <NewCardButtonImpl variant={variant} className={className} />
-    </WriteOnly>
-  );
-}
-
-function EditCardButtonImpl({ card }: { card: CardDto }) {
+export function EditCardButton({ card }: { card: CardDto }) {
   const { openEdit } = useCardDrawer();
   return (
     <Button aria-label={`Editar ${card.name}`} onClick={() => openEdit(card)}>
       Editar
     </Button>
-  );
-}
-
-export function EditCardButton({ card }: { card: CardDto }) {
-  return (
-    <WriteOnly>
-      <EditCardButtonImpl card={card} />
-    </WriteOnly>
   );
 }
 

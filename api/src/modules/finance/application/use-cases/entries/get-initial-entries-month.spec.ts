@@ -3,7 +3,7 @@ import { SaoPauloBusinessCalendar } from '@shared/infrastructure/sao-paulo-busin
 import { unwrap } from '@test/support/result.js';
 import { rejected } from '@test/support/builders.js';
 import { FixedClock } from '@test/fakes/simple-fakes.js';
-import { FixedBusinessCalendar } from '@test/fakes/demo-fakes.js';
+import { FixedBusinessCalendar } from '@test/fakes/maintenance-fakes.js';
 import { ANA, BRUNO } from '@test/support/owned-builders.js';
 import { ReferenceMonth } from '../../../domain/billing/reference-month.js';
 import type { OwnerId } from '../../../domain/owner/owner-id.js';

@@ -7,6 +7,7 @@ const GENERIC = "Valor inválido. Revise o campo.";
 const MESSAGES: Record<FieldScope, Record<string, Record<string, string>>> = {
   login: {
     email: { REQUIRED: "Informe o e-mail." },
+    identifier: { REQUIRED: "Informe o e-mail ou usuário." },
     password: { REQUIRED: "Informe a senha." },
   },
   password: {

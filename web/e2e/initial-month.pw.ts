@@ -1,6 +1,6 @@
 import { expect, test } from "./auth-support";
 import { signInAsAna } from "./legacy-auth";
-import { PAGE_BG_REGION, audit, gotoReady, setScenario, setThemeCookie } from "./support";
+import { PAGE_BG_REGION, audit, gotoReady, setThemeCookie } from "./support";
 import { cardExpense, currentMonthSP, income, longMonth, monthFromNow, noticeText, pixExpense, stubCard, seedData } from "./entries-data";
 
 /**
@@ -451,25 +451,4 @@ test.describe("aviso de avanco: ciclo de vida e acessibilidade (RF05, RNF06; des
       });
     }
   }
-});
-
-test.describe("demo (CA24)", () => {
-  test("abre no mes atual com 'Pendente' em Despesas e Faturas e sem escrita", async ({ page }) => {
-    await setScenario("default");
-    await openWithoutMonth(page, "/demo/entries");
-    expect(new URL(page.url()).pathname).toBe("/demo/entries");
-    expect(monthOfUrl(page)).toBe(M());
-    await expect(page.getByRole("radio", { name: "Pendente" })).toBeChecked();
-    await expect(page.getByRole("button", { name: /Novo lançamento|Pagar fatura|Marcar como pago/ })).toHaveCount(0);
-    await page.getByRole("tab", { name: "Faturas" }).click();
-    await expect(page.getByRole("radio", { name: "Pendente" })).toBeChecked();
-    await expect(page.getByRole("button", { name: /Pagar fatura/ })).toHaveCount(0);
-  });
-
-  test("demo com falha na leitura do mes inicial: abre em M, nunca no login", async ({ page }) => {
-    await seedData({ cards: [], entries: [] }, "initial-month-error", { demo: { cards: [], entries: [] } });
-    await openWithoutMonth(page, "/demo/entries");
-    expect(new URL(page.url()).pathname).toBe("/demo/entries");
-    expect(monthOfUrl(page)).toBe(M());
-  });
 });

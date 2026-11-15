@@ -23,20 +23,10 @@ beforeEach(async () => {
   await e.http().post('/api/auth/logout').set(bearer(tokens.loggedOut));
 });
 
-/** Rotas esperadas (ADR 0005 6.2, 6.3, 6.5). Se alguem adicionar uma rota, este teste forca decidir se ela e publica. */
+/** Rotas esperadas (ADR 0005 6.2, 6.3; ADR 0013 6.1: a demonstracao publica foi removida). Se alguem adicionar uma rota, este teste forca decidir se ela e publica. */
 const PUBLIC = [
   'POST /api/auth/login',
   'POST /api/auth/logout',
-  'GET /api/demo/entries/expenses',
-  'GET /api/demo/entries/incomes',
-  'GET /api/demo/entries/initial-month',
-  'GET /api/demo/categories',
-  'GET /api/demo/cards',
-  'GET /api/demo/invoices',
-  'GET /api/demo/cards/:cardId/invoices/:referenceMonth/entries',
-  'GET /api/demo/summary',
-  'GET /api/demo/dashboard/monthly-series',
-  'GET /api/demo/dashboard/category-distribution',
 ].sort();
 const ALLOWED_DURING_PASSWORD_CHANGE = ['GET /api/auth/me', 'PUT /api/account/password'].sort();
 const ADMIN_ROUTES = [
@@ -81,7 +71,7 @@ const call = (r: { method: string; path: string }, token?: string, body: object 
 const protectedRoutes = () => routes().filter((r) => !PUBLIC.includes(label(r)));
 
 describe('inventario de rotas (seguro por padrao)', () => {
-  it('as rotas publicas sao EXATAMENTE login, logout e GET /api/demo/*', () => {
+  it('as rotas publicas sao EXATAMENTE login e logout (nenhuma rota de leitura sem autenticacao, ADR 0013)', () => {
     const all = routes().map(label);
     expect(all.filter((r) => PUBLIC.includes(r)).sort()).toEqual(PUBLIC);
   });

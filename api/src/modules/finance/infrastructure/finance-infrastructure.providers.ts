@@ -1,6 +1,5 @@
 import type { Provider } from '@nestjs/common';
 import { PrismaService } from '@shared/infrastructure/prisma/prisma.service.js';
-import { DEMO_DATASET_STORE } from '../application/demo/demo-dataset-store.js';
 import { CARD_READ_MODEL } from '../application/ports/card-read-model.js';
 import { CATEGORY_READ_MODEL } from '../application/ports/category-read-model.js';
 import { DASHBOARD_READ_MODEL } from '../application/ports/dashboard-read-model.js';
@@ -12,9 +11,8 @@ import { MONTHLY_SUMMARY_READ_MODEL } from '../application/ports/monthly-summary
 import { CARD_REPOSITORY } from '../domain/card/card.repository.js';
 import { CATEGORY_CATALOG } from '../domain/entry/category-catalog.js';
 import { ENTRY_REPOSITORY } from '../domain/entry/entry.repository.js';
-import { SHOWCASE_DATA_PURGER } from '../application/ports/showcase-data-purger.js';
-import { PrismaShowcaseDataPurger } from './maintenance/prisma-showcase-data-purger.js';
-import { PrismaDemoDatasetStore } from './demo/prisma-demo-dataset-store.js';
+import { OWNER_DATA_RESET_STORE } from '../application/ports/owner-data-reset-store.js';
+import { PrismaOwnerDataResetStore } from './maintenance/prisma-owner-data-reset-store.js';
 import { PrismaFinanceUnitOfWork } from './prisma-finance-unit-of-work.js';
 import { PrismaCardReadModel } from './read-models/card-read-model.prisma.js';
 import { PrismaCategoryReadModel } from './read-models/category-read-model.prisma.js';
@@ -46,6 +44,5 @@ export const FINANCE_INFRASTRUCTURE_PROVIDERS: Provider[] = [
   fromPrisma(CATEGORY_READ_MODEL, (prisma) => new PrismaCategoryReadModel(prisma)),
   fromPrisma(DASHBOARD_READ_MODEL, (prisma) => new PrismaDashboardReadModel(prisma)),
   fromPrisma(PENDING_OVERVIEW_READ_MODEL, (prisma) => new PrismaPendingOverviewReadModel(prisma)),
-  fromPrisma(SHOWCASE_DATA_PURGER, (prisma) => new PrismaShowcaseDataPurger(prisma)),
-  fromPrisma(DEMO_DATASET_STORE, (prisma) => new PrismaDemoDatasetStore(prisma)),
+  fromPrisma(OWNER_DATA_RESET_STORE, (prisma) => new PrismaOwnerDataResetStore(prisma)),
 ];

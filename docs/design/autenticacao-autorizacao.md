@@ -1,5 +1,7 @@
 # Design: Autenticação, conta, gestão de usuários e modo demonstração
 
+> **Nota de atualização (ADR 0013 / `docs/design/remover-demo-publica-login.md`, 2026-11-14):** a demonstração pública (`/demo/*`, visitante sem login, `DemoBanner`, chip "Demonstração", botão "Entrar" da navbar, modo somente leitura, `basePath` `/demo`) foi **removida**; o link "Ver demonstração" também. A raiz `/` sem sessão vai para `/login`, e "Sair" leva a `/login`. O login ganhou o rótulo condicional "E-mail ou usuário" e a dica da conta demo (`demo`/`demo`, só com `DEMO_ACCOUNT_HINT=on`). As seções afetadas abaixo trazem uma nota própria (2.1, 2.2, 2.5, 3.1, 3.2, 3.6, 3.7, 7, 8, 9, 11.1, 11.10 e as referências à demo da seção 17); o texto original é mantido como histórico.
+
 - Data: 2026-10-28 (rev. 2: 2026-10-29; rev. 3: 2026-10-29)
 - Branch: `feat/auth-authorized`
 - Autor: ui-designer
@@ -78,6 +80,8 @@ Motion: o menu abre com fade e escala de 0,98 para 1, em 150ms ease-out, origem 
 
 ### 2.1 Layout por breakpoint
 
+> **Nota de atualização (ADR 0013):** a variante "visitante (demo)" e o chip "Demonstração" (navbar e cabeçalho do drawer) deixaram de existir. A navbar tem uma única forma: botão de menu, marca, tema e avatar.
+
 **(rev. 3)** A navbar passa a ter **uma linha só em todos os breakpoints**: à esquerda, o botão de menu (abaixo de `xl`), a marca e o chip "Demonstração"; à direita, `[tema] [Entrar | avatar]`. Os links da navegação principal saem da navbar e vão para o menu lateral ou para o drawer de navegação (seção 17, Proposta). A linha 2 de links no mobile deixa de existir.
 
 ```
@@ -118,6 +122,8 @@ Modo restrito (troca obrigatória, DA11), qualquer breakpoint: sem botão de men
 - Em 360px a linha cabe com folga: padding 16px, botão de menu (44px), gap 8px, marca (~80px), tema (44px), gap 8px, "Entrar" (~84px) ou avatar (44px), padding 16px, cerca de 300px no pior caso.
 
 ### 2.2 Botão "Entrar" (`SignInButton`, RF37, CA43)
+
+> **Nota de atualização (ADR 0013):** seção **obsoleta**. `SignInButton` e `signInHref` foram removidos junto com a demonstração pública; o avatar nunca é substituído por "Entrar".
 
 - `<a>` com aparência de `Button` secundário, altura mínima 44px, padding horizontal 16px, "Entrar" em Inter 500 16.
 - Secundário porque o "Entrar" primário da dobra é o do `DemoBanner`; assim não há dois primários iguais lado a lado.
@@ -190,6 +196,8 @@ Completo (USER: sem "Usuários")          Modo restrito (troca obrigatória)
 
 ### 2.5 Aviso de demonstração (`DemoBanner`, RF32, RF36, CA38, CA42)
 
+> **Nota de atualização (ADR 0013):** seção **obsoleta**. `DemoBanner` e `DemoBannerAction` foram removidos. O único aviso sobre a conta demo é a dica da tela de login (design `remover-demo-publica-login.md`, 2.4).
+
 Em todas as telas `/demo/*`, no topo da coluna de conteúdo (à direita do menu lateral a partir de `xl`, 17.9), antes do `<main>`, margem superior 16px (24px a partir de `md`). Está no layout, então aparece também em loading e erro.
 
 ```
@@ -244,6 +252,8 @@ Mesma altura e material da navbar, com "Pular para o conteúdo". Só `/login` us
 
 ### 3.1 Hierarquia de informação
 
+> **Nota de atualização (ADR 0013):** o item 6 deixa de oferecer "Ver demonstração"; passa a ser só a orientação "Não tem acesso ou esqueceu a senha? Fale com um administrador.". Entre o botão "Entrar" e o rodapé do card entra a dica da conta demo, apenas com `DEMO_ACCOUNT_HINT=on`. O rótulo do primeiro campo é "E-mail ou usuário" com a dica e "E-mail" sem ela (`type="text"`, `autoComplete="username"`).
+
 1. Título (h1) "Entrar".
 2. Contexto, quando houver: sessão expirada (`reason=expired`) ou destino ("Entre para continuar em Cartões.").
 3. Banner do formulário (credenciais, 429, rede), só quando houver.
@@ -252,6 +262,8 @@ Mesma altura e material da navbar, com "Pular para o conteúdo". Só `/login` us
 6. Orientação e caminho alternativo: "Não tem acesso ou esqueceu a senha? Fale com um administrador." e "Ver demonstração".
 
 ### 3.2 Layout por breakpoint
+
+> **Nota de atualização (ADR 0013):** o rodapé do card tem só a orientação (sem o link "Ver demonstração" nos esboços abaixo), e a dica da conta demo aparece logo abaixo do botão "Entrar" (ver `remover-demo-publica-login.md`, 2.2).
 
 ```
 < sm (360px)                         >= sm (até 1280+)
@@ -331,6 +343,8 @@ No topo do formulário, no máximo um por vez; novo envio substitui o anterior.
 
 ### 3.6 Loading e envio duplo
 
+> **Nota de atualização (ADR 0013):** o último item ("Ver demonstração" continua ativo) deixou de se aplicar; o link não existe mais. A dica da conta demo permanece visível durante o envio.
+
 - `useActionState`; enquanto `pending`, o botão mostra spinner e texto de carregando, `aria-busy="true"`, sem mudar cores.
 - `Button` ignora cliques em `loading` e o `onSubmit` ignora `Enter` enquanto `pending` (RF41).
 - Campos `readOnly` durante o envio (cursor `progress`).
@@ -338,6 +352,8 @@ No topo do formulário, no máximo um por vez; novo envio substitui o anterior.
 - "Ver demonstração" continua ativo.
 
 ### 3.7 `next` e títulos
+
+> **Nota de atualização (ADR 0013):** os títulos "... (demonstração) · Finanças" deixaram de existir com as telas `/demo/*`. `/demo/<x>` agora cai no não encontrado global; o `next` só carrega rotas protegidas.
 
 - A UI nunca mostra o `next` bruto; o texto de contexto só aparece se o `next` passar no `safeNext` do servidor e for mapeado para o rótulo da tela.
 - `document.title`: "Entrar · Finanças", "Trocar senha · Finanças", "Meu perfil · Finanças", "Usuários · Finanças", "Lançamentos (demonstração) · Finanças", "Dashboard (demonstração) · Finanças", "Cartões (demonstração) · Finanças".
@@ -706,6 +722,8 @@ Depois de qualquer ação bem-sucedida, a lista é recarregada do servidor (a or
 
 ## 7. Modo demonstração `/demo/*` (RF28-RF33, RF36, B4)
 
+> **Nota de atualização (ADR 0013):** seção **obsoleta** (histórico). As rotas `/demo/*`, o estado somente leitura (`WriteOnly`) e o `AppMode` foram removidos do web. A conta demo agora é uma conta comum (`SHOWCASE`) com escrita (`MANAGE_EXPENSES`); o controle de escrita é por `me.capabilities`.
+
 ### 7.1 Hierarquia
 
 1. Navbar (chip "Demonstração" a partir de `sm`).
@@ -737,6 +755,8 @@ Depois de qualquer ação bem-sucedida, a lista é recarregada do servidor (a or
 
 ## 8. Sessão expirada, troca obrigatória e redirecionamentos
 
+> **Nota de atualização (ADR 0013):** nas linhas da tabela, "Sair" leva a `/login` (antes `/demo/entries`), e `/` sem sessão vai para `/login` (antes `/demo/entries`); `/` com sessão continua indo para `/entries`.
+
 | Situação | O que a pessoa vê | Detalhe |
 |---|---|---|
 | Visitante abre rota protegida ou de administrador (CA40) | `/login?next=<rota>` com "Entre para continuar em <tela>." | Redirecionamento do servidor (`proxy`), sem flash de conteúdo |
@@ -758,6 +778,8 @@ Mensagem única de sessão expirada: "Sua sessão expirou. Entre novamente." (RF
 ---
 
 ## 9. Estados por tela
+
+> **Nota de atualização (ADR 0013):** a linha `/demo/*` deixou de existir.
 
 | Tela ou bloco | Carregando | Erro | Vazio | Sucesso |
 |---|---|---|---|---|
@@ -847,6 +869,8 @@ Saem da rev. 1: `RegisterForm`, `DemoInvite` e `WriteAction` com convite.
 ## 11. Fluxos de interação
 
 ### 11.1 Visitante conhece a demo e entra
+
+> **Nota de atualização (ADR 0013):** fluxo **substituído**. O visitante abre `/`, é levado a `/login`, lê a dica da conta demo e entra com `demo`/`demo` (ver `remover-demo-publica-login.md`, 2.6). Não há `/demo/entries` nem banner.
 1. Abre `/` e vai para `/demo/entries`: banner com "Entrar" e "Entrar" na navbar.
 2. Navega por mês, abas e filtros e expande uma fatura. Não há "Novo lançamento", "Pagar" nem checkboxes.
 3. Ativa "Entrar" do banner em `/demo/cards`: vai para `/login?next=/cards` com "Entre para continuar em Cartões."
@@ -899,6 +923,8 @@ Saem da rev. 1: `RegisterForm`, `DemoInvite` e `WriteAction` com convite.
 4. Entra e volta para a mesma tela e mês; o lançamento precisa ser preenchido de novo (PA2).
 
 ### 11.10 Logado visitando a demo (CA42)
+
+> **Nota de atualização (ADR 0013):** fluxo **obsoleto**. Quem está logado e abre `/demo/*` vê o não encontrado global.
 1. Ana abre `/demo/dashboard`: avatar na navbar, chip "Demonstração" e banner com "Ir para meus dados".
 2. Em `/demo/entries` não há elementos de escrita; "Ir para meus dados" leva a `/entries`.
 
@@ -1019,6 +1045,8 @@ Pendentes: só os pontos do layout global, PL1-PL3, em 17.15.
 ---
 
 ## 17. Layout global: menu lateral, navbar e footer (Aprovado)
+
+> **Nota de atualização (ADR 0013):** continuam válidos o menu lateral, o drawer, o item ativo e o footer das telas protegidas. Saíram as variantes `/demo/*` (visitante e logado), o `basePath` `/demo`, o chip "Demonstração", o `DemoBanner` e o link "Ver demonstração" do footer (17.4, 17.6, 17.7, 17.8, 17.13 e PL3 descrevem o que existia).
 
 Status desta seção: **Aprovado** (PL1-PL3, 2026-10-29). Substitui a navbar com links (e a linha 2 de links abaixo de `sm`) do design de lançamentos (shell 2.x) e da rev. 2 deste documento. Vale para todas as telas do web, inclusive as da Feature B (`docs/design/categorias-inativacao.md`, seção 2). Nenhum token novo.
 

@@ -1,6 +1,4 @@
 import { Suspense } from "react";
-import { type AppMode } from "@/lib/app-mode";
-import { AppModeProvider } from "@/components/app-mode";
 import { MonthSummarySkeleton } from "@/components/month-summary";
 import { UpdatingRegion } from "@/components/navigation";
 import { BlockErrorBoundary } from "@/components/ui/block-error-boundary";
@@ -14,8 +12,8 @@ import { ChartSkeleton, DonutSkeleton } from "./_components/dashboard-skeletons"
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-/** Tela do dashboard (ADR 0005 9.6): so leitura, igual no protegido e na demo; so a fonte dos dados (`reader`) e os links (`mode`) mudam. */
-export function DashboardScreen({ searchParams, mode, reader }: { searchParams: SearchParams; mode: AppMode; reader: FinanceReader }) {
+/** Tela do dashboard (ADR 0005 9.6): so leitura. */
+export function DashboardScreen({ searchParams, reader }: { searchParams: SearchParams; reader: FinanceReader }) {
   const raw = searchParams.month;
   const requested = Array.isArray(raw) ? raw[0] : raw;
   const currentMonth = currentYearMonthSP();
@@ -23,7 +21,6 @@ export function DashboardScreen({ searchParams, mode, reader }: { searchParams: 
   const month = requested !== undefined && isYearMonth(requested) ? requested : currentMonth;
 
   return (
-    <AppModeProvider mode={mode}>
       <DashboardLayout
         notice={invalid ? <MonthNotice /> : null}
         header={<DashboardHeader month={month} currentMonth={currentMonth} />}
@@ -55,6 +52,5 @@ export function DashboardScreen({ searchParams, mode, reader }: { searchParams: 
           </UpdatingRegion>
         }
       />
-    </AppModeProvider>
   );
 }

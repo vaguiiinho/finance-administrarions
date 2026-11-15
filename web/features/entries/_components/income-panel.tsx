@@ -6,8 +6,7 @@ import { StatusBadge } from "@/components/ui/status";
 import { formatCivilDate, monthLongPtBR } from "@/lib/dates/format";
 import { countLabel } from "@/lib/entries/feedback";
 import { changeFilter, changePage, entriesHref, toApiQuery, type EntriesState } from "@/lib/filters/entries-search-params";
-import { PROTECTED_MODE, type AppMode } from "@/lib/app-mode";
-import { createFinanceReader, type FinanceReader } from "@/lib/api/finance-reader";
+import { getFinanceReader, type FinanceReader } from "@/lib/api/finance-reader";
 import { isBadRequest, settle } from "@/lib/api/queries";
 import type { IncomesPage } from "@/lib/api/types";
 import { IncomeFilter } from "./expense-filters";
@@ -17,8 +16,7 @@ import { PANEL_TITLE_ID } from "./panel-ids";
 import { IncomeSubtotal } from "./tab-subtotal";
 
 /** Painel da aba Receitas (RF22): sem selecao e sem acao (CA71); filtro de categoria; subtotal da API. */
-export async function IncomePanel({ state, reader = createFinanceReader("protected"), mode = PROTECTED_MODE }: { state: EntriesState; reader?: FinanceReader; mode?: AppMode }) {
-  const { basePath } = mode;
+export async function IncomePanel({ state, reader = getFinanceReader() }: { state: EntriesState; reader?: FinanceReader }) {
   const pagePromise = reader.listIncomes(toApiQuery(state));
   const categoriesPromise = settle(reader.listCategories());
   void categoriesPromise.catch(() => undefined); // ver ExpensesPanel
@@ -26,7 +24,7 @@ export async function IncomePanel({ state, reader = createFinanceReader("protect
   try {
     page = await pagePromise;
   } catch (error) {
-    if (isBadRequest(error)) return <InvalidFilters state={state} basePath={basePath} />;
+    if (isBadRequest(error)) return <InvalidFilters state={state} />;
     throw error;
   }
   const categories = await categoriesPromise;
@@ -38,7 +36,7 @@ export async function IncomePanel({ state, reader = createFinanceReader("protect
   if (items.length === 0 && pagination.totalItems > 0) {
     body = (
       <EmptyState title="Esta página não existe.">
-        <NavLink href={entriesHref(changePage(state, Math.max(1, pagination.totalPages)), basePath)} className="btn" focusId={PANEL_TITLE_ID}>
+        <NavLink href={entriesHref(changePage(state, Math.max(1, pagination.totalPages)))} className="btn" focusId={PANEL_TITLE_ID}>
           Ir para a última página
         </NavLink>
       </EmptyState>
@@ -46,7 +44,7 @@ export async function IncomePanel({ state, reader = createFinanceReader("protect
   } else if (items.length === 0) {
     body = category ? (
       <EmptyState title={`Nenhuma receita na categoria ${category} em ${monthLabel}`}>
-        <NavLink href={entriesHref(changeFilter(state, { r_category: undefined }), basePath)} className="btn" focusId={PANEL_TITLE_ID}>
+        <NavLink href={entriesHref(changeFilter(state, { r_category: undefined }))} className="btn" focusId={PANEL_TITLE_ID}>
           Limpar filtro
         </NavLink>
       </EmptyState>
@@ -121,7 +119,7 @@ export async function IncomePanel({ state, reader = createFinanceReader("protect
           pageSize={pagination.pageSize}
           totalItems={pagination.totalItems}
           noun="receitas"
-          hrefFor={(p) => entriesHref(changePage(state, p), basePath)}
+          hrefFor={(p) => entriesHref(changePage(state, p))}
           focusId={PANEL_TITLE_ID}
         />
       </>

@@ -3,7 +3,6 @@
 import { settleAction } from "@/lib/api/safe-action";
 import { useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAppMode } from "@/components/app-mode";
 import { Button, IconButton } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertDialog } from "@/components/ui/dialogs";
@@ -67,8 +66,6 @@ export function ExpensesList({
   canManageExpenses = false,
   categories = [],
 }: ExpensesListProps) {
-  // Na demo (so visualizacao) nada de escrita existe no DOM: sem checkbox, sem "Pagar", sem barra de lote (RF31, CA38)
-  const { readOnly } = useAppMode();
   const router = useRouter();
   const uid = useId();
   const toast = useToast();
@@ -238,7 +235,6 @@ export function ExpensesList({
       ) : null}
 
       {/* Toolbar de selecao (>= md) */}
-      {readOnly ? null : (
       <div className="hidden min-h-12 items-center justify-between gap-3 glass rounded-lg px-4 py-2 md:flex">
         {selected.length > 0 ? (
           <>
@@ -259,7 +255,6 @@ export function ExpensesList({
           </>
         )}
       </div>
-      )}
 
       {/* Tabela (>= md) */}
       <div className="glass-flat hidden overflow-clip rounded-xl md:block">
@@ -267,11 +262,9 @@ export function ExpensesList({
         <caption className="sr-only">Despesas do mês, mais recentes primeiro</caption>
         <thead className="sticky top-[calc(var(--navbar-h)+var(--tabsbar-h))] z-10 glass-bar text-left text-muted">
           <tr className="border-b border-border-strong">
-            {readOnly ? null : (
-              <th scope="col" className="w-12 p-0 font-medium">
+            <th scope="col" className="w-12 p-0 font-medium">
                 {selectAll}
               </th>
-            )}
             <th scope="col" className="px-2 py-3 font-medium">
               Descrição
             </th>
@@ -290,11 +283,9 @@ export function ExpensesList({
             <th scope="col" className="px-2 py-3 font-medium">
               Status
             </th>
-            {readOnly ? null : (
-              <th scope="col" className="px-2 py-3 font-medium">
+            <th scope="col" className="px-2 py-3 font-medium">
                 Ação
               </th>
-            )}
           </tr>
         </thead>
         <tbody>
@@ -302,11 +293,9 @@ export function ExpensesList({
             const isSelected = selectedIds.has(entry.id) && entry.status === "PENDING";
             return (
               <EntryRow key={entry.id} id={entry.id} className={`min-h-14 border-b border-border hover:bg-card-2 ${isSelected ? "row-selected" : ""}`}>
-                {readOnly ? null : (
-                  <td className="w-12 p-0">
+                <td className="w-12 p-0">
                     <Checkbox aria-label={checkboxLabel(entry)} checked={isSelected} disabled={entry.status !== "PENDING"} onChange={(e) => toggle(entry.id, e.target.checked)} />
                   </td>
-                )}
                 <td className="max-w-[22rem] px-2 py-2">
                   <p className="flex min-w-0 items-center gap-2 font-medium text-text">
                     <span className="truncate" title={entry.description}>
@@ -330,11 +319,8 @@ export function ExpensesList({
                 </td>
                 <td className="px-2 py-2">
                   <StatusBadge status={entry.status} />
-                  {/* sem a coluna de acao, a data do pagamento acompanha o status */}
-                  {readOnly && entry.paidAt ? <p className="text-xs text-muted">Pago em {formatInstantDate(entry.paidAt)}</p> : null}
                 </td>
-                {readOnly ? null : (
-                  <td className="px-2 py-2">
+                <td className="px-2 py-2">
                     <div className="flex items-center gap-2">
                       {entry.status === "PENDING" ? (
                         <Button onClick={() => requestPay([entry], "single")}>
@@ -374,7 +360,6 @@ export function ExpensesList({
                       ) : null}
                     </div>
                   </td>
-                )}
               </EntryRow>
             );
           })}
@@ -384,12 +369,10 @@ export function ExpensesList({
 
       {/* Cards (< md) */}
       <div className="flex flex-col gap-3 md:hidden">
-        {readOnly ? null : (
-          <label className="flex items-center gap-1 text-sm text-text">
+        <label className="flex items-center gap-1 text-sm text-text">
             {selectAll}
             Selecionar pendentes ({pending.length})
           </label>
-        )}
         <ul className="flex flex-col gap-3">
           {items.map((entry) => {
             const titleId = `${uid}-card-${entry.id}`;
@@ -397,7 +380,7 @@ export function ExpensesList({
             return (
               <EntryItem key={entry.id} id={entry.id} aria-labelledby={titleId} className={`glass-flat rounded-xl p-4 ${isSelected ? "border-accent bg-card-2" : ""}`}>
                 <div className="flex items-start gap-1">
-                  {readOnly ? null : <Checkbox aria-label={checkboxLabel(entry)} checked={isSelected} disabled={entry.status !== "PENDING"} onChange={(e) => toggle(entry.id, e.target.checked)} className="-ml-3 -mt-2" />}
+                  <Checkbox aria-label={checkboxLabel(entry)} checked={isSelected} disabled={entry.status !== "PENDING"} onChange={(e) => toggle(entry.id, e.target.checked)} className="-ml-3 -mt-2" />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex items-start justify-between gap-2">
                       <p id={titleId} className="flex min-w-0 items-center gap-2 font-medium text-text">
@@ -420,8 +403,7 @@ export function ExpensesList({
                     </p>
                   </div>
                 </div>
-                {readOnly ? null : (
-                  <div className="mt-3 flex items-center gap-2">
+                <div className="mt-3 flex items-center gap-2">
                     {entry.status === "PENDING" ? (
                       <Button className={canManageExpenses ? "flex-1" : "w-full"} onClick={() => requestPay([entry], "single")}>
                         Marcar como pago
@@ -458,7 +440,6 @@ export function ExpensesList({
                       </IconButton>
                     ) : null}
                   </div>
-                )}
               </EntryItem>
             );
           })}
@@ -466,7 +447,7 @@ export function ExpensesList({
       </div>
 
       {/* Barra de selecao fixa (< md) + espaco reservado para a ultima linha nao ficar coberta */}
-      {!readOnly && selected.length > 0 ? (
+      {selected.length > 0 ? (
         <>
           <div aria-hidden="true" className="h-24 md:hidden" />
           <div className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-2 glass-bar border-t border-border-strong px-4 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 md:hidden">

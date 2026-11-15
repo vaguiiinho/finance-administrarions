@@ -4,17 +4,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AllProviders, router } from "@/test/helpers/providers";
 import { parseEntriesSearchParams } from "@/lib/filters/entries-search-params";
 import type { EntryDto, InvoiceDto } from "@/lib/api/types";
-import { AppModeProvider, DEMO_MODE } from "@/components/app-mode";
 import { InvoiceBlock } from "./invoice-block";
 import { PANEL_TITLE_ID } from "./panel-ids";
 
+vi.mock("server-only", () => ({})); // o InvoiceBlock ainda importa a action da demonstracao publica ate T6; o mock sai junto
 const payInvoice = vi.fn();
 const loadInvoiceEntries = vi.fn();
 vi.mock("@/app/(protected)/entries/actions", () => ({
   payInvoice: (...args: unknown[]) => payInvoice(...args),
   loadInvoiceEntries: (...args: unknown[]) => loadInvoiceEntries(...args),
 }));
-vi.mock("@/app/(public)/demo/actions", () => ({ loadDemoInvoiceEntries: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/entries" }));
 vi.mock("next/link", () => ({ default: ({ children, href, ...rest }: { children: React.ReactNode; href: string }) => <a href={href} {...rest}>{children}</a> }));
 
@@ -380,38 +379,6 @@ describe("InvoiceBlock - atalho para a aba Despesas (RF19, DL11, CA58)", () => {
       </AllProviders>,
     );
     expect(await screen.findByRole("link", { name: SHORTCUT_PAID })).toBeInTheDocument();
-    expect(hrefOf(SHORTCUT_PAID).get("d_status")).toBe("ALL");
-  });
-
-  it("demo: fatura nao paga usa 'Ver despesas do cartao na aba Despesas' e mantem o status vigente", async () => {
-    render(
-      <AppModeProvider mode={DEMO_MODE}>
-        <AllProviders>
-          <InvoiceBlock invoice={invoice({ pendingCount: 1 })} state={stateWith({ d_status: "PAID" })} />
-        </AllProviders>
-      </AppModeProvider>,
-    );
-    const { loadDemoInvoiceEntries } = await import("@/app/(public)/demo/actions");
-    (loadDemoInvoiceEntries as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, data: { items: [expense("e1", "Mercado", "100.00")] } });
-    await userEvent.click(screen.getByRole("button", { name: /^Ver \d+ despesas? da fatura/ }));
-    await screen.findByText("Mercado");
-    const q = hrefOf(SHORTCUT_PAID);
-    expect(screen.getByRole("link", { name: SHORTCUT_PAID }).getAttribute("href")!.startsWith("/demo/entries?")).toBe(true);
-    expect(q.get("d_status")).toBe("PAID");
-  });
-
-  it("demo: fatura PAGA abre Despesas em Todos com o mesmo rotulo", async () => {
-    render(
-      <AppModeProvider mode={DEMO_MODE}>
-        <AllProviders>
-          <InvoiceBlock invoice={PAID_INVOICE()} state={stateWith({ d_status: "PAID" })} />
-        </AllProviders>
-      </AppModeProvider>,
-    );
-    const { loadDemoInvoiceEntries } = await import("@/app/(public)/demo/actions");
-    (loadDemoInvoiceEntries as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, data: { items: [expense("e1", "Mercado", "100.00")] } });
-    await userEvent.click(screen.getByRole("button", { name: /^Ver \d+ despesas? da fatura/ }));
-    await screen.findByText("Mercado");
     expect(hrefOf(SHORTCUT_PAID).get("d_status")).toBe("ALL");
   });
 });

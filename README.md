@@ -13,11 +13,24 @@ Aplicação de finanças pessoais com `api` (NestJS 12, Prisma 7, PostgreSQL), `
 - Mostra **resumo do mês** (receitas, despesas pagas/pendentes, saldo realizado e previsto) e **dashboard** (série de 12 meses e distribuição por categoria).
 - Tema claro/escuro com alternador sol/lua, com fundo em gradiente fixo e estático (escuro grafite com brilho ciano, claro lavanda e azul-gelo).
 
-Telas: `/entries` (abas Despesas, Faturas, Receitas), `/cards`, `/dashboard`. A raiz `/` redireciona para `/entries`.
+Telas: `/entries` (abas Despesas, Faturas, Receitas), `/cards`, `/dashboard`. A raiz `/` redireciona para `/entries` (com sessão) ou para `/login` (sem sessão). Toda tela exige login; não há demonstração pública.
+
+### Conta demo
+
+Existe uma conta de demonstração compartilhada (`demo@showcase.invalid`), usada para apresentar o app e nas notas de revisão da App Store. Ela entra pelo login como qualquer conta, com escrita (cria, edita, exclui e paga lançamentos), mas não troca senha nem perfil.
+
+- **Credencial:** usuário `demo` (alias aceito no campo de e-mail do login; o e-mail canônico também funciona) e senha `demo`, definida por `SHOWCASE_ACCOUNT_PASSWORD=demo` na API. Vazia ou ausente, a conta fica desligada.
+- **Dica na tela de login (web):** `DEMO_ACCOUNT_HINT=on` no web mostra "Para testar, use o usuário demo e a senha demo." e muda o rótulo do campo para "E-mail ou usuário". A credencial exibida é fixa no código, por isso `DEMO_ACCOUNT_HINT` e `SHOWCASE_ACCOUNT_PASSWORD=demo` **precisam andar juntos**: ligue a dica só onde a API tiver a senha `demo`, e para desligar a conta mude as duas variáveis e reinicie os dois containers.
+- **Estado inicial:** com a conta ativa, o seed grava o dataset de exemplo (2 cartões e 12 meses até o mês corrente).
+- **Rotina diária:** todo dia às **03:00 (horário de Brasília)** a API apaga o que foi criado na conta e restaura o dataset de exemplo; as sessões não são revogadas. Reiniciar a API no meio do dia não zera a conta. Exige `MAINTENANCE_INTERVAL_MS` diferente de `0`.
+- **Redefinir na hora:** `docker exec <container-da-api> npm run demo:reset` (sem HTTP; redefine sempre). Rode antes de enviar o app para revisão.
+- **Primeiro deploy desta mudança:** a conta demo é redefinida uma vez (descarta dados de visitantes) e o usuário da antiga demonstração pública e os dados dele são excluídos por migration. As rotas `/api/demo/*` e as telas `/demo/*` passam a responder 404.
+
+Decisão: [`docs/adr/0013-remocao-demo-publica-login-rotina-conta-demo.md`](docs/adr/0013-remocao-demo-publica-login-rotina-conta-demo.md).
 
 ### Mês inicial e status padrão de `/entries`
 
-- **Mês inicial.** Abrir `/entries` (ou `/demo/entries`) sem `month` consulta a API (`GET /api/entries/initial-month`, demo: `GET /api/demo/entries/initial-month`) e redireciona para `?month=YYYY-MM`. Com `M` = mês atual em America/Sao_Paulo: pendência em `M` (fatura ou PIX) abre `M`; senão, abre o primeiro mês futuro com pendência; sem nenhuma pendência, abre `M+1` se houver cartão e `M` se não houver. Pendências de meses anteriores não contam. Um `month` na URL nunca é alterado. Falha ou timeout de 1,5 s da consulta abre `M`, sem aviso. Quando o mês avança, um aviso dispensável explica o motivo.
+- **Mês inicial.** Abrir `/entries` sem `month` consulta a API (`GET /api/entries/initial-month`) e redireciona para `?month=YYYY-MM`. Com `M` = mês atual em America/Sao_Paulo: pendência em `M` (fatura ou PIX) abre `M`; senão, abre o primeiro mês futuro com pendência; sem nenhuma pendência, abre `M+1` se houver cartão e `M` se não houver. Pendências de meses anteriores não contam. Um `month` na URL nunca é alterado. Falha ou timeout de 1,5 s da consulta abre `M`, sem aviso. Quando o mês avança, um aviso dispensável explica o motivo.
 - **Status padrão.** As abas Despesas e Faturas abrem em "Pendente". `d_status` (Despesas) e `f_status` (Faturas) aceitam `PENDING`, `PAID` e `ALL`; `PENDING` é omitido da URL e `ALL` ("Todos") nunca é enviado à API. Valor inválido vale "Pendente". "Limpar filtros" leva a "Todos". Receitas não têm filtro de status.
 - **Faturas.** `GET /api/invoices` aceita `status=PENDING|PAID`; o filtro seleciona a fatura inteira e sem `status` a resposta não muda. Para uma fatura paga, o atalho do bloco é "Ver despesas do cartão na aba Despesas" e abre `d_status=ALL`.
 
@@ -124,10 +137,10 @@ Os fluxos Maestro (`mobile/e2e/maestro`) ainda não foram executados (pendência
 
 ## Deploy (produção)
 
-- **API:** `TRUST_PROXY` é obrigatória com `NODE_ENV=production` (inclusive ao rodar o seed): apenas o IP do nginx, por exemplo `"172.30.0.10"`. `true`, número de saltos, `loopback`, `uniquelocal` ou ausência derrubam o boot. Também: `MOBILE_MIN_VERSION`, `MOBILE_STORE_URL`, `SHOWCASE_ACCOUNT_PASSWORD` (vazia desliga a conta demo) e `MAINTENANCE_INTERVAL_MS` diferente de `0` (senão a limpeza diária da conta demo não roda).
-- **Web:** `SUPPORT_EMAIL` obrigatória; `API_URL` aponta para o listener **interno** do nginx.
-- **nginx** (requisitos N1-N10, detalhe no ADR 0011, seção 6.1): TLS 1.2+ e HSTS (N1); `X-Forwarded-For $remote_addr` sobrescrevendo, nunca `$proxy_add_x_forwarded_for` (N2); listener interno não publicado, com `set_real_ip_from <IP do web>`, para o web (N3); no listener **público**, `location ^~ /api/admin/` e `^~ /api/demo/` respondem 404 (N4); só `/api/` roteado (N5); `client_max_body_size 128k` e `proxy_read_timeout 30s` (N6); log sem `Authorization` e `server_tokens off` (N7); `limit_req` no login recomendado (N8); IP fixo do nginx igual ao de `TRUST_PROXY` (N9); `X-Client` e `Authorization` repassados (N10).
-- Ordem do primeiro deploy: nginx, API, web, teste manual (CA31 e `/api/admin/*` = 404 no host público), app.
+- **API:** `TRUST_PROXY` é obrigatória com `NODE_ENV=production` (inclusive ao rodar o seed): apenas o IP do nginx, por exemplo `"172.30.0.10"`. `true`, número de saltos, `loopback`, `uniquelocal` ou ausência derrubam o boot. Também: `MOBILE_MIN_VERSION`, `MOBILE_STORE_URL`, `SHOWCASE_ACCOUNT_PASSWORD` (`demo` onde a dica do web estiver ligada; vazia desliga a conta demo) e `MAINTENANCE_INTERVAL_MS` diferente de `0` (senão a rotina diária das 03:00 da conta demo não roda). O seed (`prisma db seed`, executado pelo `CMD` da imagem) grava o dataset de exemplo da conta demo; no primeiro deploy desta mudança ela é redefinida uma vez.
+- **Web:** `SUPPORT_EMAIL` obrigatória; `API_URL` aponta para o listener **interno** do nginx; `DEMO_ACCOUNT_HINT=on` mostra a dica da conta demo no login (só com `SHOWCASE_ACCOUNT_PASSWORD=demo` na API; desligada por padrão).
+- **nginx** (requisitos N1-N10, detalhe no ADR 0011, seção 6.1): TLS 1.2+ e HSTS (N1); `X-Forwarded-For $remote_addr` sobrescrevendo, nunca `$proxy_add_x_forwarded_for` (N2); listener interno não publicado, com `set_real_ip_from <IP do web>`, para o web (N3); no listener **público**, `location ^~ /api/admin/` responde 404 (N4; a regra de `/api/demo/` deixou de ser requisito, a rota não existe mais); só `/api/` roteado (N5); `client_max_body_size 128k` e `proxy_read_timeout 30s` (N6); log sem `Authorization` e `server_tokens off` (N7); `limit_req` no login recomendado (N8); IP fixo do nginx igual ao de `TRUST_PROXY` (N9); `X-Client` e `Authorization` repassados (N10).
+- Ordem do primeiro deploy: nginx, API, web, teste manual (CA31 e `/api/admin/*` = 404 no host público), app. Ao publicar a remoção da demo pública, suba a API (migrations e seed) **antes** do web e teste `demo`/`demo` e `/api/demo/*` = 404.
 
 ## Regras de negócio resumidas
 

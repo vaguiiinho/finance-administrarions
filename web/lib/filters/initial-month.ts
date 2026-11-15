@@ -28,7 +28,7 @@ export function hasMonthParam(raw: RawSearchParams): boolean {
   return first(raw.month) !== undefined;
 }
 
-function hrefWith(raw: RawSearchParams, month: string, signal: AdvanceSignal | null, basePath: "" | "/demo"): string {
+function hrefWith(raw: RawSearchParams, month: string, signal: AdvanceSignal | null): string {
   const q = new URLSearchParams();
   for (const [key, value] of Object.entries(raw)) {
     if (key === "month" || key === "adv" || key === "adv_from") continue;
@@ -40,18 +40,18 @@ function hrefWith(raw: RawSearchParams, month: string, signal: AdvanceSignal | n
     q.set("adv", signal.advance);
     q.set("adv_from", signal.from);
   }
-  return `${basePath}/entries?${q.toString()}`;
+  return `/entries?${q.toString()}`;
 }
 
 /** URL de redirecionamento com o mes resolvido; mantem os demais parametros e acrescenta adv/adv_from se houve avanco. */
-export function initialMonthHref(raw: RawSearchParams, decision: InitialMonthDecision, basePath: "" | "/demo"): string {
+export function initialMonthHref(raw: RawSearchParams, decision: InitialMonthDecision): string {
   const signal = decision.advance === "NONE" ? null : { advance: decision.advance, from: decision.currentMonth };
-  return hrefWith(raw, decision.month, signal, basePath);
+  return hrefWith(raw, decision.month, signal);
 }
 
 /** URL de redirecionamento quando a verificacao falha: `month=<M do web>`, sem aviso (RNF02). */
-export function fallbackMonthHref(raw: RawSearchParams, now: Date, basePath: "" | "/demo"): string {
-  return hrefWith(raw, currentYearMonthSP(now), null, basePath);
+export function fallbackMonthHref(raw: RawSearchParams, now: Date): string {
+  return hrefWith(raw, currentYearMonthSP(now), null);
 }
 
 /** Le e valida o sinal de aviso da URL; invalido -> null (ignorado sem erro). `YYYY-MM` compara como texto. */

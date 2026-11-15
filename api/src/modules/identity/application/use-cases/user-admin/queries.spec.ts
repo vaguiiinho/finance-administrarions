@@ -1,5 +1,5 @@
 import { rejected } from '@test/support/builders.js';
-import { actorOf, ana, bruno, carla, demoUser, firstAdminMarker, userUuid, vagner } from '@test/support/identity-builders.js';
+import { actorOf, ana, bruno, carla, firstAdminMarker, userUuid, vagner } from '@test/support/identity-builders.js';
 import { buildIdentityHarness, type IdentityHarness } from '@test/support/identity-harness.js';
 
 let h: IdentityHarness;
@@ -9,14 +9,13 @@ beforeEach(() => {
   h.users.seed(ana());
   h.users.seed(bruno({ status: 'INACTIVE' }));
   h.users.seed(carla());
-  h.users.seed(demoUser());
   h.users.seed(firstAdminMarker());
 });
 const actor = () => actorOf(vagner());
 const EXPECTED_KEYS = ['createdAt', 'email', 'id', 'mustChangePassword', 'name', 'role', 'status'];
 
 describe('ListUsers (RF11, CA25, CA26)', () => {
-  it('lista ativos e inativos, SEM o usuario demo nem o marcador; ativos primeiro, depois por nome', async () => {
+  it('lista ativos e inativos, SEM o marcador; ativos primeiro, depois por nome', async () => {
     const items = await h.listUsers.execute({ actor: actor() });
     expect(items.map((u) => u.name)).toEqual(['Ana Souza', 'Carla Dias', 'Vagner', 'Bruno Lima']);
     expect(items.map((u) => u.status)).toEqual(['ACTIVE', 'ACTIVE', 'ACTIVE', 'INACTIVE']);
@@ -38,8 +37,8 @@ describe('GetUser', () => {
     expect(view).toMatchObject({ id: ana().id.value, name: 'Ana Souza', status: 'ACTIVE' });
   });
 
-  it('CA26: inexistente, demo e marcador -> 404 USER_NOT_FOUND com details.id', async () => {
-    for (const id of [userUuid(99), demoUser().id.value, firstAdminMarker().id.value]) {
+  it('CA26: inexistente e marcador -> 404 USER_NOT_FOUND com details.id', async () => {
+    for (const id of [userUuid(99), firstAdminMarker().id.value]) {
       const error = await rejected(h.getUser.execute({ actor: actor(), id }));
       expect(error).toMatchObject({ code: 'USER_NOT_FOUND', kind: 'not_found', details: { id } });
     }

@@ -319,8 +319,10 @@ describe("entriesHref: links internos sem status explicito recebem o padrao (P04
     expect(entriesHref(changePage(old, 2))).not.toContain("d_status");
   });
 
-  it("basePath /demo e preservado", () => {
-    expect(entriesHref(parse({ month: "2026-11", f_status: "ALL", tab: "invoices" }), "/demo")).toBe("/demo/entries?month=2026-11&tab=invoices&f_status=ALL");
+  it("o href e sempre /entries?... (sem basePath: a demonstracao publica saiu, ADR 0013 9.4)", () => {
+    const state = parse({ month: "2026-11", f_status: "ALL", tab: "invoices" });
+    expect(entriesHref(state)).toBe("/entries?month=2026-11&tab=invoices&f_status=ALL");
+    expect((entriesHref as (...args: unknown[]) => string)(state, "/demo")).toBe("/entries?month=2026-11&tab=invoices&f_status=ALL");
   });
 });
 

@@ -20,7 +20,7 @@ export default function PrivacyPage() {
       </section>
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Conta de demonstração</h2>
-        <p>Existe uma conta de demonstração compartilhada, usada para apresentar o aplicativo. Qualquer pessoa pode entrar nela, por isso não registre dados pessoais ali. Os lançamentos e cartões dessa conta são apagados todos os dias às 03:00 (horário de São Paulo).</p>
+        <p>Existe uma conta de demonstração compartilhada, com dados fictícios de exemplo, usada para apresentar o aplicativo. Qualquer pessoa pode entrar nela, por isso não registre dados pessoais ali. Essa conta é redefinida todos os dias às 03:00 (horário de Brasília): os lançamentos e cartões criados ou alterados são descartados e os dados de exemplo voltam ao estado original.</p>
       </section>
     </main>
   );

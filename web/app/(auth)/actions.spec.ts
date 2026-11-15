@@ -96,6 +96,19 @@ describe("loginAction: erros viram estado (RF41, CA03, CA04)", () => {
     expect(state.fields).toEqual({ email: "Informe o e-mail.", password: "Informe a senha." });
   });
 
+  it("400 REQUIRED com a dica da conta demo ligada: mensagem do identificador ('Informe o e-mail ou usuário.')", async () => {
+    vi.stubEnv("DEMO_ACCOUNT_HINT", "on");
+    try {
+      identity.login.mockRejectedValue(
+        new ApiError(400, "VALIDATION_ERROR", "x", { fields: [{ field: "email", code: "REQUIRED", message: "x" }, { field: "password", code: "REQUIRED", message: "x" }] }),
+      );
+      const state = await run({ email: "", password: "" });
+      expect(state.fields).toEqual({ email: "Informe o e-mail ou usuário.", password: "Informe a senha." });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("rede ou 5xx -> banner generico de falha, sem lancar", async () => {
     identity.login.mockRejectedValue(new ApiError(0, "NETWORK_ERROR", "x", null));
     expect(await run({ email: "a@b.c", password: "x" })).toMatchObject({ status: "error", code: "NETWORK_ERROR" });
@@ -110,18 +123,18 @@ describe("loginAction: erros viram estado (RF41, CA03, CA04)", () => {
 });
 
 describe("logoutAction (RF02, CA05, RNF08)", () => {
-  it("chama a API, apaga o cookie e redireciona para /demo/entries", async () => {
+  it("chama a API, apaga o cookie e redireciona para /login (ADR 0013 9.2, S10)", async () => {
     await expect(logoutAction()).rejects.toThrow(/NEXT_REDIRECT/);
     expect(identity.logout).toHaveBeenCalledTimes(1);
     expect(cookie.clearSessionCookie).toHaveBeenCalledTimes(1);
-    expect(redirectMock).toHaveBeenCalledWith("/demo/entries");
+    expect(redirectMock).toHaveBeenCalledWith("/login");
   });
 
   it("ignora falha da API: o cookie e SEMPRE apagado", async () => {
     identity.logout.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR", "x", null));
     await expect(logoutAction()).rejects.toThrow(/NEXT_REDIRECT/);
     expect(cookie.clearSessionCookie).toHaveBeenCalledTimes(1);
-    expect(redirectMock).toHaveBeenCalledWith("/demo/entries");
+    expect(redirectMock).toHaveBeenCalledWith("/login");
   });
 
   it("ignora 401 (sessao ja encerrada)", async () => {

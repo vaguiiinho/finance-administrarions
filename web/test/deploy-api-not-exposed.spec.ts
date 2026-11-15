@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 // ADR 0011 6.1 (revisa CA47/RF45/ADR 0005 9.9): a API passa a ser publicada pelo nginx (para o app), entao "a API nao e
 // exposta" deixou de valer. O que continua valendo: o NAVEGADOR nunca chama a API (so o BFF, no servidor) e
 // `NEXT_PUBLIC_API_URL` nao existe. Novo: o BFF usa o listener INTERNO do nginx (N3) via `API_URL`, e `/api/admin/*` e
-// `/api/demo/*` so sao bloqueados no host publico (N4), nunca no listener interno que o web usa. O nginx fica fora do repo.
+// so e bloqueado no host publico (N4), nunca no listener interno que o web usa. ADR 0013 T7: a regra de `/api/demo/` deixou de
+// ser requisito (a rota nao existe mais e a API responde 404). O nginx fica fora do repo.
 const WEB = join(__dirname, "..");
 const REPO = join(WEB, "..");
 const grep = (cwd: string, args: string) => {
@@ -45,9 +46,13 @@ describe("Web chama a API pelo listener interno do nginx (ADR 0011 6.1 N3, N4)",
     expect(envExample).toMatch(/listener interno/i);
     expect(envExample).toMatch(/nginx/i);
   });
-  it(".env.example avisa que o host publico bloqueia /api/admin/* e /api/demo/*, usados pelo web so pelo listener interno", () => {
+  it(".env.example avisa que o host publico bloqueia /api/admin/*, usado pelo web so pelo listener interno (ADR 0013 T7)", () => {
     expect(envExample).toContain("/api/admin/");
-    expect(envExample).toContain("/api/demo/");
+  });
+  it(".env.example nao exige mais /api/demo/ (rota removida) e documenta DEMO_ACCOUNT_HINT junto de SHOWCASE_ACCOUNT_PASSWORD=demo (R4, T2)", () => {
+    expect(envExample).not.toContain("/api/demo/");
+    expect(envExample).toContain("DEMO_ACCOUNT_HINT");
+    expect(envExample).toMatch(/SHOWCASE_ACCOUNT_PASSWORD/);
   });
   it("a URL base da API vem so de API_URL (lib/api/api-url.ts); nenhum host de producao esta fixo no codigo do web", () => {
     expect(readFileSync(join(WEB, "lib/api/api-url.ts"), "utf8")).toContain("process.env.API_URL");

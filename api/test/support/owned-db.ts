@@ -6,8 +6,9 @@ import { userUuid } from './identity-builders.js';
  * Seeds por SQL cru para o schema COM DONO (ADR 0005 7.1). Independentes dos repositorios (testam os read models
  * sem depender de quem escreve) e capazes de gravar linhas "impossiveis".
  */
+// owner_data_resets (ADR 0013 M2) tem FK para users com ON DELETE CASCADE: o TRUNCATE ... users CASCADE a limpa.
 export const resetAll = async (pool: pg.Pool): Promise<void> => {
-  await pool.query('TRUNCATE TABLE entries, cards, sessions, demo_datasets, users RESTART IDENTITY CASCADE');
+  await pool.query('TRUNCATE TABLE entries, cards, sessions, users RESTART IDENTITY CASCADE');
 };
 
 export interface UserRow {
@@ -17,7 +18,7 @@ export interface UserRow {
   email?: string;
   role?: 'ADMIN' | 'USER';
   status?: 'ACTIVE' | 'INACTIVE';
-  kind?: 'REGULAR' | 'DEMO' | 'PENDING_FIRST_ADMIN';
+  kind?: 'REGULAR' | 'DEMO' | 'PENDING_FIRST_ADMIN' | 'SHOWCASE';
   mustChangePassword?: boolean;
   /** undefined = hash padrao para REGULAR e null para os demais; null = sem hash. */
   passwordHash?: string | null;

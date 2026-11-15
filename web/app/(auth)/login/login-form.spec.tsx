@@ -25,9 +25,11 @@ beforeEach(() => {
 describe("LoginForm: campos (RF41, design 3.3)", () => {
   it("atributos de e-mail e senha, noValidate e botao 'Entrar'", () => {
     const { container } = render(<LoginForm next="/cards" />);
-    expect(email()).toHaveAttribute("type", "email");
-    expect(email()).toHaveAttribute("autocomplete", "email");
-    expect(email()).toHaveAttribute("inputmode", "email");
+    // ADR 0013 / design DR1: o campo aceita o usuario `demo`, que nao e e-mail: type text, autocomplete username, sem inputmode.
+    expect(email()).toHaveAttribute("type", "text");
+    expect(email()).toHaveAttribute("name", "email");
+    expect(email()).toHaveAttribute("autocomplete", "username");
+    expect(email()).not.toHaveAttribute("inputmode");
     expect(email()).toHaveAttribute("autocapitalize", "none");
     expect(email()).toHaveAttribute("spellcheck", "false");
     expect(email()).toBeRequired();
@@ -51,6 +53,63 @@ describe("LoginForm: campos (RF41, design 3.3)", () => {
   it("nao oferece 'Criar conta' (RF06)", () => {
     render(<LoginForm />);
     expect(screen.queryByText(/Criar conta/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("LoginForm: rotulo condicional ao interruptor da dica (design DR2, PA1; CA10, CA11)", () => {
+  it("demoHint ligado: rotulo 'E-mail ou usuário' e mensagem 'Informe o e-mail ou usuário.'", async () => {
+    render(<LoginForm demoHint />);
+    expect(screen.getByLabelText("E-mail ou usuário")).toBeInTheDocument();
+    expect(screen.queryByLabelText("E-mail", { exact: true })).not.toBeInTheDocument();
+    await userEvent.click(submit());
+    expect(screen.getByText("Informe o e-mail ou usuário.")).toBeInTheDocument();
+    expect(screen.queryByText("Informe o e-mail.")).not.toBeInTheDocument();
+  });
+
+  it("demoHint desligado (ou ausente): rotulo 'E-mail' e mensagem 'Informe o e-mail.'", async () => {
+    render(<LoginForm demoHint={false} />);
+    expect(screen.getByLabelText("E-mail")).toBeInTheDocument();
+    expect(screen.queryByLabelText("E-mail ou usuário")).not.toBeInTheDocument();
+    await userEvent.click(submit());
+    expect(screen.getByText("Informe o e-mail.")).toBeInTheDocument();
+  });
+
+  it.each([true, false])("demoHint=%s: type text, autocomplete username, sem inputmode e sem placeholder (DR1, DR3)", (demoHint) => {
+    render(<LoginForm demoHint={demoHint} />);
+    const field = screen.getByLabelText(demoHint ? "E-mail ou usuário" : "E-mail");
+    expect(field).toHaveAttribute("type", "text");
+    expect(field).toHaveAttribute("autocomplete", "username");
+    expect(field).toHaveAttribute("autocapitalize", "none");
+    expect(field).toHaveAttribute("spellcheck", "false");
+    expect(field).not.toHaveAttribute("inputmode");
+    expect(field).not.toHaveAttribute("placeholder");
+    expect(field).toHaveAttribute("name", "email");
+  });
+
+  it("CA12: 'demo' e 'demo' vao para a action sem bloqueio de formato (o servidor resolve o alias); Demo e ' demo ' tambem", async () => {
+    render(<LoginForm demoHint />);
+    for (const typed of ["demo", "Demo", " demo "]) {
+      login.loginAction.mockClear();
+      const field = screen.getByLabelText("E-mail ou usuário") as HTMLInputElement;
+      await userEvent.clear(field);
+      await userEvent.type(field, typed);
+      await userEvent.clear(password());
+      await userEvent.type(password(), "demo");
+      await userEvent.click(submit());
+      await waitFor(() => expect(login.loginAction).toHaveBeenCalledTimes(1));
+      const data = login.loginAction.mock.calls[0][1] as FormData;
+      expect(data.get("email")).toBe(typed);
+      expect(data.get("password")).toBe("demo");
+    }
+  });
+
+  it("CA14: o banner de credencial invalida continua 'E-mail ou senha inválidos.' mesmo com o rotulo 'E-mail ou usuário'", async () => {
+    login.loginAction.mockResolvedValue(errorState({ code: "INVALID_CREDENTIALS", message: "E-mail ou senha inválidos." }));
+    render(<LoginForm demoHint />);
+    await userEvent.type(screen.getByLabelText("E-mail ou usuário"), "admin");
+    await userEvent.type(password(), "x");
+    await userEvent.click(submit());
+    expect(await screen.findByRole("alert")).toHaveTextContent("E-mail ou senha inválidos.");
   });
 });
 

@@ -31,6 +31,22 @@ describe('login (RF01, CA01-CA03)', () => {
     await waitFor(() => expect(callsTo('POST', '/api/auth/login')[0].body).toEqual({ email: 'demo@showcase.invalid', password: 'demo' }));
   });
 
+  it('CA12/CA30 (ADR 0013): o alias "demo" vai para a API sem validacao de formato no app (o servidor resolve) e entra', async () => {
+    server.use(post('/api/auth/login', () => AUTH(DEMO_ME)), get('/api/summary', () => json(SUMMARY)));
+    renderApp('/login');
+    await login('demo', 'demo');
+    await waitFor(() => expect(callsTo('POST', '/api/auth/login')[0].body).toEqual({ email: 'demo', password: 'demo' }));
+    expect(await screen.findByText('Dashboard')).toBeOnTheScreen();
+  });
+
+  it('CA14: identificador sem @ invalido (admin) -> banner generico, nenhum token gravado', async () => {
+    server.use(post('/api/auth/login', () => apiError(401, 'INVALID_CREDENTIALS')));
+    renderApp('/login');
+    await login('admin', 'demo');
+    expect(await screen.findByText('E-mail ou senha inválidos.')).toBeOnTheScreen();
+    expect(keychain.size).toBe(0);
+  });
+
   it('CA02: INVALID_CREDENTIALS mostra o banner generico e nao grava token', async () => {
     server.use(post('/api/auth/login', () => apiError(401, 'INVALID_CREDENTIALS')));
     renderApp('/login');
@@ -214,6 +230,14 @@ describe('Ajustes (RF05, RF23, RF33, B8, CA09, CA48)', () => {
     expect(screen.getByText('Trocar senha')).toBeDisabled();
     expect(screen.getByText('Indisponível na conta de demonstração')).toBeOnTheScreen();
     expect(screen.getByText(/03:00/)).toBeOnTheScreen();
+  });
+
+  it('ADR 0013 (design 4.2): o aviso diz que a conta e compartilhada e REDEFINIDA as 03:00 (dados de exemplo voltam), nao que os dados sao apagados', async () => {
+    signedIn(DEMO_ME);
+    renderApp('/settings');
+    await screen.findByText('demo@showcase.invalid');
+    expect(screen.getByText(/compartilhada e redefinida todos os dias às 03:00 \(horário de Brasília\)/)).toBeOnTheScreen();
+    expect(screen.queryByText(/são apagados todos os dias/)).toBeNull();
   });
 
   it('S2: conta nao demo sem CHANGE_OWN_PASSWORD ve o texto generico, nao o de demonstracao', async () => {

@@ -3,7 +3,7 @@ import { MonthSummary, MonthSummarySkeleton } from "@/components/month-summary";
 import { BlockErrorBoundary } from "@/components/ui/block-error-boundary";
 import { UpdatingRegion } from "@/components/navigation";
 import { monthLongPtBR } from "@/lib/dates/format";
-import { createFinanceReader, type FinanceReader } from "@/lib/api/finance-reader";
+import { getFinanceReader, type FinanceReader } from "@/lib/api/finance-reader";
 import type { EntriesState } from "@/lib/filters/entries-search-params";
 import { EntriesMonthPicker } from "./entries-month-picker";
 import { HEADER_CONTROLS_ID } from "./entries-tabs-bar";
@@ -18,7 +18,7 @@ async function SummaryBlock({ month, reader }: { month: string; reader: FinanceR
  * Cabecalho comum de todas as abas (D16): titulo, "+ Novo lancamento", seletor de mes e resumo do MES INTEIRO.
  * O resumo nunca depende de aba, filtros ou pagina (CA47) e carrega/atualiza/falha sozinho (RF24).
  */
-export function EntriesHeader({ state, currentMonth, reader = createFinanceReader("protected") }: { state: EntriesState; currentMonth: string; reader?: FinanceReader }) {
+export function EntriesHeader({ state, currentMonth, reader = getFinanceReader() }: { state: EntriesState; currentMonth: string; reader?: FinanceReader }) {
   return (
     <header className="flex flex-col gap-4 pb-4 md:gap-6 md:pb-6">
       <div id={HEADER_CONTROLS_ID} className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

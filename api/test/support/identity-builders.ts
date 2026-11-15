@@ -9,7 +9,7 @@ import { PlainPassword } from '@identity/domain/user/value-objects/plain-passwor
 import type { UserRole } from '@identity/domain/user/value-objects/user-role.js';
 import type { UserKind, UserStatus } from '@identity/domain/user/value-objects/user-status.js';
 import type { Actor } from '@identity/application/views.js';
-import { DEMO_USER_ID, FIRST_ADMIN_ID } from '@shared/domain/well-known-ids.js';
+import { FIRST_ADMIN_ID } from '@shared/domain/well-known-ids.js';
 
 const pad = (n: number) => String(n).padStart(12, '0');
 export const userUuid = (n: number) => `0a000000-0000-7000-8000-${pad(n)}`;
@@ -66,8 +66,6 @@ export const vagner = (o: UserOverrides = {}) =>
   aUser({ n: N.vagner, name: 'Vagner', email: 'vagner@exemplo.com', role: 'ADMIN', ...o });
 export const outroAdmin = (o: UserOverrides = {}) =>
   aUser({ n: N.outroAdmin, name: 'Outro Admin', email: 'admin2@exemplo.com', role: 'ADMIN', ...o });
-export const demoUser = (o: UserOverrides = {}) =>
-  aUser({ id: DEMO_USER_ID, name: 'Demonstração', email: 'demo@finance.invalid', kind: 'DEMO', password: null, ...o });
 export const firstAdminMarker = (o: UserOverrides = {}) =>
   aUser({
     id: FIRST_ADMIN_ID,

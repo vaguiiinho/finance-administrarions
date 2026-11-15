@@ -5,7 +5,7 @@ export const IS_PUBLIC_KEY = Symbol('IS_PUBLIC');
 export const ALLOW_DURING_PASSWORD_CHANGE_KEY = Symbol('ALLOW_DURING_PASSWORD_CHANGE');
 export const REQUIRED_CAPABILITY_KEY = Symbol('REQUIRED_CAPABILITY');
 
-/** Rota sem autenticação (login, logout, leituras da demo). O padrão é protegida (seguro por padrão). */
+/** Rota sem autenticação (login, logout). O padrão é protegida (seguro por padrão). */
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 
 /** Rota liberada enquanto a troca obrigatória de senha estiver pendente (ADR 0005 6.6). */

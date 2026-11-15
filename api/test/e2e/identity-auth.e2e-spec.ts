@@ -15,7 +15,6 @@ beforeEach(async () => {
   await e.seedUser(CAST.ana);
   await e.seedUser({ ...CAST.bruno, status: 'INACTIVE' });
   await e.seedUser(CAST.carla);
-  await e.seedUser({ n: 90, kind: 'DEMO', name: 'Demonstração', email: 'demo@finance.invalid' });
 });
 
 const login = (email: string, password: string, ip = e.freshIp()) =>
@@ -53,7 +52,7 @@ describe('A1 POST /api/auth/login', () => {
     expect(res.body.user.mustChangePassword).toBe(true);
   });
 
-  it('CA03/RNF05: senha errada, e-mail inexistente, inativo com senha correta e demo -> 4x 401 INVALID_CREDENTIALS identicos', async () => {
+  it('CA03/RNF05: senha errada, e-mail inexistente, inativo com senha correta e o antigo e-mail da demonstracao publica -> 4x 401 INVALID_CREDENTIALS identicos', async () => {
     const responses = [
       await login('ana@exemplo.com', 'errada1234'),
       await login('naoexiste@exemplo.com', 'segredo123'),

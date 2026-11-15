@@ -126,10 +126,6 @@ export class OwnedEntryRepository implements EntryRepository {
     }
     this.store.delete(entry.id.value);
   }
-  async deleteAllOf(ownerId: never): Promise<void> {
-    const who = need(ownerId);
-    for (const [id, e] of [...this.store]) if (ownerOfAggregate(e as never) === who) this.store.delete(id);
-  }
   seed(entry: Entry): void {
     this.store.set(entry.id.value, copyEntry(entry));
   }

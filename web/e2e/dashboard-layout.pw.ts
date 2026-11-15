@@ -14,10 +14,7 @@ test.beforeEach(async ({ page }) => {
   await signInAsAna(page);
 });
 
-const SCREENS = [
-  ["protegido", "/dashboard"],
-  ["demo", "/demo/dashboard"],
-] as const;
+const SCREENS = [["protegido", "/dashboard"]] as const; // a tela /demo/dashboard saiu (ADR 0013)
 const THEMES = ["light", "dark"] as const;
 const WIDTHS = [320, 375, 768, 1024, 1440, 1920] as const;
 const TOL = 1;
@@ -29,7 +26,7 @@ const ring = (card: Locator) => card.locator(".recharts-responsive-container").f
 const legendOf = (card: Locator) => card.locator("ul").first();
 
 async function open(page: Page, base: string, { width, theme = "light", entries }: { width: number; theme?: (typeof THEMES)[number]; entries?: unknown[] }) {
-  if (entries) await seedData({ entries, demo: { cards: [], entries } });
+  if (entries) await seedData({ entries });
   await setThemeCookie(page.context(), theme);
   await page.setViewportSize({ width, height: 900 });
   await gotoReady(page, `${base}?month=${MONTH}`);

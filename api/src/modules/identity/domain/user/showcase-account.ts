@@ -5,4 +5,6 @@ export const ShowcaseAccount = {
   id: SHOWCASE_USER_ID,
   email: 'demo@showcase.invalid',
   name: 'Conta de demonstração',
+  /** Alias aceito só no login (ADR 0013 B1); resolve para `email`. Nunca persistido. */
+  loginAlias: 'demo',
 } as const;

@@ -48,7 +48,8 @@ test.describe("troca obrigatoria (CA08, CA09)", () => {
     await expect(page.getByRole("navigation", { name: "Principal" }).or(menuButton(page)).first()).toBeVisible();
     await page.getByRole("button", { name: "Conta de Carla Dias" }).click();
     await expect(page.getByRole("menuitem")).toHaveText(["Meu perfil", "Trocar senha", "Sair"]);
-    await expect(page.getByRole("contentinfo").getByRole("link", { name: "Ver demonstração" })).toBeVisible();
+    await expect(page.getByRole("contentinfo").getByRole("link")).toHaveCount(0); // RF03: sem 'Ver demonstração'
+    await expect(page.getByText("Ver demonstração")).toHaveCount(0);
   });
 
   test("CA09: depois, o login com a senha temporaria falha e com a nova entra sem troca obrigatoria", async ({ page, context }) => {

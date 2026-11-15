@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAppMode } from "@/components/app-mode";
 import { Tabs, type TabItem } from "@/components/ui/tabs";
 import { changeTab, entriesHref, type EntriesState, type EntriesTab } from "@/lib/filters/entries-search-params";
 import { EntriesMonthPicker } from "./entries-month-picker";
@@ -19,7 +18,6 @@ export const HEADER_CONTROLS_ID = "entries-header-controls";
  */
 export function EntriesTabsBar({ state, currentMonth }: { state: EntriesState; currentMonth: string }) {
   const [headerGone, setHeaderGone] = useState(false);
-  const { basePath } = useAppMode();
 
   useEffect(() => {
     const sentinel = document.getElementById(HEADER_CONTROLS_ID);
@@ -32,7 +30,7 @@ export function EntriesTabsBar({ state, currentMonth }: { state: EntriesState; c
     return () => observer.disconnect();
   }, []);
 
-  const items: TabItem<EntriesTab>[] = ORDER.map((id) => ({ id, label: LABELS[id], href: entriesHref(changeTab(state, id), basePath) }));
+  const items: TabItem<EntriesTab>[] = ORDER.map((id) => ({ id, label: LABELS[id], href: entriesHref(changeTab(state, id)) }));
 
   return (
     <div className="sticky top-[var(--navbar-h)] z-30 -mx-4 page-bg-window border-b border-border px-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8">

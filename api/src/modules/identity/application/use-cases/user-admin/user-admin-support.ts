@@ -25,7 +25,7 @@ export async function requireActiveAdmin(tx: IdentityTransactionScope, actor: Ac
   return user;
 }
 
-/** Inexistente ou não gerenciável (demo, marcador) -> 404 USER_NOT_FOUND (RF18). */
+/** Inexistente ou não gerenciável (marcador do primeiro administrador, conta demo) -> 404 USER_NOT_FOUND (RF18). */
 export async function loadManageable(users: { findById(id: UserId): Promise<User | null> }, id: UserId): Promise<User> {
   const user = await users.findById(id);
   if (!user || !user.isManageable()) throw new UserNotFoundError(id.value);

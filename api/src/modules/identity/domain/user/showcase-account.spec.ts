@@ -2,6 +2,7 @@ import { InvariantViolationError } from '@shared/domain/app-error.js';
 import { NOW } from '@test/support/builders.js';
 import { aUser, emailOf, hashOf, userName } from '@test/support/identity-builders.js';
 import { SHOWCASE_EMAIL, SHOWCASE_ID, SHOWCASE_NAME, showcaseUser } from '@test/support/showcase-builders.js';
+import { ShowcaseAccount } from './showcase-account.js';
 import { User } from './user.js';
 
 const LATER = new Date(NOW.getTime() + 60_000);
@@ -31,8 +32,8 @@ describe('User.showcase (ADR 0011 3.3)', () => {
     expect(text).not.toContain('$fake$');
   });
 
-  it('o id da conta e diferente do DEMO_USER_ID (dataset publico)', () => {
-    expect(SHOWCASE_ID).not.toBe('01900000-0000-7000-8000-0000000000d1');
+  it('o alias de login e demo (ADR 0013, B1)', () => {
+    expect(ShowcaseAccount.loginAlias).toBe('demo');
   });
 });
 
@@ -58,10 +59,9 @@ describe('SHOWCASE: elegibilidade e administracao', () => {
     expect(showcaseUser().canAuthenticate()).toBe(true);
   });
 
-  it('canAuthenticate: inativos, DEMO e marcador do primeiro admin nao', () => {
+  it('canAuthenticate: inativos e marcador do primeiro admin nao', () => {
     expect(aUser({ status: 'INACTIVE' }).canAuthenticate()).toBe(false);
     expect(showcaseUser({ status: 'INACTIVE' }).canAuthenticate()).toBe(false);
-    expect(User.demo({ now: NOW }).canAuthenticate()).toBe(false);
     expect(
       aUser({ kind: 'PENDING_FIRST_ADMIN', id: '01900000-0000-7000-8000-0000000000a1', role: 'ADMIN', password: null, mustChangePassword: true }).canAuthenticate(),
     ).toBe(false);
@@ -116,7 +116,18 @@ describe('SHOWCASE: defesa em profundidade (B8)', () => {
 });
 
 describe('e-mail da conta', () => {
-  it('demo@showcase.invalid e um e-mail valido para o fluxo comum (TLD .invalid, sem alias)', () => {
+  it('demo@showcase.invalid e um e-mail valido para o fluxo comum (TLD .invalid)', () => {
     expect(emailOf('demo@showcase.invalid').value).toBe('demo@showcase.invalid');
+  });
+});
+
+describe('ShowcaseAccount.loginAlias (ADR 0013 3.1, B1)', () => {
+  it('o alias de login e "demo" e nao e um e-mail (nunca persistido)', () => {
+    expect(ShowcaseAccount.loginAlias).toBe('demo');
+    expect(ShowcaseAccount.loginAlias).not.toContain('@');
+  });
+
+  it('o e-mail canonico continua demo@showcase.invalid (o alias resolve para ele)', () => {
+    expect(ShowcaseAccount.email).toBe(SHOWCASE_EMAIL);
   });
 });

@@ -1,5 +1,5 @@
 import { rejected } from '@test/support/builders.js';
-import { ana, carla, demoUser, vagner } from '@test/support/identity-builders.js';
+import { ana, carla, firstAdminMarker, vagner } from '@test/support/identity-builders.js';
 import { SHOWCASE_EMAIL, SHOWCASE_ID, showcaseUser } from '@test/support/showcase-builders.js';
 import { buildShowcaseHarness, type ShowcaseHarness } from '@test/support/showcase-harness.js';
 
@@ -31,9 +31,9 @@ describe('AuthenticateSession: capacidades e elegibilidade (ADR 0011 5.3, S8)', 
     expect(principal.capabilities).toEqual(expect.arrayContaining(['MANAGE_USERS', 'MANAGE_EXPENSES']));
   });
 
-  it('DEMO (dataset publico) continua nao autenticando: UNAUTHENTICATED', async () => {
-    h.users.seed(demoUser());
-    const { token } = h.openSession(demoUser());
+  it('marcador do primeiro administrador continua nao autenticando: UNAUTHENTICATED', async () => {
+    h.users.seed(firstAdminMarker());
+    const { token } = h.openSession(firstAdminMarker());
     expect((await rejected(h.authenticate.execute({ token }))).code).toBe('UNAUTHENTICATED');
   });
 

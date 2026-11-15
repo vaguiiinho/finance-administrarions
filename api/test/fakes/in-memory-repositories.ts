@@ -115,9 +115,6 @@ export class InMemoryEntryRepository implements EntryRepository {
     }
     this.store.delete(snapshot.id.value);
   }
-  async deleteAllOf(ownerId: OwnerId): Promise<void> {
-    for (const [id, e] of [...this.store]) if (e.ownerId.equals(ownerId)) this.store.delete(id);
-  }
   seed(entry: Entry): void {
     this.store.set(entry.id.value, copyEntry(entry));
   }

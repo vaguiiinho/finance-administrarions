@@ -9,14 +9,16 @@ npm install
 API_URL=http://127.0.0.1:3001 npm run dev    # ver .env.example; a API deve rodar com PORT=3001
 ```
 
-`API_URL` é lida apenas no servidor (o navegador nunca chama a API). Padrão do código: `http://127.0.0.1:3001`. A raiz `/` redireciona para `/entries`.
+`API_URL` é lida apenas no servidor (o navegador nunca chama a API). Padrão do código: `http://127.0.0.1:3001`. A raiz `/` redireciona para `/entries` (com sessão) ou `/login` (sem sessão).
+
+`DEMO_ACCOUNT_HINT` (lida só no servidor, por requisição; padrão desligada): com `on`, o login mostra a dica da conta demo ("usuário demo e senha demo") e rotula o primeiro campo "E-mail ou usuário". A credencial exibida é fixa no código, então a variável deve andar junto com `SHOWCASE_ACCOUNT_PASSWORD=demo` na API; ligue só onde a API tiver essa senha. Ver `.env.example`.
 
 ## Rotas
 
 | Rota | Conteúdo |
 |---|---|
 | `/entries` | Resumo do mês e abas Despesas, Faturas e Receitas; drawer "Novo lançamento". Sem `month` na URL, resolve o mês inicial pela API e redireciona (ver abaixo) |
-| `/demo/entries` | Mesma tela, somente leitura, com a rota demo da API |
+| `/login` | Entrar; com `DEMO_ACCOUNT_HINT=on`, mostra a dica da conta demo. `/demo/*` não existe mais (404) |
 | `/cards` | Cartões (criar e editar) |
 | `/dashboard` | Série de 12 meses e distribuição por categoria (Recharts) |
 

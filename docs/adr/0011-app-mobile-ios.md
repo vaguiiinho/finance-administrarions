@@ -338,6 +338,8 @@ Provisionamento: `run-seed.ts` (composition root) lê `SHOWCASE_ACCOUNT_PASSWORD
 
 ### 5.4 Use case (finance) e agendamento diário (B7, B9)
 
+> **Nota de atualização (ADR 0013, 2026-11-14):** a parte de limpeza deste item foi **substituída** pelo ADR 0013. `PurgeShowcaseData`, `ShowcaseDataPurger` e o corte por `created_at` não existem mais: a tarefa diária (03:00 America/Sao_Paulo) agora é `reset-demo-account`, que apaga tudo da conta demo e restaura o dataset de exemplo (`ResetOwnerData` + `DemoAccountResetRoutine`), com condição `not-reset-since` sob lock; execução manual com `npm run demo:reset`. Também foram ajustados neste ADR: §2.2, §3.3 e §3.5 (o alias `demo` volta no login, via `LoginIdentifier`, valendo só em `POST /api/auth/login`) e §6.1 N4 (a regra de `/api/demo/` no nginx deixou de ser requisito; a rota não existe mais).
+
 | Use case | Input | Output | Fluxo |
 |---|---|---|---|
 | `PurgeShowcaseData` (novo, `finance/application/use-cases/maintenance/`) | `{ ownerId: string }` | `{ entries: number; cards: number }` | `cutoff = dailyTime.lastOccurrence(clock.now(), purgeAt)`; `purger.purgeCreatedBefore(ownerId, cutoff)`. `purgeAt: LocalTimeOfDay` (`03:00`) chega pelo construtor, montado no composition root. Idempotente, sem estado próprio. O `ownerId` vem do composition root (`SHOWCASE_USER_ID`), então finance não conhece o conceito de conta de demonstração. |

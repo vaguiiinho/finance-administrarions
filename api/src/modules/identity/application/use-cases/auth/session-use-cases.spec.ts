@@ -1,5 +1,5 @@
 import { NOW, rejected } from '@test/support/builders.js';
-import { ana, bruno, carla, demoUser, firstAdminMarker, userUuid, vagner } from '@test/support/identity-builders.js';
+import { ana, bruno, carla, firstAdminMarker, userUuid, vagner } from '@test/support/identity-builders.js';
 import { buildIdentityHarness, type IdentityHarness } from '@test/support/identity-harness.js';
 
 const H24 = 24 * 60 * 60 * 1000;
@@ -45,12 +45,9 @@ describe('AuthenticateSession (RF03, RF04, T16, CA27)', () => {
     expect((await rejected(h.authenticate.execute({ token }))).code).toBe('UNAUTHENTICATED');
   });
 
-  it.each([
-    ['demo', () => demoUser()],
-    ['marcador do primeiro administrador', () => firstAdminMarker()],
-  ])('usuario %s com sessao -> 401 (kind <> REGULAR)', async (_label, make) => {
-    h.users.seed(make());
-    const { token } = h.openSession(make());
+  it('marcador do primeiro administrador com sessao -> 401 (kind <> REGULAR)', async () => {
+    h.users.seed(firstAdminMarker());
+    const { token } = h.openSession(firstAdminMarker());
     expect((await rejected(h.authenticate.execute({ token }))).code).toBe('UNAUTHENTICATED');
   });
 

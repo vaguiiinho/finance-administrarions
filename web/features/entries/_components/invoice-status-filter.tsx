@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useState } from "react";
-import { useAppMode } from "@/components/app-mode";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/components/navigation";
@@ -15,15 +14,14 @@ import { StatusField, StatusIndicator } from "./status-filter-field";
  */
 export function InvoiceStatusFilter({ state }: { state: EntriesState }) {
   const { navigate } = useNav();
-  const { basePath } = useAppMode();
   const uid = useId();
   const [sheetOpen, setSheetOpen] = useState(false);
   const active = state.invoices.status;
   const [draft, setDraft] = useState<StatusFilter>(active);
   const count = active === "ALL" ? 0 : 1;
 
-  const apply = (status: StatusFilter, focusId?: string) => navigate(entriesHref(changeFilter(state, { f_status: status }), basePath), { scope: "panel", focusId });
-  const clear = () => navigate(entriesHref(clearInvoiceFilters(state), basePath), { scope: "panel", focusId: PANEL_TITLE_ID });
+  const apply = (status: StatusFilter, focusId?: string) => navigate(entriesHref(changeFilter(state, { f_status: status })), { scope: "panel", focusId });
+  const clear = () => navigate(entriesHref(clearInvoiceFilters(state)), { scope: "panel", focusId: PANEL_TITLE_ID });
 
   return (
     <div className="flex flex-col gap-3">

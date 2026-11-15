@@ -17,9 +17,9 @@ const INVALID_CREDENTIALS = "E-mail ou senha inválidos.";
 const NETWORK_TEXT = "Não foi possível entrar agora. Verifique sua conexão e tente novamente.";
 
 /** Validacao so de presenca (D13): o formato do e-mail e da API, e a senha nunca tem regra de composicao no login. */
-function validate(email: string, password: string): Partial<Record<Field, string>> {
+function validate(email: string, password: string, demoHint: boolean): Partial<Record<Field, string>> {
   return {
-    ...(email === "" ? { email: fieldMessage("login", "email", "REQUIRED") } : {}),
+    ...(email === "" ? { email: fieldMessage("login", demoHint ? "identifier" : "email", "REQUIRED") } : {}),
     ...(password === "" ? { password: fieldMessage("login", "password", "REQUIRED") } : {}),
   };
 }
@@ -28,7 +28,7 @@ function validate(email: string, password: string): Partial<Record<Field, string
  * Formulario de login (design 3, RF41): `useActionState`, erro de credenciais em banner (senha limpa, foco nela), 429 com
  * horario e botao indisponivel ate o prazo, `?reason=expired` como banner informativo. `next` vai bruto; o servidor valida.
  */
-export function LoginForm({ next, reason }: { next?: string; reason?: "expired" }) {
+export function LoginForm({ next, reason, demoHint = false }: { next?: string; reason?: "expired"; demoHint?: boolean }) {
   const [state, formAction, pending] = useFormAction(loginAction);
   const bannerId = useId();
   const [email, setEmail] = useState("");
@@ -60,7 +60,7 @@ export function LoginForm({ next, reason }: { next?: string; reason?: "expired" 
   const retry = useRetryAfter(rateLimited ? state.retryAfterSeconds : undefined, state.at ? new Date(state.at) : undefined);
   const blocked = rateLimited && !retry.expired;
 
-  const clientErrors = showClientErrors ? validate(email, password) : {};
+  const clientErrors = showClientErrors ? validate(email, password, demoHint) : {};
   const errors: Partial<Record<Field, string>> = { ...serverFields, ...clientErrors };
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -68,7 +68,7 @@ export function LoginForm({ next, reason }: { next?: string; reason?: "expired" 
       event.preventDefault();
       return;
     }
-    const found = validate(email, password);
+    const found = validate(email, password, demoHint);
     const first = FIELDS.find((f) => found[f]);
     if (first) {
       event.preventDefault();
@@ -100,11 +100,10 @@ export function LoginForm({ next, reason }: { next?: string; reason?: "expired" 
       {banner}
       <input type="hidden" name="next" value={next ?? ""} />
       <TextField
-        label="E-mail"
+        label={demoHint ? "E-mail ou usuário" : "E-mail"}
         name="email"
-        type="email"
-        inputMode="email"
-        autoComplete="email"
+        type="text"
+        autoComplete="username"
         autoCapitalize="none"
         spellCheck={false}
         aria-required="true"

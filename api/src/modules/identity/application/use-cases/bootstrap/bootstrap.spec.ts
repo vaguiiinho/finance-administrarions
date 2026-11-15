@@ -1,6 +1,6 @@
-import { DEMO_USER_ID, FIRST_ADMIN_ID } from '@shared/domain/well-known-ids.js';
+import { FIRST_ADMIN_ID } from '@shared/domain/well-known-ids.js';
 import { rejected } from '@test/support/builders.js';
-import { ana, demoUser, firstAdminMarker, userUuid, vagner } from '@test/support/identity-builders.js';
+import { ana, firstAdminMarker, userUuid, vagner } from '@test/support/identity-builders.js';
 import { buildIdentityHarness, type IdentityHarness } from '@test/support/identity-harness.js';
 
 const ENV = { ADMIN_NAME: 'Vagner', ADMIN_EMAIL: 'Admin@Exemplo.com', ADMIN_PASSWORD: 'Inicial123' };
@@ -41,12 +41,6 @@ describe('BootstrapFirstAdmin (RF20, CA12, CA13, CA14)', () => {
     expect(provisioned.email.value).toBe('admin@exemplo.com');
     expect(h.users.all()).toHaveLength(1);
     expect(h.audit.of('firstAdminBootstrapped')[0].payload).toMatchObject({ userId: FIRST_ADMIN_ID, receivedLegacyData: true });
-  });
-
-  it('o usuario demo nao conta: banco so com o demo ainda cria o administrador', async () => {
-    h.users.seed(demoUser());
-    expect(await h.bootstrap.execute(ENV)).toEqual({ status: 'created' });
-    expect(h.users.get(DEMO_USER_ID)).toBeDefined();
   });
 
   it('CA12/CA13: se ja existe algum usuario REGULAR -> skipped, SEM validar as variaveis, sem hash, sem auditoria', async () => {
@@ -117,10 +111,9 @@ describe('RecoverAdminAccess (T15, D17)', () => {
     expect(h.uow.adminLocks).toBe(1);
   });
 
-  it('e-mail inexistente, do demo ou do marcador -> 404 USER_NOT_FOUND', async () => {
-    h.users.seed(demoUser());
+  it('e-mail inexistente ou do marcador -> 404 USER_NOT_FOUND', async () => {
     h.users.seed(firstAdminMarker());
-    for (const email of ['naoexiste@exemplo.com', 'demo@finance.invalid', 'first-admin@finance.invalid']) {
+    for (const email of ['naoexiste@exemplo.com', 'first-admin@finance.invalid']) {
       expect((await rejected(h.recover.execute({ email, temporaryPassword: 'Temp1234' }))).code).toBe('USER_NOT_FOUND');
     }
   });
@@ -139,15 +132,5 @@ describe('RecoverAdminAccess (T15, D17)', () => {
     await h.recover.execute({ email: 'ana@exemplo.com', temporaryPassword: 'Temp1234' });
     expect(h.sessions.ofUser(vagner().id.value).map((x) => x.id.value)).toEqual([s.sessionId]);
     expect(userUuid(1)).toBeDefined();
-  });
-});
-
-describe('EnsureDemoUser', () => {
-  it('cria o usuario demo reservado uma unica vez (idempotente)', async () => {
-    expect(await h.ensureDemo.execute({})).toEqual({ created: true });
-    expect(await h.ensureDemo.execute({})).toEqual({ created: false });
-    const demo = h.users.get(DEMO_USER_ID)!;
-    expect(demo).toMatchObject({ kind: 'DEMO', role: 'USER', passwordHash: null });
-    expect(h.users.all()).toHaveLength(1);
   });
 });

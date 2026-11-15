@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { PROTECTED_MODE } from "@/lib/app-mode";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { currentUrl } from "@/lib/auth/redirect-urls";
 import { decideProtectedLayout } from "@/lib/auth/route-policy";
@@ -18,7 +17,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   if (decision.kind === "notFound" || !user) redirect("/login");
   const restricted = user.mustChangePassword;
   return (
-    <AppShell user={user} mode={PROTECTED_MODE} restricted={restricted} showDemoLink>
+    <AppShell user={user} restricted={restricted}>
       {children}
     </AppShell>
   );

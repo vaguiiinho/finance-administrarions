@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api/http";
 import { login, logout } from "@/lib/api/identity-client";
 import type { FormState } from "@/lib/auth/form-state";
 import { fieldMessage } from "@/lib/auth/field-messages";
+import { isDemoHintEnabled } from "@/lib/auth/demo-hint";
 import { safeNext } from "@/lib/auth/next-param";
 import { clearSessionCookie, writeSessionCookie } from "@/lib/auth/session-cookie";
 
@@ -41,7 +42,9 @@ function loginFailure(error: unknown, email: string): FormState {
     }
     if (error.status === 400) {
       const issues = (error.details as { fields?: { field: string; code: string }[] } | null)?.fields ?? [];
-      const fields = Object.fromEntries(issues.map((issue) => [issue.field, fieldMessage("login", issue.field, issue.code)]));
+      // com a dica ligada o rotulo e "E-mail ou usuario": a mensagem de obrigatorio acompanha (design DR2)
+      const emailField = isDemoHintEnabled() ? "identifier" : "email";
+      const fields = Object.fromEntries(issues.map((issue) => [issue.field, fieldMessage("login", issue.field === "email" ? emailField : issue.field, issue.code)]));
       if (Object.keys(fields).length > 0) return { status: "error", code: "VALIDATION_ERROR", fields, values };
     }
     return { status: "error", code: error.status === 0 ? "NETWORK_ERROR" : error.code, values };
@@ -49,7 +52,7 @@ function loginFailure(error: unknown, email: string): FormState {
   return { status: "error", code: "INTERNAL_ERROR", values };
 }
 
-/** A2: ignora falha da API (inclusive 401), sempre apaga o cookie e vai para a demo (CA05). Nunca por GET. */
+/** A2: ignora falha da API (inclusive 401), sempre apaga o cookie e vai para o login (RF06). Nunca por GET. */
 export async function logoutAction(): Promise<void> {
   try {
     await logout();
@@ -57,5 +60,5 @@ export async function logoutAction(): Promise<void> {
     // a sessao pode ja ter acabado; o cookie sai de qualquer forma
   }
   await clearSessionCookie();
-  redirect("/demo/entries");
+  redirect("/login");
 }

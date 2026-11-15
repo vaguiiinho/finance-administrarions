@@ -51,7 +51,7 @@ async function forwardedFor(): Promise<string | null> {
 
 /**
  * `auth: "session"` (padrao) envia `Authorization: Bearer <cookie>`; sem cookie nem chama a API.
- * `auth: "none"` (login, rotas de demo) nunca envia o Bearer.
+ * `auth: "none"` (login) nunca envia o Bearer.
  */
 export async function request<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, options: { query?: Query; body?: unknown; auth?: "session" | "none"; timeoutMs?: number } = {}): Promise<T> {
   const auth = options.auth ?? "session";

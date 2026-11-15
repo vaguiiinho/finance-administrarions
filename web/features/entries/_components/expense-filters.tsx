@@ -2,7 +2,6 @@
 
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAppMode } from "@/components/app-mode";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
 import { useNav } from "@/components/navigation";
@@ -90,7 +89,6 @@ interface ExpenseFiltersProps {
 /** Filtros da aba Despesas (RF20): inline em >= md (aplicam ao mudar); folha com "Aplicar" em < md (D6). */
 export function ExpenseFilters({ state, categories, categoriesError, cards, cardsError }: ExpenseFiltersProps) {
   const { navigate } = useNav();
-  const { basePath } = useAppMode();
   const router = useRouter();
   const uid = useId();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -99,9 +97,9 @@ export function ExpenseFilters({ state, categories, categoriesError, cards, card
   const count = [active.status !== "ALL", active.category, active.card].filter(Boolean).length;
 
   const apply = (filters: Filters) =>
-    navigate(entriesHref(changeFilter(state, { d_status: filters.status, d_category: filters.category, d_card: filters.card }), basePath), { scope: "panel" });
+    navigate(entriesHref(changeFilter(state, { d_status: filters.status, d_category: filters.category, d_card: filters.card })), { scope: "panel" });
   // "Limpar filtros" some depois de usado: o foco vai para o h2 do painel (DL7)
-  const clear = () => navigate(entriesHref(clearExpenseFilters(state), basePath), { scope: "panel", focusId: PANEL_TITLE_ID });
+  const clear = () => navigate(entriesHref(clearExpenseFilters(state)), { scope: "panel", focusId: PANEL_TITLE_ID });
   const retry = () => router.refresh();
   const common = { categories, categoriesError, cards, cardsError, onRetry: retry };
 
@@ -160,7 +158,6 @@ export function ExpenseFilters({ state, categories, categoriesError, cards, card
 /** Filtro de categoria da aba Receitas (aplica ao mudar em todas as larguras). */
 export function IncomeFilter({ state, categories, categoriesError }: { state: EntriesState; categories: string[]; categoriesError: boolean }) {
   const { navigate } = useNav();
-  const { basePath } = useAppMode();
   const router = useRouter();
   const id = useId();
   const category = state.incomes.category ?? "";
@@ -175,7 +172,7 @@ export function IncomeFilter({ state, categories, categoriesError }: { state: En
           id={id}
           className="field"
           value={category}
-          onChange={(e) => navigate(entriesHref(changeFilter(state, { r_category: e.target.value || undefined }), basePath), { scope: "panel" })}
+          onChange={(e) => navigate(entriesHref(changeFilter(state, { r_category: e.target.value || undefined })), { scope: "panel" })}
         >
           <option value="">Todas as categorias</option>
           {list.map((c) => (
@@ -194,7 +191,7 @@ export function IncomeFilter({ state, categories, categoriesError }: { state: En
         ) : null}
       </div>
       {category ? (
-        <Button variant="tertiary" onClick={() => navigate(entriesHref(changeFilter(state, { r_category: undefined }), basePath), { scope: "panel" })}>
+        <Button variant="tertiary" onClick={() => navigate(entriesHref(changeFilter(state, { r_category: undefined })), { scope: "panel" })}>
           Limpar filtro
         </Button>
       ) : null}

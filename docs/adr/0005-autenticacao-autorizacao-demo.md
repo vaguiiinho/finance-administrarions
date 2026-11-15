@@ -524,6 +524,8 @@ Ordem do Nest: middleware (body parser) -> guards -> pipes -> handler. Portanto,
 
 ### 6.5 Rotas públicas de demo (RF29, T4)
 
+> **Nota de atualização (ADR 0013, 2026-11-14):** este item foi **substituído** pelo ADR 0013. As rotas públicas `/api/demo/*`, o `DemoController`, o usuário `DEMO` (`DEMO_USER_ID`, `EnsureDemoUser`, `User.demo`) e as telas `/demo/*` do web foram removidos; as rotas respondem 404 `ROUTE_NOT_FOUND`. O texto abaixo é histórico. Consequências nos itens relacionados (§5.6, §7.6, §9.3 e §9.5-§9.8): o dataset de exemplo (`buildSampleDataset`) agora é o estado inicial da **conta demo** (`SHOWCASE`), e a tabela `demo_datasets` virou `owner_data_resets`.
+
 Inalterado: 9 rotas `GET /api/demo/*` com `@Public()`, mesmo DTO das protegidas, dono fixo `DEMO_USER_ID`, montadas pelos `finance-read-handlers` compartilhados. Qualquer outro método -> 404 `ROUTE_NOT_FOUND` (CA36).
 
 > **Nota de atualização (ADR 0007, 2026-10-30):** as rotas públicas de demo passaram de 9 para **10** com `GET /api/demo/entries/initial-month` (mesmo contrato de `GET /api/entries/initial-month`, dono `DEMO_USER_ID`, sem rota de escrita). A tabela abaixo e a contagem acima descrevem a decisão original; o inventário vigente está em `api/test/e2e/access-control.e2e-spec.ts` e em `docs/api/finance.md`. `GET /api/demo/invoices` também aceita `status=PENDING|PAID`.

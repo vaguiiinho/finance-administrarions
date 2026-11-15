@@ -17,8 +17,6 @@ export interface EntryRepository {
   delete(entry: Entry): Promise<void>;
   /** Persiste status, paidAt, updatedAt de despesas existentes (guarda status = PENDING e user_id = entry.ownerId). */
   saveAll(entries: readonly Entry[]): Promise<void>;
-  /** Usado só pelo DemoDatasetStore (ADR 0005 5.6). */
-  deleteAllOf(ownerId: OwnerId): Promise<void>;
 }
 
 export const ENTRY_REPOSITORY = Symbol('ENTRY_REPOSITORY');

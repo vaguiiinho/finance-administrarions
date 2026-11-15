@@ -1,6 +1,6 @@
 import { AggregateRoot } from '@shared/domain/aggregate-root.js';
 import { InvariantViolationError } from '@shared/domain/app-error.js';
-import { FIRST_ADMIN_ID, DEMO_USER_ID, SHOWCASE_USER_ID } from '@shared/domain/well-known-ids.js';
+import { FIRST_ADMIN_ID, SHOWCASE_USER_ID } from '@shared/domain/well-known-ids.js';
 import { unwrapPersisted } from '@shared/domain/unwrap.js';
 import {
   FirstAdminBootstrapped,
@@ -75,21 +75,6 @@ export class User extends AggregateRoot<UserDomainEvent> {
     return user;
   }
 
-  static demo(p: { now: Date }): User {
-    return User.restore({
-      id: unwrapPersisted(UserId.create(DEMO_USER_ID), 'wellKnown'),
-      name: unwrapPersisted(UserName.create('Demonstração'), 'wellKnown'),
-      email: unwrapPersisted(EmailAddress.create('demo@finance.invalid'), 'wellKnown'),
-      passwordHash: null,
-      kind: 'DEMO',
-      role: 'USER',
-      status: 'ACTIVE',
-      mustChangePassword: false,
-      createdAt: p.now,
-      updatedAt: p.now,
-    });
-  }
-
   static showcase(p: { passwordHash: PasswordHash; now: Date }): User {
     const user = User.restore({
       id: unwrapPersisted(UserId.create(ShowcaseAccount.id), 'wellKnown'),
@@ -128,9 +113,6 @@ export class User extends AggregateRoot<UserDomainEvent> {
   static restore(snapshot: UserSnapshot): User {
     const { kind, passwordHash, role, id, createdAt, updatedAt } = snapshot;
     if (kind === 'REGULAR' && passwordHash === null) throw new InvariantViolationError('User REGULAR exige passwordHash.');
-    if (kind === 'DEMO' && (passwordHash !== null || role !== 'USER')) {
-      throw new InvariantViolationError('User DEMO exige passwordHash nulo e role USER.');
-    }
     if (kind === 'PENDING_FIRST_ADMIN' && (passwordHash !== null || id.value !== FIRST_ADMIN_ID)) {
       throw new InvariantViolationError('Marcador do primeiro administrador exige passwordHash nulo e FIRST_ADMIN_ID.');
     }

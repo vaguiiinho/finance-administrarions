@@ -34,7 +34,7 @@ const fillLogin = async (page: Page, email: string, password: string) => {
 const SCREENS: Screen[] = [
   { name: "login vazio", h1: "Entrar", url: "/login" },
   { name: "login com contexto next", h1: "Entrar", url: "/login?next=/cards" },
-  { name: "login com erro de campo", h1: "Entrar", url: "/login", prepare: async (p) => { await p.getByRole("button", { name: "Entrar", exact: true }).click(); await p.getByText("Informe o e-mail.").waitFor(); } },
+  { name: "login com erro de campo", h1: "Entrar", url: "/login", prepare: async (p) => { await p.getByRole("button", { name: "Entrar", exact: true }).click(); await p.getByText("Informe o e-mail ou usuário.").waitFor(); } },
   { name: "login com banner de credenciais", h1: "Entrar", url: "/login", prepare: async (p) => { await fillLogin(p, "ana@exemplo.com", "errada"); await p.getByRole("button", { name: "Entrar", exact: true }).click(); await p.getByRole("alert").filter({ hasText: "E-mail ou senha inválidos." }).waitFor(); } },
   { name: "login sessao expirada", h1: "Entrar", url: "/login?next=%2Fcards&reason=expired" },
   { name: "login 429", h1: "Entrar", url: "/login", scenario: "rate-limited", prepare: async (p) => { await fillLogin(p, "ana@exemplo.com", "x"); await p.getByRole("button", { name: "Entrar", exact: true }).click(); await p.getByRole("alert").filter({ hasText: "Muitas tentativas" }).waitFor(); } },
@@ -49,12 +49,8 @@ const SCREENS: Screen[] = [
   { name: "usuarios: dialogo de redefinir senha", h1: "Usuários", auth: "vagner", url: "/admin/users", prepare: async (p) => { await row(p, "Ana Souza").getByRole("button", { name: /Redefinir senha/ }).click(); await dialog(p).waitFor(); } },
   { name: "menu da conta aberto", h1: "Cartões", auth: "ana", url: "/cards", prepare: async (p) => { await openAccountMenu(p, "Ana Souza"); } },
   { name: "menu da conta do administrador aberto", h1: "Cartões", auth: "vagner", url: "/cards", prepare: async (p) => { await openAccountMenu(p, "Vagner"); } },
-  { name: "demo: entries com aviso (visitante)", h1: "Lançamentos", url: "/demo/entries?month=2026-11" },
-  { name: "demo: cartoes com aviso (visitante)", h1: "Cartões", url: "/demo/cards" },
-  { name: "demo: dashboard com aviso (logada)", h1: "Dashboard", auth: "ana", url: "/demo/dashboard?month=2026-11" },
   { name: "tela protegida com menu lateral", h1: "Cartões", auth: "ana", url: "/cards", only: "desktop" },
   { name: "drawer de navegacao aberto", h1: "Cartões", auth: "ana", url: "/cards", only: "mobile", prepare: async (p) => { await menuButton(p).click(); await p.getByRole("dialog", { name: "Menu de navegação" }).waitFor(); } },
-  { name: "drawer de navegacao da demo aberto", h1: "Cartões", url: "/demo/cards", only: "mobile", prepare: async (p) => { await menuButton(p).click(); await p.getByRole("dialog", { name: "Menu de navegação" }).waitFor(); } },
   { name: "pagina de nao encontrado (/register)", url: "/register" },
 ];
 
@@ -101,12 +97,10 @@ for (const theme of THEMES) {
 }
 
 test.describe("CA46: foco visivel em controles-chave", () => {
-  test("avatar, botao de menu e 'Entrar' mostram anel de foco ao receber foco por teclado", async ({ page }) => {
+  test("avatar e botao de menu mostram anel de foco ao receber foco por teclado", async ({ page }) => {
     await page.setViewportSize(VIEWPORTS.mobile);
-    await page.goto("/demo/entries");
-    expect(await focusRingVisible(page.getByRole("link", { name: "Entrar" }).first())).toBe(true);
-    expect(await focusRingVisible(menuButton(page))).toBe(true);
     await signIn(page, "ana");
+    expect(await focusRingVisible(menuButton(page))).toBe(true);
     expect(await focusRingVisible(page.getByRole("button", { name: "Conta de Ana Souza" }))).toBe(true);
   });
 });

@@ -2,12 +2,10 @@ import "server-only";
 import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { expiredLoginUrl, passwordChangeUrl } from "@/lib/auth/redirect-urls";
-import type { InitialMonthDecision } from "@/lib/filters/initial-month";
 import * as endpoints from "./endpoints";
-import { ForbiddenApiError, PasswordChangeRequiredApiError, UnauthenticatedApiError, request, type Query } from "./http";
-import type { CategoryDistribution, CardDto, EntryDto, ExpensesPage, IncomesPage, InvoiceDto, MonthlySeries, TotalsDto } from "./types";
+import { ForbiddenApiError, PasswordChangeRequiredApiError, UnauthenticatedApiError } from "./http";
 
-/** Leituras do finance usadas pelas telas (ADR 0005 9.6); mesmas assinaturas de `endpoints.ts`. */
+/** Leituras do finance usadas pelas telas (ADR 0005 9.6, ADR 0013 9.4); mesmas assinaturas de `endpoints.ts`. */
 export interface FinanceReader {
   getSummary: typeof endpoints.getSummary;
   listCards: typeof endpoints.listCards;
@@ -54,29 +52,9 @@ function buildProtected(): FinanceReader {
   };
 }
 
-/** `GET /api/demo/*`: publico, sem cookie e sem Bearer; falhas seguem como `ApiError` (nao redirecionam para o login). */
-const demoGet = <T>(path: string, query?: Query) => request<T>("GET", `/demo${path}`, { query, auth: "none" });
-const enc = encodeURIComponent;
+let reader: FinanceReader | undefined;
 
-function buildDemo(): FinanceReader {
-  return {
-    getSummary: cache((month: string) => demoGet<{ month: string; totals: TotalsDto }>("/summary", { month })),
-    listCards: cache(() => demoGet<{ items: CardDto[] }>("/cards")),
-    listCategories: cache(() => demoGet<{ items: string[] }>("/categories")),
-    listInvoices: ({ month, status }) => demoGet<{ month: string; items: InvoiceDto[] }>("/invoices", { month, status }),
-    getInitialMonth: () => request<InitialMonthDecision>("GET", "/demo/entries/initial-month", { auth: "none", timeoutMs: endpoints.INITIAL_MONTH_TIMEOUT_MS }),
-    listInvoiceEntries: (cardId, referenceMonth) =>
-      demoGet<{ card: { id: string; name: string }; referenceMonth: string; items: EntryDto[] }>(`/cards/${enc(cardId)}/invoices/${enc(referenceMonth)}/entries`),
-    listExpenses: (query) => demoGet<ExpensesPage>("/entries/expenses", query),
-    listIncomes: (query) => demoGet<IncomesPage>("/entries/incomes", query),
-    getMonthlySeries: (month) => demoGet<MonthlySeries>("/dashboard/monthly-series", { month }),
-    getCategoryDistribution: (month) => demoGet<CategoryDistribution>("/dashboard/category-distribution", { month }),
-  };
-}
-
-const readers: Partial<Record<"protected" | "demo", FinanceReader>> = {};
-
-/** Uma instancia por tipo (as funcoes com `cache` precisam ser as mesmas em toda a renderizacao). */
-export function createFinanceReader(kind: "protected" | "demo"): FinanceReader {
-  return (readers[kind] ??= kind === "demo" ? buildDemo() : buildProtected());
+/** Uma instancia por processo (as funcoes com `cache` precisam ser as mesmas em toda a renderizacao). */
+export function getFinanceReader(): FinanceReader {
+  return (reader ??= buildProtected());
 }

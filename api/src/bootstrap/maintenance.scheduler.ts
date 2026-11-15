@@ -1,7 +1,7 @@
 import { Logger, type OnModuleDestroy } from '@nestjs/common';
 import type { Clock } from '@shared/application/ports/clock.js';
 import type { DailyTimeCalculator } from '@shared/application/ports/daily-time-calculator.js';
-import type { MaintenanceTask } from './maintenance-task.js';
+import type { MaintenanceTask, MaintenanceTrigger } from './maintenance-task.js';
 
 type DailyTask = MaintenanceTask & { schedule: { kind: 'daily' } };
 
@@ -32,12 +32,12 @@ export class MaintenanceScheduler implements OnModuleDestroy {
     this.started = true;
     const intervalTasks = this.tasks.filter((t) => t.schedule.kind === 'interval');
     if (intervalTasks.length > 0) {
-      this.interval = setInterval(() => void this.runAll(intervalTasks), this.intervalMs);
+      this.interval = setInterval(() => void this.runAll(intervalTasks, 'interval'), this.intervalMs);
       this.interval.unref();
     }
     const dailyTasks = this.tasks.filter((t): t is DailyTask => t.schedule.kind === 'daily');
-    // Recuperação no boot: segura porque a tarefa diária usa um corte e é idempotente.
-    if (dailyTasks.length > 0) void this.runAll(dailyTasks);
+    // Recuperação no boot: a tarefa diária decide sozinha se pula (contrato de MaintenanceTask).
+    if (dailyTasks.length > 0) void this.runAll(dailyTasks, 'startup');
     for (const task of dailyTasks) this.scheduleDaily(task);
   }
 
@@ -51,7 +51,10 @@ export class MaintenanceScheduler implements OnModuleDestroy {
 
   /** Roda as tarefas `interval` uma vez, na ordem. Nunca lança. */
   async runOnce(): Promise<void> {
-    await this.runAll(this.tasks.filter((t) => t.schedule.kind === 'interval'));
+    await this.runAll(
+      this.tasks.filter((t) => t.schedule.kind === 'interval'),
+      'interval',
+    );
   }
 
   private scheduleDaily(task: DailyTask): void {
@@ -59,20 +62,20 @@ export class MaintenanceScheduler implements OnModuleDestroy {
     const now = this.clock.now();
     const delay = Math.max(0, this.dailyTime.nextOccurrence(now, task.schedule.at).getTime() - now.getTime());
     const timer = setTimeout(() => {
-      void this.runTask(task).finally(() => this.scheduleDaily(task));
+      void this.runTask(task, 'daily-timer').finally(() => this.scheduleDaily(task));
     }, delay);
     timer.unref();
     this.dailyTimers.set(task.name, timer);
   }
 
-  private async runAll(tasks: readonly MaintenanceTask[]): Promise<void> {
-    for (const task of tasks) await this.runTask(task);
+  private async runAll(tasks: readonly MaintenanceTask[], trigger: MaintenanceTrigger): Promise<void> {
+    for (const task of tasks) await this.runTask(task, trigger);
   }
 
   /** Nunca lança: uma falha não derruba o processo nem impede as outras tarefas ou a próxima execução. */
-  private async runTask(task: MaintenanceTask): Promise<void> {
+  private async runTask(task: MaintenanceTask, trigger: MaintenanceTrigger): Promise<void> {
     try {
-      const summary = await task.run();
+      const summary = await task.run(trigger);
       if (summary) this.logger.log(`${task.name}: ${summary}`);
     } catch (error) {
       this.logger.error(`Manutenção "${task.name}" falhou: ${error instanceof Error ? error.message : String(error)}`);

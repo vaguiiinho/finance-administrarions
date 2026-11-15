@@ -3,7 +3,7 @@ import type { CurrentUserDto } from "@/lib/api/types";
 
 const mocks = vi.hoisted(() => ({ getCurrentUser: vi.fn(), screenProps: [] as Record<string, unknown>[] }));
 vi.mock("@/lib/auth/current-user", () => ({ getCurrentUser: mocks.getCurrentUser }));
-vi.mock("@/lib/api/finance-reader", () => ({ createFinanceReader: () => ({}) }));
+vi.mock("@/lib/api/finance-reader", () => ({ createFinanceReader: () => ({}), getFinanceReader: () => ({}) }));
 vi.mock("@/features/entries/redirect-to-initial-month", () => ({ redirectToInitialMonth: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("@/features/entries/entries-screen", () => ({
   EntriesScreen: (props: Record<string, unknown>) => {

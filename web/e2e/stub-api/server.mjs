@@ -1,5 +1,5 @@
 // Stub da API para os testes Playwright (ADR 9.5 / 11.5; ADR 0005 9.8): implementa os contratos da secao 6 em memoria,
-// inclusive autenticacao (A1-A5), gestao de usuarios (U1-U7, so administrador) e rotas publicas da demo (/api/demo/*).
+// inclusive autenticacao (A1-A5), gestao de usuarios (U1-U7, so administrador) e a conta demo (alias `demo` no login; sem /api/demo/*).
 // Usuarios semeados em qualquer cenario: vagner (ADMIN), ana (USER), carla (troca obrigatoria), bruno (inativo); token `stub-<id>`.
 // Cenarios extras: `expired-session` (toda rota autenticada responde 401), `rate-limited` (login e troca de senha respondem 429),
 // `users-error` (so GET /api/admin/users responde 500). Contrato verificado por `auth.spec.ts`. Nao ha cadastro publico.
@@ -28,10 +28,12 @@ const SEED_USERS = () => [
   { id: userId(3), name: "Carla Dias", email: "carla@exemplo.com", password: "Temp1234", role: "USER", status: "ACTIVE", mustChangePassword: true, createdAt: "2026-10-30T02:30:00.000Z" },
   { id: userId(4), name: "Bruno Lima", email: "bruno@exemplo.com", password: "segredo123", role: "USER", status: "INACTIVE", mustChangePassword: false, createdAt: "2026-10-29T15:00:00.000Z" },
 ];
-const DEMO_EMAIL = "demo@finance.invalid";
+// Conta demo (ADR 0013 9.5): fora de `state.users` (nao aparece na gestao de usuarios); o alias `demo` (sem @) entra nela.
+const SHOWCASE_EMAIL = "demo@showcase.invalid";
+const showcaseUser = () => ({ id: userId(90), name: "Conta de demonstração", email: SHOWCASE_EMAIL, password: "demo", role: "USER", status: "ACTIVE", mustChangePassword: false, createdAt: "2026-10-28T12:00:00.000Z", accountKind: "SHOWCASE", capabilities: ["MANAGE_EXPENSES"] });
 const SESSION_MS = 24 * 3600_000;
 const RETRY_AFTER_SECONDS = 180;
-const currentUserDto = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, mustChangePassword: u.mustChangePassword });
+const currentUserDto = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, mustChangePassword: u.mustChangePassword, ...(u.accountKind ? { accountKind: u.accountKind, capabilities: u.capabilities } : {}) });
 const adminUserDto = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, status: u.status, mustChangePassword: u.mustChangePassword, createdAt: u.createdAt });
 const normalizeName = (v) => String(v ?? "").normalize("NFC").trim().replace(/\s+/g, " ");
 const normalizeEmail = (v) => String(v ?? "").trim().toLowerCase();
@@ -58,7 +60,7 @@ const SCENARIOS = {
   batch422: { failMode: "batch422" },
   "card-conflict": { failMode: "card-conflict" },
   // ADR 0007: cenarios do mes inicial / status padrao. `custom` recebe os dados do proprio teste em `POST /__scenario`
-  // ({ now?, cards?, entries?, demo?: { cards, entries } }); `initial-month-error` so derruba GET .../entries/initial-month (500);
+  // ({ now?, cards?, entries?, }); `initial-month-error` so derruba GET .../entries/initial-month (500);
   // `initial-month-slow` atrasa so essa leitura (o web aborta em 1,5 s e cai em M).
   custom: { failMode: null, custom: true },
   "category-distribution-error": { failMode: "category-distribution" },
@@ -71,11 +73,11 @@ function seed(name, options = {}) {
   const config = SCENARIOS[name] ?? SCENARIOS.default;
   const extra = {
     failMode: config.failMode, delayMs: Number(options.delayMs ?? 0), holdMutations: Boolean(options.holdMutations), holdQueries: Boolean(options.holdQueries),
-    expiredSession: Boolean(config.expiredSession), rateLimited: Boolean(config.rateLimited), usersError: Boolean(config.usersError), emptyDemo: Boolean(config.empty),
+    expiredSession: Boolean(config.expiredSession), rateLimited: Boolean(config.rateLimited), usersError: Boolean(config.usersError), 
     // usuarios e sessoes encerradas (inativar/redefinir/sair): trocar de cenario restaura tudo
-    users: SEED_USERS(), revoked: new Set(),
+    users: SEED_USERS(), showcase: showcaseUser(), revoked: new Set(),
     // ADR 0007 T5: "agora" do stub por cenario (padrao: relogio real); so afeta o que a API decide (mes inicial, demo)
-    now: options.now ? new Date(options.now) : null, initialMonthDelayMs: config.initialMonthDelayMs ?? 0, customDemo: options.demo ?? null,
+    now: options.now ? new Date(options.now) : null, initialMonthDelayMs: config.initialMonthDelayMs ?? 0,
   };
   if (config.custom) return { cards: options.cards ?? [], entries: options.entries ?? [], ...extra };
   if (config.empty) return { cards: [], entries: [], ...extra };
@@ -234,46 +236,9 @@ const categoryDistribution = ({ res, url, data }) => {
   return json(res, 200, { month: month(url), total: money(total), items: groups });
 };
 
-// ---------- dados de exemplo da demo (RF28, B5): 1 cartao, meses ao redor do mes atual + ago-dez/2026 fixos para os testes ----------
-const monthShift = (ym, delta) => { const [y, m] = ym.split("-").map(Number); const i = y * 12 + (m - 1) + delta; return `${Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}`; };
-function buildDemo() {
-  const demoCard = { id: uuid("d", 1), name: "Cartão Demo", closingDay: 25, dueDay: 5, createdAt: "2026-10-01T12:00:00.000Z", updatedAt: "2026-10-01T12:00:00.000Z" };
-  if (state.emptyDemo) return { cards: [], entries: [] };
-  if (state.customDemo) return { cards: state.customDemo.cards ?? [], entries: state.customDemo.entries ?? [] };
-  const now = spMonth(stubNow()); // ADR 0007 T5: mes de Sao Paulo (era UTC, incoerente com RNF03 na virada do mes)
-  const months = new Set(["2026-09", "2026-10", "2026-11", "2026-12"]);
-  for (let d = -12; d <= 1; d++) months.add(monthShift(now, d));
-  const entries = [];
-  let n = 1;
-  for (const m of [...months].sort()) {
-    const prev = monthShift(m, -1);
-    const base = { referenceMonth: m, createdAt: "2026-10-05T13:00:00.000Z", updatedAt: "2026-10-05T13:00:00.000Z" };
-    entries.push(
-      entry(1000 + n++, { ...base, description: "Demo: Salário", type: "INCOME", category: "Salário", amount: "5000.00", date: `${m}-05`, status: "RECEIVED" }),
-      entry(1000 + n++, { ...base, description: "Demo: Aluguel", category: "Moradia", amount: "1500.00", date: `${m}-02`, status: "PAID", paidAt: `${m}-02T13:00:00.000Z` }),
-      entry(1000 + n++, { ...base, description: "Demo: Internet", category: "Moradia", amount: "99.90", date: `${m}-10` }),
-      entry(1000 + n++, {
-        ...base,
-        description: "Demo: Mercado",
-        category: "Alimentação",
-        amount: "420.00",
-        date: `${prev}-10`,
-        paymentMethod: "CARD",
-        status: m < now ? "PAID" : "PENDING",
-        paidAt: m < now ? `${m}-05T13:00:00.000Z` : null,
-        card: { id: demoCard.id, name: demoCard.name },
-        invoice: { closingDate: `${prev}-25`, dueDate: `${m}-05` },
-      }),
-    );
-  }
-  return { cards: [demoCard], entries };
-}
-let demoCache = null;
-const demoData = () => (demoCache ??= buildDemo());
-
 const route = (method, pattern, handler, options = {}) => ({ method, pattern: pattern instanceof RegExp ? pattern : new RegExp(`^${pattern}$`), handler, ...options });
 
-// Leituras do finance: as MESMAS em /api/* (protegidas, dados do usuario) e /api/demo/* (publicas, dados de exemplo; ADR 6.5).
+// Leituras do finance: as MESMAS em /api/* (protegidas, dados do usuario).
 const READS = [
   ["/summary", ({ res, url, data }) => json(res, 200, { month: month(url), totals: totalsOf(month(url), data) })],
   ["/cards", ({ res, data }) => json(res, 200, { items: data.cards })],
@@ -312,7 +277,8 @@ const READS = [
 ];
 
 // ---------- identidade (A1-A5) e gestao (U1-U7) ----------
-const findUser = (id) => state.users.find((u) => u.id === id);
+const findUser = (id) => state.users.find((u) => u.id === id) ?? (state.showcase.id === id ? state.showcase : undefined);
+const findAdminUser = (id) => state.users.find((u) => u.id === id);
 const sessionOf = (req) => {
   const m = /^Bearer (.+)$/.exec(req.headers.authorization ?? "");
   if (!m || state.expiredSession) return null;
@@ -333,7 +299,7 @@ const emailIssues = (value) => {
 };
 const roleIssues = (value) => (value === undefined || value === "" ? [issue("role", "REQUIRED")] : value === "ADMIN" || value === "USER" ? [] : [issue("role", "INVALID_VALUE")]);
 const unknownIssues = (b, allowed) => Object.keys(b).filter((k) => !allowed.includes(k)).map((k) => issue(k, "UNKNOWN_FIELD"));
-const emailTaken = (email, exceptId) => email === DEMO_EMAIL || state.users.some((u) => u.id !== exceptId && u.email === email);
+const emailTaken = (email, exceptId) => email === SHOWCASE_EMAIL || state.users.some((u) => u.id !== exceptId && u.email === email);
 const takenReply = (res) => err(res, 409, "EMAIL_TAKEN", { fields: [issue("email", "EMAIL_TAKEN", "Este e-mail já está em uso.")] });
 
 const login = async ({ req, res }) => {
@@ -341,7 +307,9 @@ const login = async ({ req, res }) => {
   const b = await body(req);
   const fields = [...(b.email ? [] : [issue("email", "REQUIRED")]), ...(b.password ? [] : [issue("password", "REQUIRED")])];
   if (fields.length) return validation(res, fields);
-  const user = state.users.find((u) => u.email === normalizeEmail(b.email));
+  const identifier = normalizeEmail(b.email);
+  // alias `demo` (so a conta demo; qualquer outro identificador sem @ continua invalido)
+  const user = identifier === "demo" ? state.showcase : [...state.users, state.showcase].find((u) => u.email === identifier);
   // inexistente, senha errada e inativo: a MESMA resposta (CA03, sem enumeracao)
   if (!user || user.status !== "ACTIVE" || user.password !== b.password) return err(res, 401, "INVALID_CREDENTIALS", null, { "www-authenticate": "Bearer" });
   return json(res, 200, { user: currentUserDto(user), session: issueSession(user) });
@@ -372,7 +340,7 @@ const listUsers = ({ res }) => {
   const items = [...state.users.filter((u) => u.status === "ACTIVE").sort(by), ...state.users.filter((u) => u.status === "INACTIVE").sort(by)];
   return json(res, 200, { items: items.map(adminUserDto) });
 };
-const getUser = ({ res, params }) => badId(res, params[0]) ? undefined : findUser(params[0]) ? json(res, 200, adminUserDto(findUser(params[0]))) : err(res, 404, "USER_NOT_FOUND", { id: params[0] });
+const getUser = ({ res, params }) => badId(res, params[0]) ? undefined : findAdminUser(params[0]) ? json(res, 200, adminUserDto(findAdminUser(params[0]))) : err(res, 404, "USER_NOT_FOUND", { id: params[0] });
 const createUser = async ({ req, res }) => {
   const b = await body(req);
   const fields = [...unknownIssues(b, ["name", "email", "role", "password"]), ...nameIssues(b.name), ...emailIssues(b.email), ...roleIssues(b.role), ...passwordIssues(b.password, "password")];
@@ -388,7 +356,7 @@ const updateUser = async ({ req, res, params, user: actor }) => {
   const fields = [...unknownIssues(b, ["name", "email", "role"]), ...nameIssues(b.name), ...emailIssues(b.email), ...roleIssues(b.role)];
   if (badId(res, params[0])) return;
   if (fields.length) return validation(res, fields);
-  const target = findUser(params[0]);
+  const target = findAdminUser(params[0]);
   if (!target) return err(res, 404, "USER_NOT_FOUND", { id: params[0] });
   if (target.role === "ADMIN" && target.status === "ACTIVE" && b.role === "USER" && activeAdminsExcept(target.id) === 0) return err(res, 422, "LAST_ADMIN");
   const email = normalizeEmail(b.email);
@@ -399,7 +367,7 @@ const updateUser = async ({ req, res, params, user: actor }) => {
 };
 const deactivateUser = ({ res, params, user: actor }) => {
   if (badId(res, params[0])) return;
-  const target = findUser(params[0]);
+  const target = findAdminUser(params[0]);
   if (!target) return err(res, 404, "USER_NOT_FOUND", { id: params[0] });
   if (target.id === actor.id) return err(res, 422, "CANNOT_TARGET_SELF");
   if (target.status === "INACTIVE") return json(res, 200, adminUserDto(target)); // idempotente (P18)
@@ -409,7 +377,7 @@ const deactivateUser = ({ res, params, user: actor }) => {
 };
 const reactivateUser = ({ res, params }) => {
   if (badId(res, params[0])) return;
-  const target = findUser(params[0]);
+  const target = findAdminUser(params[0]);
   if (!target) return err(res, 404, "USER_NOT_FOUND", { id: params[0] });
   target.status = "ACTIVE"; // nao toca a senha nem a troca obrigatoria (CA21)
   return json(res, 200, adminUserDto(target));
@@ -419,7 +387,7 @@ const resetUserPassword = async ({ req, res, params, user: actor }) => {
   const fields = [...unknownIssues(b, ["password"]), ...passwordIssues(b.password, "password")];
   if (badId(res, params[0])) return;
   if (fields.length) return validation(res, fields);
-  const target = findUser(params[0]);
+  const target = findAdminUser(params[0]);
   if (!target) return err(res, 404, "USER_NOT_FOUND", { id: params[0] });
   if (target.id === actor.id) return err(res, 422, "CANNOT_TARGET_SELF");
   Object.assign(target, { password: b.password, mustChangePassword: true }); state.revoked.add(target.id);
@@ -442,7 +410,6 @@ const ROUTES = [
   route("POST", "/api/admin/users/([^/]+)/reactivate", reactivateUser, { auth: "admin" }),
   route("POST", "/api/admin/users/([^/]+)/password-reset", resetUserPassword, { auth: "admin" }),
   ...READS.map(([path, handler]) => route("GET", `/api${path}`, handler, { auth: "user", data: () => state })),
-  ...READS.map(([path, handler]) => route("GET", `/api/demo${path}`, handler, { auth: "public", data: () => demoData() })),
   route("POST", "/api/cards", createCard, { auth: "user" }),
   route("PUT", "/api/cards/([^/]+)", updateCard, { auth: "user" }),
   route("POST", "/api/cards/([^/]+)/invoices/(\\d{4}-\\d{2})/pay", payInvoice, { auth: "user" }),
@@ -458,7 +425,7 @@ const waitGate = () => new Promise((resolve) => { const prev = releaseGate; rele
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const CONTROL = {
-  "POST /__scenario": async ({ req, res }) => { openGate(); const b = await body(req); state = seed(b.name ?? "default", b); demoCache = null; return json(res, 200, { ok: true }); },
+  "POST /__scenario": async ({ req, res }) => { openGate(); const b = await body(req); state = seed(b.name ?? "default", b); return json(res, 200, { ok: true }); },
   "POST /__release": ({ res }) => { openGate(); return json(res, 200, { ok: true }); },
 };
 

@@ -140,13 +140,6 @@ describe('EntryRepository e UnitOfWork com dono', () => {
     expect((await query<{ status: string }>(pool, 'SELECT status FROM entries'))[0].status).toBe('PENDING');
   });
 
-  it('deleteAllOf(owner) remove so os lancamentos daquele dono', async () => {
-    await seedBoth();
-    await (infra.entries as any).deleteAllOf(A);
-    const left = await query<{ user_id: string }>(pool, 'SELECT DISTINCT user_id FROM entries');
-    expect(left.map((r) => r.user_id)).toEqual([BRUNO]);
-  });
-
   it('CA33: catalogo devolve a grafia do PRIMEIRO uso do dono', async () => {
     await insertOwnedEntry(pool, BRUNO, { n: 1, category: 'alimentação', createdAt: '2026-10-01T10:00:00.000Z' });
     await insertOwnedEntry(pool, ANA, { n: 2, category: 'Alimentação', createdAt: '2026-10-02T10:00:00.000Z' });

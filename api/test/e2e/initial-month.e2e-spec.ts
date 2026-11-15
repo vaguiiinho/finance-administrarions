@@ -2,11 +2,10 @@ import { CAST, bearer, idOf, startIdentityE2e, type IdentityE2e } from '../suppo
 import { startFinanceE2e } from '../support/finance-e2e.js';
 import { cardEntry } from '../support/db.js';
 import { insertOwnedCard, insertOwnedEntry } from '../support/owned-db.js';
-import { DEMO_USER_ID } from '@shared/domain/well-known-ids.js';
 import { PENDING_OVERVIEW_READ_MODEL } from '@finance/application/ports/pending-overview-read-model.js';
 
 /**
- * GET /api/entries/initial-month (protegida) e GET /api/demo/entries/initial-month (publica): ADR 0007 6.1.
+ * GET /api/entries/initial-month (protegida): ADR 0007 6.1. A rota publica /api/demo/* foi removida (ADR 0013, CA01).
  * Relogio controlado (FixedClock): por padrao 2026-10-05T13:00Z, ou seja, M = 2026-10 em America/Sao_Paulo.
  */
 let e: IdentityE2e;
@@ -19,7 +18,6 @@ afterAll(() => e.close());
 beforeEach(async () => {
   e.clock.set(new Date('2026-10-05T13:00:00.000Z'));
   await e.resetAll();
-  await e.seedUser({ n: 90, id: DEMO_USER_ID, kind: 'DEMO', name: 'Demonstração', email: 'demo@finance.invalid' });
   await e.seedUser(CAST.ana);
   await e.seedUser(CAST.bruno);
   ana = await e.sessionFor(idOf(1));
@@ -210,50 +208,6 @@ describe('GET /api/entries/initial-month - erros no formato { code, message, det
       expect(demoRes.status, `${method} ${DEMO_ROUTE}`).toBe(404);
       expect(demoRes.body.code).toBe('ROUTE_NOT_FOUND');
     }
-  });
-});
-
-describe('GET /api/demo/entries/initial-month - leitura publica (CA24, RNF04)', () => {
-  it('200 sem credencial, com o mesmo formato; usa so os dados do usuario demo', async () => {
-    await card(DEMO_USER_ID, 7, 'Cartao Demo');
-    await insertOwnedEntry(e.pool, DEMO_USER_ID, { n: 701, date: '2026-10-07', status: 'PENDING', paidAt: null, description: 'Internet demo' });
-    const res = await e.http().get(DEMO_ROUTE);
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ currentMonth: '2026-10', month: '2026-10', advance: 'NONE' });
-  });
-
-  it('nao vaza dados de usuarios: pendencia de Ana/Bruno nao muda o mes da demo', async () => {
-    await card(DEMO_USER_ID, 7, 'Cartao Demo');
-    await paidPix(DEMO_USER_ID, 701, '2026-10-02');
-    await card(ANA, 1);
-    await pendingPix(ANA, 1, '2026-10-20');
-    await pendingPix(BRUNO, 2, '2026-12-20');
-    expect((await e.http().get(DEMO_ROUTE)).body).toEqual({ currentMonth: '2026-10', month: '2026-11', advance: 'NO_PENDING_AHEAD' });
-    // logado, a demo continua sendo a demo
-    expect((await e.http().get(DEMO_ROUTE).set(bearer(ana))).body).toEqual({ currentMonth: '2026-10', month: '2026-11', advance: 'NO_PENDING_AHEAD' });
-  });
-
-  it('mesmo contrato da rota protegida (mesmas chaves)', async () => {
-    await card(DEMO_USER_ID, 7, 'Cartao Demo');
-    await card(ANA, 1);
-    const demo = await e.http().get(DEMO_ROUTE);
-    const real = await as(ana);
-    expect(Object.keys(demo.body).sort()).toEqual(Object.keys(real.body).sort());
-  });
-
-  it('demo também abre na fatura de cartão pendente mais antiga, anterior a M', async () => {
-    e.clock.set(new Date('2026-11-05T13:00:00.000Z'));
-    await insertOwnedCard(e.pool, DEMO_USER_ID, { n: 7, name: 'Cartao Demo', closingDay: 4, dueDay: 11 });
-    await insertOwnedEntry(e.pool, DEMO_USER_ID, cardEntry(701, 7, { date: '2026-09-20', closing: '2026-10-04', due: '2026-10-11' }));
-    await insertOwnedEntry(e.pool, DEMO_USER_ID, cardEntry(702, 7, { date: '2026-10-20', closing: '2026-11-04', due: '2026-11-11' }));
-    await pendingPix(DEMO_USER_ID, 703, '2026-09-15');
-    expect((await e.http().get(DEMO_ROUTE)).body).toEqual({ currentMonth: '2026-11', month: '2026-10', advance: 'NONE' });
-  });
-
-  it('400 UNKNOWN_FIELD com parametro de query tambem na demo', async () => {
-    const res = await e.http().get(`${DEMO_ROUTE}?month=2026-10`);
-    expect(res.status).toBe(400);
-    expect(res.body.details.fields[0]).toMatchObject({ code: 'UNKNOWN_FIELD' });
   });
 });
 

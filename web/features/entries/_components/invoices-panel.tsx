@@ -3,8 +3,7 @@ import { EmptyState } from "@/components/ui/states";
 import { NavLink } from "@/components/navigation";
 import { monthLongPtBR } from "@/lib/dates/format";
 import { countLabel } from "@/lib/entries/feedback";
-import { PROTECTED_MODE, type AppMode } from "@/lib/app-mode";
-import { createFinanceReader, type FinanceReader } from "@/lib/api/finance-reader";
+import { getFinanceReader, type FinanceReader } from "@/lib/api/finance-reader";
 import { settle } from "@/lib/api/queries";
 import { clearInvoiceFilters, entriesHref, type EntriesState } from "@/lib/filters/entries-search-params";
 import { InvoiceBlock } from "./invoice-block";
@@ -19,7 +18,7 @@ const QUALIFIER = { PENDING: ", pendentes", PAID: ", pagas", ALL: "" } as const;
  * vazios por condicao (design 5.2). O filtro e a regiao viva ficam na mesma posicao nos ramos com lista e vazio; sem cartao
  * o filtro nao existe (DL9).
  */
-export async function InvoicesPanel({ state, reader = createFinanceReader("protected"), mode = PROTECTED_MODE }: { state: EntriesState; reader?: FinanceReader; mode?: AppMode }) {
+export async function InvoicesPanel({ state, reader = getFinanceReader() }: { state: EntriesState; reader?: FinanceReader }) {
   const { status } = state.invoices;
   const { items } = await reader.listInvoices({ month: state.month, ...(status === "ALL" ? {} : { status }) });
   const monthLabel = monthLongPtBR(state.month);
@@ -52,7 +51,7 @@ export async function InvoicesPanel({ state, reader = createFinanceReader("prote
       <EmptyState title="Nenhuma fatura neste mês" description="Compras no cartão aparecem na fatura do mês em que vencem.">
         <NewEntryButton variant="primary" />
         {noCards ? (
-          <Link href={`${mode.basePath}/cards`} className="btn btn-tertiary">
+          <Link href={`/cards`} className="btn btn-tertiary">
             Cadastrar cartão
           </Link>
         ) : null}
@@ -64,7 +63,7 @@ export async function InvoicesPanel({ state, reader = createFinanceReader("prote
         title={`Nenhuma fatura para os filtros selecionados em ${monthLabel}`}
         description={`Não há faturas ${status === "PAID" ? "pagas" : "pendentes"} neste mês. "Limpar filtros" mostra todo o mês.`}
       >
-        <NavLink href={entriesHref(clearInvoiceFilters(state), mode.basePath)} className="btn" focusId={PANEL_TITLE_ID}>
+        <NavLink href={entriesHref(clearInvoiceFilters(state))} className="btn" focusId={PANEL_TITLE_ID}>
           Limpar filtros
         </NavLink>
         <NewEntryButton variant="primary" />

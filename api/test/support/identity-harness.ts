@@ -32,7 +32,6 @@ import { ReactivateUser } from '@identity/application/use-cases/user-admin/react
 import { ResetUserPassword } from '@identity/application/use-cases/user-admin/reset-user-password.js';
 import { BootstrapFirstAdmin } from '@identity/application/use-cases/bootstrap/bootstrap-first-admin.js';
 import { RecoverAdminAccess } from '@identity/application/use-cases/bootstrap/recover-admin-access.js';
-import { EnsureDemoUser } from '@identity/application/use-cases/bootstrap/ensure-demo-user.js';
 
 /**
  * Composicao dos use cases do identity sobre fakes em memoria.
@@ -95,7 +94,6 @@ export function buildIdentityHarness(now: Date = NOW) {
     resetPassword: new ResetUserPassword(uow, hasher, clock, publisher, audit),
     bootstrap: new BootstrapFirstAdmin(uow, hasher, clock, publisher, audit),
     recover: new RecoverAdminAccess(uow, hasher, clock, publisher, audit),
-    ensureDemo: new EnsureDemoUser(users, clock),
   };
 }
 

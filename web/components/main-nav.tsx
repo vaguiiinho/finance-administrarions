@@ -13,13 +13,11 @@ const LINKS = [
 const isActive = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
 /** Algum item esta ativo em `pathname`? (o drawer decide o foco inicial: item ativo ou o primeiro). */
-export const hasActiveNavItem = (pathname: string, basePath: "" | "/demo"): boolean => LINKS.some((link) => isActive(pathname, `${basePath}${link.href}`));
+export const hasActiveNavItem = (pathname: string): boolean => LINKS.some((link) => isActive(pathname, link.href));
 
 interface MainNavProps {
   className?: string;
   label?: string;
-  /** `''` (telas protegidas) ou `/demo` (RF33, CA39). */
-  basePath?: "" | "/demo";
   /** Chamado ao ativar um item (o drawer de navegacao fecha). */
   onNavigate?: () => void;
 }
@@ -29,13 +27,13 @@ interface MainNavProps {
  * item ou dentro dele; barra de 3px `--accent`, peso 600 e `aria-current="page"` (tres sinais alem da cor).
  * "Usuarios" nao entra aqui: so no menu da conta (DL4).
  */
-export function MainNav({ className = "", label = "Principal", basePath = "", onNavigate }: MainNavProps) {
+export function MainNav({ className = "", label = "Principal", onNavigate }: MainNavProps) {
   const pathname = usePathname();
   return (
     <nav aria-label={label} className={className}>
       <ul className="flex flex-col gap-1">
         {LINKS.map((link) => {
-          const href = `${basePath}${link.href}`;
+          const href = link.href;
           const active = isActive(pathname, href);
           return (
             <li key={link.href}>

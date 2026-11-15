@@ -15,7 +15,7 @@ describe('AccountCapabilities.of (ADR 0011 3.4)', () => {
     expect(caps('SHOWCASE', 'USER')).toEqual(['MANAGE_EXPENSES']);
   });
 
-  it.each(['DEMO', 'PENDING_FIRST_ADMIN'])('%s nao autentica: nenhuma capacidade', (kind) => {
+  it.each(['PENDING_FIRST_ADMIN'])('%s nao autentica: nenhuma capacidade', (kind) => {
     expect(caps(kind, 'USER')).toEqual([]);
     expect(caps(kind, 'ADMIN')).toEqual([]);
   });

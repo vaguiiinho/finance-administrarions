@@ -1,6 +1,6 @@
-import { DEMO_USER_ID, FIRST_ADMIN_ID } from '@shared/domain/well-known-ids.js';
+import { FIRST_ADMIN_ID } from '@shared/domain/well-known-ids.js';
 import { NOW, rejected } from '@test/support/builders.js';
-import { ana, bruno, carla, demoUser, firstAdminMarker } from '@test/support/identity-builders.js';
+import { ana, bruno, carla, firstAdminMarker } from '@test/support/identity-builders.js';
 import { buildIdentityHarness, type IdentityHarness } from '@test/support/identity-harness.js';
 
 const IP = '203.0.113.9';
@@ -12,7 +12,6 @@ beforeEach(() => {
   h.users.seed(ana());
   h.users.seed(bruno({ status: 'INACTIVE' }));
   h.users.seed(carla());
-  h.users.seed(demoUser());
   h.users.seed(firstAdminMarker());
 });
 
@@ -168,10 +167,9 @@ describe('LoginWithPassword: validacao (D13)', () => {
 });
 
 describe('ids reservados', () => {
-  it('o usuario demo nunca autentica, mesmo existindo no repositorio', async () => {
-    expect(DEMO_USER_ID).toBeDefined();
+  it('o marcador do primeiro administrador nunca autentica, mesmo existindo no repositorio', async () => {
     expect(FIRST_ADMIN_ID).toBeDefined();
-    const error = await rejected(login('demo@finance.invalid', 'qualquer123'));
+    const error = await rejected(login('first-admin@finance.invalid', 'qualquer123'));
     expect(error.code).toBe('INVALID_CREDENTIALS');
   });
 });

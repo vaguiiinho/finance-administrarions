@@ -75,10 +75,14 @@ Regra: **edite no web e rode `npm run sync:shared`**. Nunca edite a cópia em `m
 
 | Campo | Valor |
 |---|---|
-| E-mail | `demo@showcase.invalid` |
-| Senha | a definida em `SHOWCASE_ACCOUNT_PASSWORD` na API (lida só pelo seed; sem a variável, a conta fica desligada) |
+| Usuário (campo "E-mail") | `demo` (alias aceito pela API; o e-mail `demo@showcase.invalid` também funciona) |
+| Senha | `demo`, a definida em `SHOWCASE_ACCOUNT_PASSWORD` na API (lida só pelo seed; sem a variável, a conta fica desligada) |
 
-Coloque o e-mail e a senha nas notas de revisão do App Store Connect. A conta é compartilhada e tem restrições: não troca senha nem renomeia (403 `FORBIDDEN`; no app, "Trocar senha" aparece visível e desabilitado) e **seus lançamentos e cartões são apagados todo dia às 03:00 (America/Sao_Paulo)**. Pode criar, editar, excluir e pagar lançamentos. O e-mail `.invalid` é reservado e não pode ser usado por usuários comuns.
+Texto sugerido para as notas de revisão do App Store Connect: "Conta de demonstração: usuário `demo` (ou `demo@showcase.invalid`) e senha `demo`. A conta já vem com dados de exemplo e é redefinida todos os dias às 03:00 (horário de Brasília)."
+
+O app não valida o formato do campo, então `demo` funciona sem nova versão e **não há dica nem mudança de rótulo no app** (a credencial vai só nas notas de revisão). A conta é compartilhada e tem restrições: não troca senha nem renomeia (403 `FORBIDDEN`; no app, "Trocar senha" aparece visível e desabilitado) e **é redefinida todo dia às 03:00 (America/Sao_Paulo)**: o que foi criado ou alterado é descartado e os dados de exemplo voltam. Pode criar, editar, excluir e pagar lançamentos. O e-mail `.invalid` é reservado e não pode ser usado por usuários comuns.
+
+Antes de enviar o app para revisão, rode `docker exec <container-da-api> npm run demo:reset` para a conta estar com os dados de exemplo. Atualize as notas de revisão antes do próximo envio (as antigas citavam só o e-mail e a conta vazia). O texto do aviso no app (`DEMO_CLEANUP_TEXT`) já usa a redação de "redefinida" e chega aos usuários na próxima versão publicada.
 
 ## O que ainda é placeholder
 

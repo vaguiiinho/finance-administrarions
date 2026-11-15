@@ -5,7 +5,7 @@ Documenta o que o código implementa em `api/src/modules/finance/presentation/ht
 ## Convenções
 
 - **Prefixo:** todas as rotas ficam sob `/api` (`configureApp`). A porta vem de `PORT` (padrão 3000; o web espera 3001, ver README).
-- **Formato:** JSON (`Content-Type: application/json`). Todas as rotas, exceto as públicas `/api/demo/*` (somente leitura, dono fixo `DEMO_USER_ID`), exigem sessão válida; sem ela, 401 `UNAUTHENTICATED`, e com troca de senha pendente, 403 `PASSWORD_CHANGE_REQUIRED`. O dono dos dados é sempre o do principal (ou o usuário demo nas rotas `/api/demo/*`, que têm o mesmo contrato de resposta).
+- **Formato:** JSON (`Content-Type: application/json`). Todas as rotas exigem sessão válida (as únicas públicas são `POST /api/auth/login` e `POST /api/auth/logout`, ver `docs/api/identity.md`); sem ela, 401 `UNAUTHENTICATED`, e com troca de senha pendente, 403 `PASSWORD_CHANGE_REQUIRED`. O dono dos dados é sempre o do principal. As antigas rotas públicas `/api/demo/*` foram removidas (ADR 0013) e respondem 404 `ROUTE_NOT_FOUND`, com ou sem Bearer.
 - **Dinheiro:** string decimal com 2 casas (`"1234.56"`); saldos podem ser negativos (`"-150.00"`). Nunca número JSON.
 - **Datas:** `date`, `closingDate`, `dueDate` são datas civis `YYYY-MM-DD`; `referenceMonth` e `month` são `YYYY-MM`; instantes (`paidAt`, `createdAt`, `updatedAt`) são ISO 8601 em UTC.
 - **IDs:** UUID (gerados em v7). Aceita-se qualquer UUID bem formado; bem formado e inexistente resulta em 404, mal formado em 400.
@@ -201,7 +201,7 @@ Erros: 400 `VALIDATION_ERROR`; 403 `FORBIDDEN` (`details: {}`) só para conta se
 
 ### GET /api/entries/initial-month
 
-Rota pública equivalente: `GET /api/demo/entries/initial-month` (dono = usuário demo). Não aceita query: qualquer parâmetro gera 400 `VALIDATION_ERROR` com `UNKNOWN_FIELD`. Uma única consulta ao banco.
+Não há mais rota pública equivalente (`GET /api/demo/entries/initial-month` foi removida, ADR 0013). Não aceita query: qualquer parâmetro gera 400 `VALIDATION_ERROR` com `UNKNOWN_FIELD`. Uma única consulta ao banco.
 
 Regra (ADR 0007, com adendo do ADR 0009): `M` é o mês corrente em America/Sao_Paulo. Se houver fatura de cartão `PENDING` com referência anterior a `M`, usa-se a menor referência histórica. PIX anterior a `M` é ignorado. Na ausência de fatura antiga, considera-se a primeira despesa `PENDING` (PIX ou cartão) com referência >= `M`.
 
@@ -321,7 +321,7 @@ Uma fatura por cartão que tenha despesas com aquele mês de referência (mês d
 }
 ```
 
-`status` é opcional (também em `GET /api/demo/invoices`). `PENDING` retorna só faturas com `pendingCount > 0`; `PAID`, só as com `pendingCount = 0`. O filtro seleciona a fatura inteira: `entryCount`, `pendingCount` e `totals` continuam sobre todas as despesas dela. Sem `status`, a resposta é a de sempre (todas). `ALL`, minúsculas ou qualquer outro valor geram 400 `VALIDATION_ERROR` com `fields: [{ field: "status", code: "INVALID_VALUE" }]`: "todas" é a ausência do parâmetro. A tela (web) usa `ALL` só na própria URL (`f_status`, `d_status`) e nunca o envia à API.
+`status` é opcional. `PENDING` retorna só faturas com `pendingCount > 0`; `PAID`, só as com `pendingCount = 0`. O filtro seleciona a fatura inteira: `entryCount`, `pendingCount` e `totals` continuam sobre todas as despesas dela. Sem `status`, a resposta é a de sempre (todas). `ALL`, minúsculas ou qualquer outro valor geram 400 `VALIDATION_ERROR` com `fields: [{ field: "status", code: "INVALID_VALUE" }]`: "todas" é a ausência do parâmetro. A tela (web) usa `ALL` só na própria URL (`f_status`, `d_status`) e nunca o envia à API.
 
 ```http
 GET /api/invoices?month=2026-11&status=PENDING
@@ -586,7 +586,7 @@ sequenceDiagram
   Note over U: o aviso lê adv e adv_from, mostra o banner e remove os dois parâmetros da URL
 ```
 
-Em `/demo/entries` o fluxo é o mesmo, com `GET /api/demo/entries/initial-month`. Sessão expirada (401 ou 403) nas rotas protegidas continua levando ao login.
+Sessão expirada (401 ou 403) nas rotas protegidas continua levando ao login.
 
 ## Divergências em relação ao ADR
 

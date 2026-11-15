@@ -3,7 +3,6 @@ import {
   actorOf,
   ana,
   bruno,
-  demoUser,
   firstAdminMarker,
   outroAdmin,
   userUuid,
@@ -51,9 +50,9 @@ describe.each(ops)('$name: autorizacao do ator e alvo', (op) => {
     expect(error.code).toBe('UNAUTHENTICATED');
   });
 
-  it('ator demo -> 401 (kind <> REGULAR nunca age)', async () => {
-    h.users.seed(demoUser());
-    const error = await rejected(op.run(h, actorOf(demoUser()), ana().id.value));
+  it('ator marcador do primeiro administrador -> 401 (kind <> REGULAR nunca age)', async () => {
+    h.users.seed(firstAdminMarker());
+    const error = await rejected(op.run(h, actorOf(firstAdminMarker()), ana().id.value));
     expect(error.code).toBe('UNAUTHENTICATED');
   });
 
@@ -63,12 +62,9 @@ describe.each(ops)('$name: autorizacao do ator e alvo', (op) => {
     expect(error).toMatchObject({ code: 'USER_NOT_FOUND', kind: 'not_found', details: { id } });
   });
 
-  it.each([
-    ['demo', () => demoUser()],
-    ['marcador do primeiro administrador', () => firstAdminMarker()],
-  ])('CA26: alvo %s -> 404 USER_NOT_FOUND (nao e gerenciavel)', async (_l, make) => {
-    h.users.seed(make());
-    const error = await rejected(op.run(h, actorOf(vagner()), make().id.value));
+  it('CA26: alvo marcador do primeiro administrador -> 404 USER_NOT_FOUND (nao e gerenciavel)', async () => {
+    h.users.seed(firstAdminMarker());
+    const error = await rejected(op.run(h, actorOf(vagner()), firstAdminMarker().id.value));
     expect(error.code).toBe('USER_NOT_FOUND');
   });
 

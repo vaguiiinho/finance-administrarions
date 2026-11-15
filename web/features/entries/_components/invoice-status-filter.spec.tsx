@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AllProviders, router } from "@/test/helpers/providers";
-import { AppModeProvider, DEMO_MODE } from "@/components/app-mode";
 import { parseEntriesSearchParams } from "@/lib/filters/entries-search-params";
 
 vi.mock("next/navigation", () => ({ useRouter: () => router, usePathname: () => "/entries" }));
@@ -76,16 +75,11 @@ describe("InvoiceStatusFilter - >= md (aplica ao mudar)", () => {
     expect(q.get("d_category")).toBe("Moradia");
   });
 
-  it("navegacao dentro da aba Faturas por /demo respeita o basePath", async () => {
-    render(
-      <AppModeProvider mode={DEMO_MODE}>
-        <AllProviders>
-          <InvoiceStatusFilter state={st()} />
-        </AllProviders>
-      </AppModeProvider>,
-    );
+  it("a navegacao dentro da aba Faturas vai sempre para /entries?... (sem /demo)", async () => {
+    wrap(<InvoiceStatusFilter state={st()} />);
     await userEvent.click(screen.getAllByRole("radio", { name: "Pago" })[0]);
-    expect(lastHref().startsWith("/demo/entries?")).toBe(true);
+    expect(lastHref().startsWith("/entries?")).toBe(true);
+    expect(lastHref()).not.toContain("/demo");
   });
 });
 

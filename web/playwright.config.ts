@@ -35,7 +35,8 @@ export default defineConfig({
     {
       command: `npx next build && npx next start -p ${WEB_PORT}`,
       port: WEB_PORT,
-      env: { API_URL: `http://127.0.0.1:${STUB_PORT}` },
+      // DEMO_ACCOUNT_HINT=on: o login mostra a dica e o rotulo "E-mail ou usuario" (ADR 0013 9.3). Sem a dica: coberto em page.spec.tsx.
+      env: { API_URL: `http://127.0.0.1:${STUB_PORT}`, DEMO_ACCOUNT_HINT: "on" },
       reuseExistingServer: !process.env.CI,
       timeout: 300_000,
     },

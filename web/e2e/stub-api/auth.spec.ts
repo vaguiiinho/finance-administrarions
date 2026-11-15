@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { STUB_ADMIN_LIST_ORDER, STUB_USERS, type StubUser } from "../stub-users";
 
 /**
- * Contrato do stub de e2e com auth/demo/admin (ADR 0005 9.8, T11, D10). Sobe `server.mjs` numa porta propria e fala HTTP.
+ * Contrato do stub de e2e com auth/admin (ADR 0005 9.8, T11, D10; ADR 0013 9.5: sem /api/demo/*, com o alias `demo` no login). Sobe `server.mjs` numa porta propria e fala HTTP.
  * Toda regra aqui espelha a API real (ADR 6.2-6.5); se a API mudar, este spec e o stub mudam juntos.
  */
 const PORT = 4300 + Math.floor(Math.random() * 500);
@@ -304,46 +304,78 @@ describe("U1-U7 gestao de usuarios (RF10-RF19)", () => {
   });
 });
 
-describe("rotas publicas da demo (RF29, CA35, CA36)", () => {
-  const demo = ["/api/demo/summary?month=2026-11", "/api/demo/cards", "/api/demo/categories", "/api/demo/invoices?month=2026-11", "/api/demo/entries/expenses?month=2026-11", "/api/demo/entries/incomes?month=2026-11", "/api/demo/dashboard/monthly-series?month=2026-11", "/api/demo/dashboard/category-distribution?month=2026-11"];
+describe("sem rotas publicas da demonstracao (ADR 0013 9.5; RF01, CA01)", () => {
+  const demo = ["/api/demo/summary?month=2026-11", "/api/demo/cards", "/api/demo/categories", "/api/demo/invoices?month=2026-11", "/api/demo/entries/expenses?month=2026-11", "/api/demo/entries/incomes?month=2026-11", "/api/demo/entries/initial-month", "/api/demo/dashboard/monthly-series?month=2026-11", "/api/demo/dashboard/category-distribution?month=2026-11"];
 
-  it.each(demo)("GET %s sem cookie/Bearer -> 200", async (path) => {
-    expect((await call("GET", path)).status).toBe(200);
-  });
-  it("tambem funciona para quem esta logado e nao mistura com os dados do usuario", async () => {
-    const own = await call("GET", "/api/cards", { token: await tokenOf(ana) });
-    const demoCards = await call("GET", "/api/demo/cards", { token: await tokenOf(ana) });
-    expect(demoCards.status).toBe(200);
-    expect(demoCards.json.items.map((c: { name: string }) => c.name)).toEqual(["Cartão Demo"]);
-    expect(own.json.items.map((c: { name: string }) => c.name)).not.toContain("Cartão Demo");
-  });
-  it("despesas da demo em 2026-11 existem e sao reconheciveis ('Demo' na descricao)", async () => {
-    const r = await call("GET", "/api/demo/entries/expenses?month=2026-11");
-    expect(r.json.items.length).toBeGreaterThan(0);
-    expect(r.json.items.every((e: { description: string }) => /Demo/.test(e.description))).toBe(true);
-  });
-  it("fatura da demo lista os lancamentos do cartao demo", async () => {
-    const cards = (await call("GET", "/api/demo/cards")).json.items as { id: string }[];
-    const r = await call("GET", `/api/demo/cards/${cards[0].id}/invoices/2026-11/entries`);
-    expect(r.status).toBe(200);
-    expect(Array.isArray(r.json.items)).toBe(true);
-  });
-  it.each(["POST", "PUT", "PATCH", "DELETE"])("%s em qualquer caminho da demo -> 404 ROUTE_NOT_FOUND", async (method) => {
-    const r = await call(method, "/api/demo/entries", { token: await tokenOf(ana), body: {} });
+  it.each(demo)("GET %s sem cookie/Bearer -> 404 ROUTE_NOT_FOUND (como a API real)", async (path) => {
+    const r = await call("GET", path);
     expect([r.status, r.json.code]).toEqual([404, "ROUTE_NOT_FOUND"]);
+  });
+  it.each(demo)("GET %s com sessao tambem -> 404 ROUTE_NOT_FOUND e nenhum dado", async (path) => {
+    const r = await call("GET", path, { token: await tokenOf(ana) });
+    expect([r.status, r.json.code]).toEqual([404, "ROUTE_NOT_FOUND"]);
+    expect(JSON.stringify(r.json)).not.toMatch(/Cart[ãa]o Demo|Demo:/);
+  });
+  it("nenhuma leitura sem credencial responde 200 (so login e logout sao publicos)", async () => {
+    for (const path of ["/api/summary?month=2026-11", "/api/cards", "/api/categories", "/api/invoices?month=2026-11"]) {
+      expect((await call("GET", path)).status, path).toBe(401);
+    }
+  });
+});
+
+describe("alias `demo` no login do stub (ADR 0013 9.5; CA12, CA13, CA14, CA11)", () => {
+  const DEMO = { name: "Conta de demonstração", email: "demo@showcase.invalid" };
+  const tryLogin = (email: string, password = "demo") => call("POST", "/api/auth/login", { body: { email, password } });
+
+  it.each(["demo", "Demo", " demo ", "DEMO"])("CA12: %j + demo -> 200 como a conta de demonstracao", async (alias) => {
+    const r = await tryLogin(alias);
+    expect(r.status).toBe(200);
+    expect(r.json.user).toMatchObject(DEMO);
+    expect(r.json.session.token).toEqual(expect.any(String));
+  });
+
+  it("CA13: o e-mail canonico demo@showcase.invalid + demo tambem entra", async () => {
+    const r = await tryLogin("demo@showcase.invalid");
+    expect(r.status).toBe(200);
+    expect(r.json.user).toMatchObject(DEMO);
+  });
+
+  it("CA12: a sessao do alias funciona em /api/auth/me e nas leituras protegidas", async () => {
+    const token = (await tryLogin("demo")).json.session.token as string;
+    expect((await call("GET", "/api/auth/me", { token })).json).toMatchObject(DEMO);
+    expect((await call("GET", "/api/cards", { token })).status).toBe(200);
+  });
+
+  it("CA12: alias com senha errada -> 401 INVALID_CREDENTIALS igual ao de qualquer credencial invalida", async () => {
+    const wrong = await tryLogin("demo", "errada");
+    const other = await login(ana, "errada");
+    expect([wrong.status, wrong.json]).toEqual([other.status, other.json]);
+    expect(wrong.json.code).toBe("INVALID_CREDENTIALS");
+  });
+
+  it.each(["admin", "ana", "demo2", "showcase"])("CA14: %j (sem @) -> 401 INVALID_CREDENTIALS, sem sessao", async (id) => {
+    const r = await tryLogin(id, "demo");
+    expect([r.status, r.json.code]).toEqual([401, "INVALID_CREDENTIALS"]);
+    expect(r.json.session).toBeUndefined();
+  });
+
+  it("a conta de demonstracao nao aparece na gestao de usuarios (RF13: fora do escopo do admin)", async () => {
+    const items = (await call("GET", "/api/admin/users", { token: await tokenOf(vagner) })).json.items as { email: string }[];
+    expect(items.map((i) => i.email)).not.toContain("demo@showcase.invalid");
+    expect(items).toHaveLength(4);
   });
 });
 
 describe("cenarios (ADR 9.8)", () => {
   const scenario = (name: string) => call("POST", "/__scenario", { body: { name } });
 
-  it("expired-session: toda rota autenticada responde 401 mesmo com Bearer valido (me inclusive); demo e login seguem", async () => {
+  it("expired-session: toda rota autenticada responde 401 mesmo com Bearer valido (me inclusive); o login segue", async () => {
     const token = await tokenOf(ana);
     await scenario("expired-session");
     expect((await call("GET", "/api/auth/me", { token })).status).toBe(401);
     expect((await call("GET", "/api/summary?month=2026-11", { token })).status).toBe(401);
     expect((await call("POST", "/api/cards", { token, body: { name: "X", closingDay: 1, dueDay: 2 } })).status).toBe(401);
-    expect((await call("GET", "/api/demo/cards")).status).toBe(200);
+    expect((await login(ana)).status).toBe(200);
   });
 
   it("rate-limited: login e troca de senha respondem 429 TOO_MANY_ATTEMPTS com retryAfterSeconds > 0 e Retry-After", async () => {

@@ -1,9 +1,10 @@
 appId: br.com.finance.app
 ---
-# CA44/CA46/CA48: conta demo comeca vazia, tem todas as acoes e ve "Trocar senha" desabilitado com motivo (B8).
+# CA44/CA46/CA48 + ADR 0013 (CA12, CA30): entra pelo alias "demo", a conta ja vem com dados de exemplo, tem todas as acoes e ve
+# "Trocar senha" desabilitado com motivo (B8) e o aviso de que a conta e redefinida as 03:00.
 - launchApp: { clearState: true }
 - tapOn: "E-mail"
-- inputText: "demo@showcase.invalid"
+- inputText: "demo"
 - tapOn: "Senha"
 - inputText: "demo"
 - tapOn: "Entrar"
@@ -14,12 +15,14 @@ appId: br.com.finance.app
     text: "Trocar senha"
     enabled: false
 - assertVisible: "Indisponível na conta de demonstração"
-- assertVisible: ".*03:00.*"
+- assertVisible: ".*redefinida todos os dias às 03:00.*"
 - tapOn: "Finanças"
 - tapOn: "Selecionar"
 - tapOn: "Cancelar"
-- tapOn: "Excluir despesa: Cinema"
+# "Aluguel" existe todo mes no dataset de exemplo (sample-dataset.ts)
+- assertVisible: "Aluguel"
+- tapOn: "Excluir despesa: Aluguel"
 - tapOn: "Excluir"
 - assertVisible: "Despesa excluída."
 - tapOn: "Desfazer"
-- assertVisible: "Cinema"
+- assertVisible: "Aluguel"

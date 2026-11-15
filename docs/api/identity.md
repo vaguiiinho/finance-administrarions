@@ -4,7 +4,7 @@ Documenta o que o código implementa em `api/src/modules/identity/presentation/h
 
 ## Autenticação
 
-Bearer token opaco: `Authorization: Bearer <token>`, emitido por `POST /api/auth/login`. Rotas públicas: login, logout e `/api/demo/*`.
+Bearer token opaco: `Authorization: Bearer <token>`, emitido por `POST /api/auth/login`. Rotas públicas: apenas login e logout. As rotas `/api/demo/*` (demonstração pública) foram removidas e respondem 404 `ROUTE_NOT_FOUND` (ADR 0013).
 
 ### Cabeçalho `X-Client`
 
@@ -27,7 +27,7 @@ Identifica o cliente. Opcional.
 }
 ```
 
-- A verificação roda em **todas as rotas casadas**, inclusive as públicas (login, logout, `/api/demo/*`), antes da autenticação: um 426 vale mesmo sem token. Rotas inexistentes (404 `ROUTE_NOT_FOUND`) não passam por ela.
+- A verificação roda em **todas as rotas casadas**, inclusive as públicas (login, logout), antes da autenticação: um 426 vale mesmo sem token. Rotas inexistentes (404 `ROUTE_NOT_FOUND`) não passam por ela.
 - `X-Client` não é controle de segurança: informá-lo não concede privilégio.
 - Precedência numa rota protegida: `MALFORMED_JSON`/413 > 400 `X-Client` > 426 > 401 > 403 `PASSWORD_CHANGE_REQUIRED` > 403 `FORBIDDEN` > 429 > 400 > 404 > 422.
 
@@ -73,7 +73,26 @@ Identifica o cliente. Opcional.
 
 ### POST /api/auth/login
 
-Corpo estrito: `{ "email": string, "password": string }`. `X-Client` opcional. Sem alias de e-mail.
+Corpo estrito: `{ "email": string, "password": string }`. `X-Client` opcional.
+
+O campo `email` aceita o e-mail **ou o alias `demo`**, que vale como `demo@showcase.invalid` (conta de demonstração). O nome do campo não muda (compatível com o app publicado). Regras do identificador (`LoginIdentifier`):
+
+- Sem diferenciar maiúsculas de minúsculas e ignorando espaços nas pontas: `demo`, `Demo` e ` demo ` são o mesmo alias.
+- O alias vale **só** neste endpoint; a gestão de usuários continua exigindo e-mail (e recusa `.invalid`). O e-mail canônico `demo@showcase.invalid` continua funcionando.
+- Qualquer outro texto sem `@` (`admin`, `ana`, `demo2`) é tratado como credencial inválida: 401 `INVALID_CREDENTIALS`, sem 400 de formato.
+- Com o alias, `user.email` na resposta é `demo@showcase.invalid`. A chave do limite por identificador e o e-mail registrado na auditoria de falha são o e-mail canônico, então `demo` e o e-mail contam como o mesmo identificador.
+- Conta de demonstração desligada (`SHOWCASE_ACCOUNT_PASSWORD` vazia) ou senha errada: 401 `INVALID_CREDENTIALS` genérico.
+
+Exemplo (alias):
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{ "email": "demo", "password": "demo" }
+```
+
+A resposta é a mesma de qualquer login (200 com `user` e `session`), com `"email": "demo@showcase.invalid"`, `"accountKind": "SHOWCASE"` e `"capabilities": ["MANAGE_EXPENSES"]`.
 
 ```json
 {
@@ -110,7 +129,7 @@ Corpo estrito: `{ "name": string }`. A conta `SHOWCASE` (sem `UPDATE_OWN_PROFILE
 
 Só `MANAGE_USERS` (REGULAR + ADMIN); os demais recebem 403 `FORBIDDEN`. Criar: `{ name, email, role, password }`; editar: `{ name, email, role }`; redefinir senha: `{ password }`. A conta de demonstração não aparece nem é endereçável (404 `USER_NOT_FOUND`).
 
-**E-mails `.invalid` são reservados** (demo, conta de demonstração, marcador do primeiro administrador): criar (`POST`) ou editar (`PUT`) um usuário com e-mail terminado em `.invalid` responde **400 `VALIDATION_ERROR`** com `fields: [{ "field": "email", "code": "INVALID_FORMAT", ... }]`, e não mais 409 `EMAIL_TAKEN`. `EMAIL_TAKEN` (409) continua para e-mail comum já usado. O primeiro administrador (`ADMIN_EMAIL`) também recusa `.invalid`.
+**E-mails `.invalid` são reservados** (conta de demonstração, marcador do primeiro administrador): criar (`POST`) ou editar (`PUT`) um usuário com e-mail terminado em `.invalid` responde **400 `VALIDATION_ERROR`** com `fields: [{ "field": "email", "code": "INVALID_FORMAT", ... }]`, e não mais 409 `EMAIL_TAKEN`. `EMAIL_TAKEN` (409) continua para e-mail comum já usado. O primeiro administrador (`ADMIN_EMAIL`) também recusa `.invalid`.
 
 ## Erros
 
@@ -118,7 +137,7 @@ Só `MANAGE_USERS` (REGULAR + ADMIN); os demais recebem 403 `FORBIDDEN`. Criar: 
 |---|---|---|---|
 | 400 | `VALIDATION_ERROR` | Corpo ou cabeçalho inválido (inclui `X-Client` malformado e e-mail `.invalid` na gestão) | `{ fields: [...] }` |
 | 401 | `UNAUTHENTICATED` | Token ausente, inválido ou expirado | - |
-| 401 | `INVALID_CREDENTIALS` | Login inválido (inclusive e-mail inexistente, conta inativa, e-mail demo reservado) | - |
+| 401 | `INVALID_CREDENTIALS` | Login inválido (inclusive e-mail ou alias inexistente, conta inativa, conta demo desligada) | - |
 | 403 | `PASSWORD_CHANGE_REQUIRED` | Troca de senha pendente em rota que não a permite | - |
 | 403 | `FORBIDDEN` | Capacidade ausente | **`{}`** (sempre objeto vazio) |
 | 404 | `USER_NOT_FOUND` | Usuário inexistente na gestão | - |
@@ -136,18 +155,46 @@ Só `MANAGE_USERS` (REGULAR + ADMIN); os demais recebem 403 `FORBIDDEN`. Criar: 
 | `MOBILE_MIN_VERSION` | semver `X.Y.Z`; padrão `1.0.0` |
 | `MOBILE_STORE_URL` | URL `https://`; vai em `details.storeUrl` |
 | `TRUST_PROXY` | obrigatória em produção; só IP(s)/sub-rede do nginx (recusa `true`, número, `loopback`, `uniquelocal`); vale também para o seed |
-| `SHOWCASE_ACCOUNT_PASSWORD` | lida só pelo seed; vazia/ausente desliga (inativa) a conta `demo@showcase.invalid` |
-| `MAINTENANCE_INTERVAL_MS` | `0` desliga também a limpeza diária da conta de demonstração |
+| `SHOWCASE_ACCOUNT_PASSWORD` | lida só pelo seed; vazia/ausente desliga (inativa) a conta `demo@showcase.invalid`. Deve valer `demo` onde o web mostrar a dica (`DEMO_ACCOUNT_HINT=on`) |
+| `MAINTENANCE_INTERVAL_MS` | `0` desliga também a rotina diária da conta de demonstração |
 
 ## Conta de demonstração (`SHOWCASE`)
 
-- E-mail `demo@showcase.invalid`; senha definida por `SHOWCASE_ACCOUNT_PASSWORD` (1 a 72 caracteres, sem o mínimo de 8 das demais contas; só o seed a define).
+- Login: e-mail `demo@showcase.invalid` ou o alias `demo`; senha definida por `SHOWCASE_ACCOUNT_PASSWORD` (1 a 72 caracteres, sem o mínimo de 8 das demais contas; só o seed a define). A convenção do projeto é `demo`/`demo`.
 - Cria, edita, exclui e paga os próprios lançamentos (`MANAGE_EXPENSES`); não troca senha nem perfil (403).
-- Os lançamentos e cartões da conta são apagados todo dia às 03:00 America/Sao_Paulo (tarefa diária da manutenção, também executada uma vez na subida do processo HTTP, de forma idempotente).
+- **Estado inicial:** com a conta ativa, o seed grava o dataset de exemplo (2 cartões e 12 meses até o mês corrente de America/Sao_Paulo, mais a fatura do mês seguinte).
+- **Rotina diária:** todo dia às 03:00 America/Sao_Paulo a tarefa `reset-demo-account` apaga todos os lançamentos e cartões da conta e restaura o dataset de exemplo (conta desativada: só apaga). As sessões **não** são revogadas. Na subida do processo ela roda de novo como recuperação, mas só se ainda não houve redefinição desde o último 03:00 (condição `not-reset-since` avaliada sob lock no banco, tabela `owner_data_resets`), então reiniciar a API no meio do dia não zera a conta. Tudo ou nada: falha não deixa a conta pela metade.
+- **Execução manual:** `npm run demo:reset` dentro do container (sem HTTP; não existe rota para isso). Redefine sempre, sem olhar a última execução. Imprime uma linha legível e uma linha JSON; código de saída 1 em falha.
+- **Primeiro deploy:** a conta é redefinida uma vez (o seed grava o dataset de exemplo e descarta o que visitantes criaram). Também no primeiro deploy a migration `20261114000001_remove_public_demo_user` exclui o usuário da demonstração pública e os dados dele.
+
+### Diagrama: login com alias e rotina da conta demo
+
+```mermaid
+flowchart TD
+  L["POST /api/auth/login { email: 'demo' }"] --> I{LoginIdentifier}
+  I -- "'demo' (trim, sem caixa)" --> E[demo@showcase.invalid]
+  I -- "e-mail válido" --> E2[e-mail normalizado]
+  I -- "outro texto" --> U[usuário nulo]
+  E --> F[findByEmail + verificação de senha]
+  E2 --> F
+  U --> F
+  F -- "ok, conta ativa" --> OK[200 user + session]
+  F -- "falha, inativa ou inexistente" --> E401[401 INVALID_CREDENTIALS]
+
+  T["03:00 America/Sao_Paulo / subida / npm run demo:reset"] --> S{estado da conta demo}
+  S -- ausente --> SK[skipped]
+  S -- inativa --> R1["reset sem dataset"]
+  S -- ativa --> R2["reset com dataset de exemplo"]
+  R1 --> C{condição sob lock}
+  R2 --> C
+  C -- "manual: always" --> W[apaga e restaura na mesma transação]
+  C -- "agendada ou subida: não redefinida desde o último 03:00" --> W
+  C -- "já redefinida" --> SK
+```
 
 ## Exposição pelo nginx
 
-Em produção a API fica atrás do nginx: o listener público bloqueia `/api/admin/*` e `/api/demo/*` (404); o web chama a API por um listener interno. Checklist N1-N10 no README raiz e no ADR 0011, seção 6.1.
+Em produção a API fica atrás do nginx: o listener público bloqueia `/api/admin/*` (404; a regra de `/api/demo/*` deixou de ser requisito, pois a rota não existe mais); o web chama a API por um listener interno. Checklist N1-N10 no README raiz e no ADR 0011, seção 6.1.
 
 ## Diagrama: pré-políticas e capacidade
 

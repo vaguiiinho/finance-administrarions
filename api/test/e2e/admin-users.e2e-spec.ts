@@ -13,7 +13,6 @@ beforeEach(async () => {
   await e.seedUser(CAST.vagner);
   await e.seedUser(CAST.ana);
   await e.seedUser({ ...CAST.bruno, status: 'INACTIVE' });
-  await e.seedUser({ n: 90, kind: 'DEMO', name: 'Demonstração', email: 'demo@finance.invalid' });
   admin = await e.sessionFor(idOf(4));
 });
 
@@ -74,7 +73,7 @@ describe('U3 POST /api/admin/users (RF12, CA16-CA18)', () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('VALIDATION_ERROR');
     expect(fieldsOf(res)).toEqual(['email:INVALID_FORMAT', 'name:REQUIRED', 'password:TOO_SHORT', 'role:INVALID_VALUE']);
-    expect(await query(e.pool, 'SELECT 1 FROM users')).toHaveLength(4);
+    expect(await query(e.pool, 'SELECT 1 FROM users')).toHaveLength(3);
   });
 
   it('CA18: senha de 73 caracteres -> password: TOO_LONG; campo desconhecido -> UNKNOWN_FIELD', async () => {

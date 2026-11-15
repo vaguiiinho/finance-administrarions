@@ -1,6 +1,5 @@
 import "server-only";
 import { redirect, unstable_rethrow } from "next/navigation";
-import type { AppMode } from "@/lib/app-mode";
 import type { RawSearchParams } from "@/lib/filters/entries-search-params";
 import { fallbackMonthHref, hasMonthParam, initialMonthHref, type InitialMonthDecision } from "@/lib/filters/initial-month";
 
@@ -11,17 +10,16 @@ import { fallbackMonthHref, hasMonthParam, initialMonthHref, type InitialMonthDe
  */
 export async function redirectToInitialMonth(
   searchParams: RawSearchParams,
-  mode: AppMode,
   reader: { getInitialMonth: () => Promise<InitialMonthDecision> },
   now: Date = new Date(),
 ): Promise<void> {
   if (hasMonthParam(searchParams)) return;
   let href: string;
   try {
-    href = initialMonthHref(searchParams, await reader.getInitialMonth(), mode.basePath);
+    href = initialMonthHref(searchParams, await reader.getInitialMonth());
   } catch (error) {
     unstable_rethrow(error);
-    href = fallbackMonthHref(searchParams, now, mode.basePath);
+    href = fallbackMonthHref(searchParams, now);
   }
   redirect(href);
 }

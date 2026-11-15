@@ -1,9 +1,9 @@
 import type pg from 'pg';
-import { createPool, expectCheckViolation, query } from '@test/support/db.js';
-import { insertOwnedEntry, insertSession, insertUser, resetAll } from '@test/support/owned-db.js';
+import { createPool, expectCheckViolation } from '@test/support/db.js';
+import { insertUser, resetAll } from '@test/support/owned-db.js';
 import { buildIdentityInfra, type IdentityInfra } from '@test/support/identity-infra.js';
 import { NOW } from '@test/support/builders.js';
-import { ana, demoUser, emailOf, firstAdminMarker, hashOf, vagner } from '@test/support/identity-builders.js';
+import { ana, emailOf, firstAdminMarker, hashOf, vagner } from '@test/support/identity-builders.js';
 import { SHOWCASE_EMAIL, SHOWCASE_ID, showcaseUser } from '@test/support/showcase-builders.js';
 import { SessionTokenDigest } from '@identity/domain/session/value-objects/session-token-digest.js';
 import { Session } from '@identity/domain/session/session.js';
@@ -53,7 +53,7 @@ describe('users_showcase_chk (ADR 0011 7.2): espelha as invariantes do dominio',
   it('must_change_password = true falha', async () => {
     await expectCheckViolation(insertUser(pool, showcaseRow({ mustChangePassword: true })));
   });
-  it('os CHECKs antigos seguem valendo (REGULAR sem hash, DEMO com hash)', async () => {
+  it('os CHECKs antigos seguem valendo (REGULAR sem hash, DEMO proibido)', async () => {
     await expectCheckViolation(insertUser(pool, { n: 1, kind: 'REGULAR', passwordHash: null }));
     await expectCheckViolation(insertUser(pool, { n: 2, kind: 'DEMO', passwordHash: 'x' }));
   });
@@ -85,7 +85,7 @@ describe('PrismaUserRepository com SHOWCASE', () => {
   });
 
   it('a conta nao aparece na gestao: listManageable, countRegular e countActiveAdminsExcept a ignoram', async () => {
-    for (const u of [showcaseUser(), ana(), vagner(), demoUser(), firstAdminMarker()]) await infra.users.insert(u);
+    for (const u of [showcaseUser(), ana(), vagner(), firstAdminMarker()]) await infra.users.insert(u);
     expect((await infra.users.listManageable()).map((u) => u.kind)).toEqual(['REGULAR', 'REGULAR']);
     expect(await infra.users.countRegular()).toBe(2);
     expect(await infra.users.countActiveAdminsExcept(ana().id)).toBe(1);

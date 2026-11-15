@@ -15,8 +15,7 @@ import { presentExpenseTotals, presentPagination, presentTotals } from './presen
 import type { ExpensesQuery, IncomesQuery, InvoicesQuery, MonthQuery } from './schemas/query.schemas.js';
 
 /**
- * Leituras do finance montadas uma só vez: os controllers protegidos passam o dono do principal e as rotas públicas
- * da demo passam o dono fixo `DEMO_USER_ID`, com o MESMO contrato de resposta (ADR 0005 6.5).
+ * Leituras do finance montadas uma só vez: os controllers protegidos passam o dono do principal (nunca o do corpo).
  */
 @Injectable()
 export class FinanceReadHandlers {

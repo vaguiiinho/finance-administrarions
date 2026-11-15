@@ -11,7 +11,7 @@ export default defineConfig({
     include: ['src/**/*.spec.ts', 'test/**/*.spec.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/**/domain/**/*.ts', 'src/**/application/**/*.ts'],
+      include: ['src/**/domain/**/*.ts', 'src/**/application/**/*.ts', 'src/bootstrap/demo-account/**/*.ts'],
       exclude: ['**/*.spec.ts', '**/*.int-spec.ts', '**/*.e2e-spec.ts', '**/index.ts'],
       reporter: ['text', 'text-summary', 'lcov'],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },

@@ -2,7 +2,6 @@
 
 import { settleAction } from "@/lib/api/safe-action";
 import { useEffect, useId, useRef, useState } from "react";
-import { useAppMode } from "@/components/app-mode";
 import { Button } from "@/components/ui/button";
 import { AlertDialog } from "@/components/ui/dialogs";
 import { SessionExpiredInline, useAuthRedirect } from "@/components/session-expired";
@@ -15,17 +14,10 @@ import { formatCivilDate, monthLongPtBR } from "@/lib/dates/format";
 import { countLabel, invoicePaidFeedback } from "@/lib/entries/feedback";
 import { focusTargetAfterPay } from "@/lib/entries/focus-target";
 import { changeFilter, changeTab, entriesHref, type EntriesState } from "@/lib/filters/entries-search-params";
-import type { ActionError, ActionResult, EntryDto, InvoiceDto } from "@/lib/api/types";
+import type { ActionError, EntryDto, InvoiceDto } from "@/lib/api/types";
 import { loadInvoiceEntries, payInvoice } from "@/app/(protected)/entries/actions";
-import { loadDemoInvoiceEntries } from "@/app/(public)/demo/actions";
 import { PANEL_TITLE_ID } from "./panel-ids";
 import { useFocusAfterClose } from "./use-focus-after-close";
-
-/** Leitura sob demanda da lista da fatura: protegida (sessao) ou demo (reader publico), mesmo formato de resultado. */
-async function loadDemoEntries(cardId: string, referenceMonth: string): Promise<ActionResult<EntryDto[]>> {
-  const result = await loadDemoInvoiceEntries(cardId, referenceMonth);
-  return result.ok ? { ok: true, data: result.data.items } : result;
-}
 
 type ListState = { status: "idle" } | { status: "loading" } | { status: "error" } | { status: "ready"; items: EntryDto[]; key: string };
 
@@ -34,8 +26,6 @@ type ListState = { status: "idle" } | { status: "loading" } | { status: "error" 
  * (cartao, mes, pendente, pago) para ser descartado quando a fatura muda (ex.: apos "Pagar fatura", ADR 9.2).
  */
 export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: EntriesState }) {
-  const { basePath, readOnly } = useAppMode();
-  const loadEntries = readOnly ? loadDemoEntries : loadInvoiceEntries;
   const uid = useId();
   const toast = useToast();
   const headingId = `${uid}-title`;
@@ -67,7 +57,7 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
 
   const fetchList = async () => {
     setList({ status: "loading" });
-    const result = await settleAction(() => loadEntries(invoice.card.id, invoice.referenceMonth));
+    const result = await settleAction(() => loadInvoiceEntries(invoice.card.id, invoice.referenceMonth));
     setList(result.ok ? { status: "ready", items: result.data, key: dataKey } : { status: "error" });
   };
 
@@ -75,13 +65,13 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
   useEffect(() => {
     if (!stale || !expanded) return;
     let alive = true;
-    void settleAction(() => loadEntries(invoice.card.id, invoice.referenceMonth)).then((result) => {
+    void settleAction(() => loadInvoiceEntries(invoice.card.id, invoice.referenceMonth)).then((result) => {
       if (alive) setList(result.ok ? { status: "ready", items: result.data, key: dataKey } : { status: "error" });
     });
     return () => {
       alive = false;
     };
-  }, [stale, expanded, dataKey, invoice.card.id, invoice.referenceMonth, loadEntries]);
+  }, [stale, expanded, dataKey, invoice.card.id, invoice.referenceMonth]);
 
   const toggle = () => {
     const next = !expanded;
@@ -116,7 +106,7 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
 
   // Fatura paga: Despesas abre em "Todos" (DL11), senao cairia em lista vazia sob "Pendente". Fatura com pendencia (inclusive
   // parcial) preserva o status vigente (RF19, CA58). Mes da fatura e cartao nos dois casos; f_status nao muda.
-  const expensesHref = entriesHref(changeFilter(changeTab({ ...state, month: invoice.referenceMonth }, "expenses"), { d_card: invoice.card.id, ...(fullyPaid ? { d_status: "ALL" as const } : {}) }), basePath);
+  const expensesHref = entriesHref(changeFilter(changeTab({ ...state, month: invoice.referenceMonth }, "expenses"), { d_card: invoice.card.id, ...(fullyPaid ? { d_status: "ALL" as const } : {}) }));
   const payLabel = fullyPaid ? (
     <p id={paidNoteId} className="flex items-center gap-1.5 text-sm font-medium text-success-text">
       <Icon name="check" />
@@ -137,8 +127,7 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
         </div>
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
           {payLabel}
-          {readOnly ? null : (
-            <Button
+          <Button
               ref={payButtonRef}
               variant="primary"
               disabled={fullyPaid}
@@ -151,7 +140,6 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
             >
               Pagar fatura
             </Button>
-          )}
         </div>
       </div>
 
@@ -195,11 +183,11 @@ export function InvoiceBlock({ invoice, state }: { invoice: InvoiceDto; state: E
           {`Ver ${countLabel(invoice.entryCount, "despesa", "despesas")}`}
         </Button>
         <div id={listId} hidden={!expanded} className="mt-2">
-          {expanded ? <InvoiceEntries list={view} cardName={invoice.card.name} onRetry={() => void fetchList()} expensesHref={expensesHref} shortcutLabel={readOnly || fullyPaid ? "Ver despesas do cartão na aba Despesas" : "Pagar despesas individualmente na aba Despesas"} /> : null}
+          {expanded ? <InvoiceEntries list={view} cardName={invoice.card.name} onRetry={() => void fetchList()} expensesHref={expensesHref} shortcutLabel={fullyPaid ? "Ver despesas do cartão na aba Despesas" : "Pagar despesas individualmente na aba Despesas"} /> : null}
         </div>
       </div>
 
-      {!readOnly && confirmOpen ? (
+      {confirmOpen ? (
         <AlertDialog
           title={`Pagar a fatura ${invoice.card.name} de ${monthLong}?`}
           confirmLabel="Pagar fatura"

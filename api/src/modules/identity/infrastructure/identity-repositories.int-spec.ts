@@ -3,12 +3,12 @@ import { createPool, expectCheckViolation, query } from '@test/support/db.js';
 import { insertSession, insertUser, resetAll } from '@test/support/owned-db.js';
 import { buildIdentityInfra, type IdentityInfra } from '@test/support/identity-infra.js';
 import { NOW, rejected } from '@test/support/builders.js';
-import { aUser, ana, bruno, carla, demoUser, emailOf, firstAdminMarker, outroAdmin, sessionUuid, userId, userUuid, vagner } from '@test/support/identity-builders.js';
+import { aUser, ana, bruno, carla, emailOf, firstAdminMarker, outroAdmin, sessionUuid, userId, userUuid, vagner } from '@test/support/identity-builders.js';
 import { Session } from '@identity/domain/session/session.js';
 import { SessionId } from '@identity/domain/session/value-objects/session-id.js';
 import { SessionTokenDigest } from '@identity/domain/session/value-objects/session-token-digest.js';
 import { unwrap } from '@test/support/result.js';
-import { DEMO_USER_ID, FIRST_ADMIN_ID } from '@shared/domain/well-known-ids.js';
+import { FIRST_ADMIN_ID } from '@shared/domain/well-known-ids.js';
 
 let pool: pg.Pool;
 let infra: IdentityInfra;
@@ -42,12 +42,10 @@ describe('PrismaUserRepository', () => {
     expect(row.created_at.toISOString()).toBe(NOW.toISOString());
   });
 
-  it('findById inexistente -> null; findByEmail acha por e-mail normalizado (inclusive inativo e demo)', async () => {
+  it('findById inexistente -> null; findByEmail acha por e-mail normalizado (inclusive inativo)', async () => {
     await infra.users.insert(bruno({ status: 'INACTIVE' }));
-    await infra.users.insert(demoUser());
     expect(await infra.users.findById(userId(userUuid(99)))).toBeNull();
     expect((await infra.users.findByEmail(emailOf(' BRUNO@exemplo.com ')))?.id.value).toBe(bruno().id.value);
-    expect((await infra.users.findByEmail(emailOf('demo@finance.invalid')))?.id.value).toBe(DEMO_USER_ID);
     expect(await infra.users.findByEmail(emailOf('x@exemplo.com'))).toBeNull();
   });
 
@@ -84,8 +82,8 @@ describe('PrismaUserRepository', () => {
     expect((await rejected(infra.users.update(clash))).code).toBe('EMAIL_TAKEN');
   });
 
-  it('listManageable: so REGULAR (sem demo nem marcador), ativos antes de inativos, depois por nome', async () => {
-    for (const u of [bruno({ status: 'INACTIVE' }), vagner(), carla(), ana(), demoUser(), firstAdminMarker()]) await infra.users.insert(u);
+  it('listManageable: so REGULAR (sem o marcador), ativos antes de inativos, depois por nome', async () => {
+    for (const u of [bruno({ status: 'INACTIVE' }), vagner(), carla(), ana(), firstAdminMarker()]) await infra.users.insert(u);
     const list = await infra.users.listManageable();
     expect(list.map((u) => u.name.value)).toEqual(['Ana Souza', 'Carla Dias', 'Vagner', 'Bruno Lima']);
   });
@@ -108,8 +106,7 @@ describe('PrismaUserRepository', () => {
     expect(await infra.users.countActiveAdminsExcept(ana().id)).toBe(2);
   });
 
-  it('countRegular conta so REGULAR (demo e marcador nao contam)', async () => {
-    await infra.users.insert(demoUser());
+  it('countRegular conta so REGULAR (o marcador nao conta)', async () => {
     await infra.users.insert(firstAdminMarker());
     expect(await infra.users.countRegular()).toBe(0);
     await infra.users.insert(ana());
@@ -121,7 +118,7 @@ describe('CHECKs de users (ADR 7.3)', () => {
   it('REGULAR sem hash falha', async () => {
     await expectCheckViolation(insertUser(pool, { n: 1, kind: 'REGULAR', passwordHash: null }));
   });
-  it('DEMO com hash falha; DEMO com ADMIN falha', async () => {
+  it('kind DEMO e proibido (users_kind_not_demo_chk, ADR 0013)', async () => {
     await expectCheckViolation(insertUser(pool, { n: 1, kind: 'DEMO', passwordHash: 'x' }));
     await expectCheckViolation(insertUser(pool, { n: 2, kind: 'DEMO', role: 'ADMIN', passwordHash: null }));
   });

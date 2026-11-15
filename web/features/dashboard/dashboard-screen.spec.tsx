@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { AllProviders, router } from "@/test/helpers/providers";
-import { DEMO_MODE, PROTECTED_MODE, type AppMode } from "@/lib/app-mode";
 import type { FinanceReader } from "@/lib/api/finance-reader";
 
 vi.mock("server-only", () => ({}));
@@ -44,19 +43,19 @@ const reader = {} as FinanceReader;
 const FORBIDDEN = /(^|:)(col-span-|col-start-|row-start-|order-|grid-cols-(?!1$)|flex-row|flex-col-reverse|flex-row-reverse)/;
 const precedes = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 
-function renderScreen(month = "2026-11", appMode: AppMode = PROTECTED_MODE) {
+function renderScreen(month = "2026-11") {
   mode.monthly = "ok";
   mode.categories = "ok";
   return render(
     <AllProviders>
-      <DashboardScreen searchParams={{ month }} mode={appMode} reader={reader} />
+      <DashboardScreen searchParams={{ month }} reader={reader} />
     </AllProviders>,
   );
 }
 
 describe("DashboardScreen (ADR 0012, RF01-RF07)", () => {
-  it.each([["protected", PROTECTED_MODE], ["demo", DEMO_MODE]] as const)("evolucao mensal vem antes de despesas por categoria no DOM (%s) (CA01, CA06)", (_name, m) => {
-    renderScreen("2026-11", m);
+  it("evolucao mensal vem antes de despesas por categoria no DOM (CA01, CA06)", () => {
+    renderScreen("2026-11");
     const monthly = screen.getByRole("figure", { name: "Evolução mensal" });
     const categories = screen.getByRole("figure", { name: "Despesas por categoria" });
     expect(precedes(screen.getByRole("heading", { name: "Dashboard" }), screen.getByRole("region", { name: "Resumo do mes" }))).toBe(true);
@@ -91,7 +90,7 @@ describe("DashboardScreen (ADR 0012, RF01-RF07)", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     render(
       <AllProviders>
-        <DashboardScreen searchParams={{ month: "2026-11" }} mode={PROTECTED_MODE} reader={reader} />
+        <DashboardScreen searchParams={{ month: "2026-11" }} reader={reader} />
       </AllProviders>,
     );
     const alert = screen.getByRole("alert");
@@ -106,7 +105,7 @@ describe("DashboardScreen (ADR 0012, RF01-RF07)", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     render(
       <AllProviders>
-        <DashboardScreen searchParams={{ month: "2026-11" }} mode={PROTECTED_MODE} reader={reader} />
+        <DashboardScreen searchParams={{ month: "2026-11" }} reader={reader} />
       </AllProviders>,
     );
     const alert = screen.getByRole("alert");
@@ -120,7 +119,7 @@ describe("DashboardScreen (ADR 0012, RF01-RF07)", () => {
     mode.categories = "pending";
     render(
       <AllProviders>
-        <DashboardScreen searchParams={{ month: "2026-11" }} mode={PROTECTED_MODE} reader={reader} />
+        <DashboardScreen searchParams={{ month: "2026-11" }} reader={reader} />
       </AllProviders>,
     );
     const monthly = screen.getByText("Carregando evolução mensal");

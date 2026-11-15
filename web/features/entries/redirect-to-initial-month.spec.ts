@@ -9,19 +9,18 @@ const nav = vi.hoisted(() => ({
 vi.mock("next/navigation", async (orig) => ({ ...(await orig<typeof import("next/navigation")>()), ...nav }));
 
 import { ApiError } from "@/lib/api/http";
-import { DEMO_MODE, PROTECTED_MODE } from "@/lib/app-mode";
 import { redirectToInitialMonth } from "./redirect-to-initial-month";
 
 /**
  * ADR 0007 7.2: sem `month` na URL a pagina resolve o mes e chama `redirect()` (tipo replace), mantendo os demais parametros.
- * CONTRATO PROPOSTO PELO TESTER: redirectToInitialMonth(searchParams, mode, reader, now?) lanca o NEXT_REDIRECT ou nao faz nada.
+ * CONTRATO PROPOSTO PELO TESTER (ADR 0013 9.4: o modo saiu): redirectToInitialMonth(searchParams, reader, now?) lanca o NEXT_REDIRECT ou nao faz nada.
  */
 const NOW = new Date("2026-10-30T15:00:00.000Z"); // 12:00 em SP
 const getInitialMonth = vi.fn();
 const reader = { getInitialMonth: () => getInitialMonth() };
-const run = (raw: Record<string, string | string[] | undefined>, mode = PROTECTED_MODE, now = NOW) => redirectToInitialMonth(raw, mode, reader, now);
-const target = async (raw: Record<string, string | string[] | undefined>, mode = PROTECTED_MODE, now = NOW): Promise<string> => {
-  await expect(run(raw, mode, now)).rejects.toThrow("NEXT_REDIRECT");
+const run = (raw: Record<string, string | string[] | undefined>, now = NOW) => redirectToInitialMonth(raw, reader, now);
+const target = async (raw: Record<string, string | string[] | undefined>, now = NOW): Promise<string> => {
+  await expect(run(raw, now)).rejects.toThrow("NEXT_REDIRECT");
   return nav.redirect.mock.calls[0][0] as string;
 };
 const q = (href: string) => new URLSearchParams(href.split("?")[1]);
@@ -88,10 +87,11 @@ describe("redirectToInitialMonth: sucesso", () => {
     expect(getInitialMonth).toHaveBeenCalledTimes(1);
   });
 
-  it("demo: redireciona para /demo/entries com o mesmo formato (CA24)", async () => {
+  it("redireciona sempre para /entries?month=... (nunca /demo/entries)", async () => {
     getInitialMonth.mockResolvedValue({ currentMonth: "2026-10", month: "2026-10", advance: "NONE" });
-    const href = await target({}, DEMO_MODE);
-    expect(href.startsWith("/demo/entries?")).toBe(true);
+    const href = await target({});
+    expect(href.startsWith("/entries?")).toBe(true);
+    expect(href).not.toContain("/demo");
     expect(q(href).get("month")).toBe("2026-10");
   });
 });
@@ -111,22 +111,15 @@ describe("redirectToInitialMonth: falha da verificacao -> M do web, sem aviso (R
 
   it("o mes de fallback respeita America/Sao_Paulo (31/10 23:30 em SP ainda e outubro; 01/11 00:30 e novembro)", async () => {
     getInitialMonth.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR", "x", null));
-    expect(q(await target({}, PROTECTED_MODE, new Date("2026-11-01T02:30:00.000Z"))).get("month")).toBe("2026-10");
+    expect(q(await target({}, new Date("2026-11-01T02:30:00.000Z"))).get("month")).toBe("2026-10");
     nav.redirect.mockClear();
-    expect(q(await target({}, PROTECTED_MODE, new Date("2026-11-01T03:30:00.000Z"))).get("month")).toBe("2026-11");
+    expect(q(await target({}, new Date("2026-11-01T03:30:00.000Z"))).get("month")).toBe("2026-11");
   });
 
   it("redireciona tambem na falha (fixa o mes: a revalidacao pos-pagamento nao reaplica a regra, RF07)", async () => {
     getInitialMonth.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR", "x", null));
     await target({});
     expect(nav.redirect).toHaveBeenCalledTimes(1);
-  });
-
-  it("demo: falha resulta em M em /demo/entries, nunca em login", async () => {
-    getInitialMonth.mockRejectedValue(new ApiError(500, "INTERNAL_ERROR", "x", null));
-    const href = await target({}, DEMO_MODE);
-    expect(href.startsWith("/demo/entries?")).toBe(true);
-    expect(href).not.toContain("login");
   });
 });
 

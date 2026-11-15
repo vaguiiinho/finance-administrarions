@@ -10,7 +10,7 @@ const PROTECTED_PREFIXES = ["/entries", "/dashboard", "/cards", "/account", "/ad
 const isProtectedPath = (pathname: string) => PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
 export function decideRoute(pathname: string, search: string, hasCookie: boolean, session?: ProxySession): RouteDecision {
-  if (pathname === "/") return { kind: "redirect", to: hasCookie ? "/entries" : "/demo/entries" };
+  if (pathname === "/") return { kind: "redirect", to: hasCookie ? "/entries" : "/login" };
   if (pathname === "/login") {
     if (!hasCookie) return { kind: "next" };
     if (session === undefined) return { kind: "validate-session" };

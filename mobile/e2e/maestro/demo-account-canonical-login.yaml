@@ -1,0 +1,12 @@
+appId: br.com.finance.app
+---
+# CA13/CA30 (ADR 0013): o e-mail canonico da conta demo continua entrando no app, sem o alias.
+- launchApp: { clearState: true }
+- tapOn: "E-mail"
+- inputText: "demo@showcase.invalid"
+- tapOn: "Senha"
+- inputText: "demo"
+- tapOn: "Entrar"
+- assertVisible: "Dashboard"
+- tapOn: "Ajustes"
+- assertVisible: "demo@showcase.invalid"

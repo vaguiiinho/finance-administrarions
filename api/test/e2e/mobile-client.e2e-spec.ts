@@ -1,3 +1,4 @@
+import { EnsureShowcaseAccount } from '@identity/application/use-cases/bootstrap/ensure-showcase-account.js';
 import { CAST, bearer, idOf, startIdentityE2e, type IdentityE2e } from '../support/identity-e2e.js';
 
 let e: IdentityE2e;
@@ -95,9 +96,10 @@ describe('426 APP_UPDATE_REQUIRED: roda antes da autenticacao (ADR 0011 6.3)', (
     expect((await e.http().get('/api/summary?month=2026-10').set('X-Client', OLD)).status).toBe(426);
   });
 
-  it('/api/demo/* (publica) -> 426', async () => {
+  it('/api/demo/* (removida, ADR 0013) -> 404 ROUTE_NOT_FOUND, sem passar pela checagem de versao', async () => {
     const res = await e.http().get('/api/demo/categories').set('X-Client', OLD);
-    expect(res.status).toBe(426);
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('ROUTE_NOT_FOUND');
   });
 
   it('rota sem casamento continua 404 ROUTE_NOT_FOUND (sem guards)', async () => {
@@ -106,8 +108,8 @@ describe('426 APP_UPDATE_REQUIRED: roda antes da autenticacao (ADR 0011 6.3)', (
     expect(res.body.code).toBe('ROUTE_NOT_FOUND');
   });
 
-  it('o web (sem X-Client) nunca recebe 426, nem na rota publica', async () => {
-    expect((await e.http().get('/api/demo/categories')).status).toBe(200);
+  it('o web (sem X-Client) nunca recebe 426, nem em rota inexistente', async () => {
+    expect((await e.http().get('/api/demo/categories')).status).toBe(404);
   });
 });
 
@@ -124,6 +126,16 @@ describe('Cache-Control e contrato aditivo (6.1, 6.2, RNF11)', () => {
     expect(Object.keys(res.body).sort()).toEqual(['session', 'user']);
     expect(Object.keys(res.body.user).sort()).toEqual(['accountKind', 'capabilities', 'email', 'id', 'mustChangePassword', 'name', 'role']);
     expect(Object.keys(res.body.session).sort()).toEqual(['expiresAt', 'token']);
+  });
+
+  it.each(['demo@showcase.invalid', 'demo'])('CA30: AuthResponse da conta demo (%s / senha demo) com X-Client mobile/1.2.3 mantem as chaves do contrato', async (identifier) => {
+    await e.app.get(EnsureShowcaseAccount).execute({ password: 'demo' });
+    const res = await e.http().post('/api/auth/login').set('X-Forwarded-For', ip()).set('X-Client', 'mobile/1.2.3').send({ email: identifier, password: 'demo' });
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body).sort()).toEqual(['session', 'user']);
+    expect(Object.keys(res.body.user).sort()).toEqual(['accountKind', 'capabilities', 'email', 'id', 'mustChangePassword', 'name', 'role']);
+    expect(Object.keys(res.body.session).sort()).toEqual(['expiresAt', 'token']);
+    expect(res.body.user).toMatchObject({ email: 'demo@showcase.invalid', accountKind: 'SHOWCASE', capabilities: ['MANAGE_EXPENSES'] });
   });
 
   it('me de USER comum: accountKind REGULAR e MANAGE_EXPENSES (B6), sem MANAGE_USERS', async () => {

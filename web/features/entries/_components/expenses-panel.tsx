@@ -4,8 +4,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { monthLongPtBR } from "@/lib/dates/format";
 import { countLabel } from "@/lib/entries/feedback";
 import { changeFilter, changePage, clearExpenseFilters, entriesHref, hasExpenseFilters, toApiQuery, type EntriesState } from "@/lib/filters/entries-search-params";
-import { PROTECTED_MODE, type AppMode } from "@/lib/app-mode";
-import { createFinanceReader, type FinanceReader } from "@/lib/api/finance-reader";
+import { getFinanceReader, type FinanceReader } from "@/lib/api/finance-reader";
 import { isBadRequest, settle } from "@/lib/api/queries";
 import type { ExpensesPage } from "@/lib/api/types";
 import { ExpenseFilters } from "./expense-filters";
@@ -15,12 +14,12 @@ import { ExpensesSubtotal } from "./tab-subtotal";
 
 import { PANEL_TITLE_ID } from "./panel-ids";
 
-export function InvalidFilters({ state, basePath = "" }: { state: EntriesState; basePath?: "" | "/demo" }) {
+export function InvalidFilters({ state }: { state: EntriesState }) {
   const clear = state.tab === "income" ? changeFilter(state, { r_category: undefined }) : clearExpenseFilters(state);
   return (
     <div role="alert" className="card flex flex-wrap items-center gap-3 p-6">
       <p className="flex-1 text-text">Os filtros da URL são inválidos.</p>
-      <NavLink href={entriesHref(clear, basePath)} className="btn" focusId={PANEL_TITLE_ID}>
+      <NavLink href={entriesHref(clear)} className="btn" focusId={PANEL_TITLE_ID}>
         Limpar filtros
       </NavLink>
     </div>
@@ -47,16 +46,13 @@ function announce(state: EntriesState, page: ExpensesPage): string {
 /** Painel da aba Despesas (RF20): filtros, subtotal (da API), lista, paginacao e vazios (3.12). */
 export async function ExpensesPanel({
   state,
-  reader = createFinanceReader("protected"),
-  mode = PROTECTED_MODE,
+  reader = getFinanceReader(),
   canManageExpenses = false,
 }: {
   state: EntriesState;
   reader?: FinanceReader;
-  mode?: AppMode;
   canManageExpenses?: boolean;
 }) {
-  const { basePath } = mode;
   const pagePromise = reader.listExpenses(toApiQuery(state));
   const categoriesPromise = settle(reader.listCategories());
   const cardsPromise = settle(reader.listCards());
@@ -67,7 +63,7 @@ export async function ExpensesPanel({
   try {
     page = await pagePromise;
   } catch (error) {
-    if (isBadRequest(error)) return <InvalidFilters state={state} basePath={basePath} />;
+    if (isBadRequest(error)) return <InvalidFilters state={state} />;
     throw error;
   }
   const [categories, cardsResult] = await Promise.all([categoriesPromise, cardsPromise]);
@@ -82,7 +78,7 @@ export async function ExpensesPanel({
   if (items.length === 0 && pagination.totalItems > 0) {
     body = (
       <EmptyState title="Esta página não existe.">
-        <NavLink href={entriesHref(changePage(state, Math.max(1, pagination.totalPages)), basePath)} className="btn" focusId={PANEL_TITLE_ID}>
+        <NavLink href={entriesHref(changePage(state, Math.max(1, pagination.totalPages)))} className="btn" focusId={PANEL_TITLE_ID}>
           Ir para a última página
         </NavLink>
       </EmptyState>
@@ -90,7 +86,7 @@ export async function ExpensesPanel({
   } else if (items.length === 0 && cardMissing) {
     body = (
       <EmptyState title="Este cartão não foi encontrado.">
-        <NavLink href={entriesHref(changeFilter(state, { d_card: undefined }), basePath)} className="btn" focusId={PANEL_TITLE_ID}>
+        <NavLink href={entriesHref(changeFilter(state, { d_card: undefined }))} className="btn" focusId={PANEL_TITLE_ID}>
           Remover filtro de cartão
         </NavLink>
       </EmptyState>
@@ -98,7 +94,7 @@ export async function ExpensesPanel({
   } else if (items.length === 0) {
     body = filtered ? (
       <EmptyState title={`Nenhuma despesa para os filtros selecionados em ${monthLabel}`} description={filteredEmptyDescription(state)}>
-        <NavLink href={entriesHref(clearExpenseFilters(state), basePath)} className="btn" focusId={PANEL_TITLE_ID}>
+        <NavLink href={entriesHref(clearExpenseFilters(state))} className="btn" focusId={PANEL_TITLE_ID}>
           Limpar filtros
         </NavLink>
         <NewEntryButton variant="primary" />
@@ -125,7 +121,7 @@ export async function ExpensesPanel({
           pageSize={pagination.pageSize}
           totalItems={pagination.totalItems}
           noun="despesas"
-          hrefFor={(p) => entriesHref(changePage(state, p), basePath)}
+          hrefFor={(p) => entriesHref(changePage(state, p))}
           focusId={PANEL_TITLE_ID}
         />
       </>

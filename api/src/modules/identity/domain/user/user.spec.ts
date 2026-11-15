@@ -1,7 +1,7 @@
 import { InvariantViolationError } from '@shared/domain/app-error.js';
-import { DEMO_USER_ID, FIRST_ADMIN_ID } from '@shared/domain/well-known-ids.js';
+import { FIRST_ADMIN_ID } from '@shared/domain/well-known-ids.js';
 import { NOW, eventNames, pullEvents, thrown } from '@test/support/builders.js';
-import { aUser, demoUser, emailOf, firstAdminMarker, hashOf, userId, userName, userUuid } from '@test/support/identity-builders.js';
+import { aUser, emailOf, firstAdminMarker, hashOf, userId, userName, userUuid } from '@test/support/identity-builders.js';
 import { User } from './user.js';
 
 const LATER = new Date(NOW.getTime() + 60_000);
@@ -32,14 +32,9 @@ describe('User.create (RF12)', () => {
   });
 });
 
-describe('User.demo e User.firstAdmin', () => {
-  it('demo: DEMO, sem hash, USER, nome e e-mail reservados, nunca autentica nem e gerenciavel', () => {
-    const u = User.demo({ now: NOW });
-    expect(u).toMatchObject({ kind: 'DEMO', role: 'USER', passwordHash: null });
-    expect(u.name.value).toBe('Demonstração');
-    expect(u.email.value).toBe('demo@finance.invalid');
-    expect(u.canAuthenticate()).toBe(false);
-    expect(u.isManageable()).toBe(false);
+describe('User.firstAdmin', () => {
+  it('nao existe mais User.demo (ADR 0013, T4)', () => {
+    expect((User as unknown as Record<string, unknown>).demo).toBeUndefined();
   });
 
   it('firstAdmin: id fixo, REGULAR, ADMIN, ACTIVE, troca obrigatoria, evento sem dados legados', () => {
@@ -61,12 +56,6 @@ describe('invariantes de kind/hash/role (ADR 3.2) no restore', () => {
   it('REGULAR sem hash -> violacao', () => {
     expect(thrown(() => aUser({ password: null }))).toBeInstanceOf(InvariantViolationError);
   });
-  it('DEMO com hash -> violacao', () => {
-    expect(thrown(() => demoUser({ password: 'x1234567' }))).toBeInstanceOf(InvariantViolationError);
-  });
-  it('DEMO com ADMIN -> violacao', () => {
-    expect(thrown(() => demoUser({ role: 'ADMIN' }))).toBeInstanceOf(InvariantViolationError);
-  });
   it('PENDING_FIRST_ADMIN com hash -> violacao', () => {
     expect(thrown(() => firstAdminMarker({ password: 'x1234567' }))).toBeInstanceOf(InvariantViolationError);
   });
@@ -76,10 +65,8 @@ describe('invariantes de kind/hash/role (ADR 3.2) no restore', () => {
   it('updatedAt anterior a createdAt -> violacao', () => {
     expect(thrown(() => aUser({ createdAt: LATER, updatedAt: NOW }))).toBeInstanceOf(InvariantViolationError);
   });
-  it('estados validos nao lancam (demo, marcador)', () => {
-    expect(() => demoUser()).not.toThrow();
+  it('estado valido nao lanca (marcador)', () => {
     expect(() => firstAdminMarker()).not.toThrow();
-    expect(demoUser().id.value).toBe(DEMO_USER_ID);
   });
 });
 
@@ -87,7 +74,6 @@ describe('predicados', () => {
   it.each([
     ['regular ativo', () => aUser(), true],
     ['regular inativo', () => aUser({ status: 'INACTIVE' }), false],
-    ['demo', () => demoUser(), false],
     ['marcador do primeiro admin', () => firstAdminMarker(), false],
   ])('canAuthenticate: %s -> %s', (_label, make, expected) => {
     expect(make().canAuthenticate()).toBe(expected);
@@ -102,10 +88,9 @@ describe('predicados', () => {
     expect(make().isActiveAdmin()).toBe(expected);
   });
 
-  it('isManageable: so REGULAR (demo e marcador respondem USER_NOT_FOUND)', () => {
+  it('isManageable: so REGULAR (o marcador responde USER_NOT_FOUND)', () => {
     expect(aUser().isManageable()).toBe(true);
     expect(aUser({ status: 'INACTIVE' }).isManageable()).toBe(true);
-    expect(demoUser().isManageable()).toBe(false);
     expect(firstAdminMarker().isManageable()).toBe(false);
   });
 });

@@ -31,6 +31,7 @@ enum EntryStatus {
 
 enum UserKind {
   REGULAR
+  /// Legado da demonstração pública (ADR 0013). O valor não é removível do tipo do PostgreSQL; proibido por users_kind_not_demo_chk.
   DEMO
   PENDING_FIRST_ADMIN
   SHOWCASE
@@ -66,6 +67,7 @@ model User {
   sessions           Session[]
   cards              Card[]
   entries            Entry[]
+  dataReset          OwnerDataReset?
 
   @@index([role, status], map: "users_role_status_idx")
   @@map("users")
@@ -84,13 +86,15 @@ model Session {
   @@map("sessions")
 }
 
-model DemoDataset {
-  ownerId         String   @id @map("owner_id") @db.Uuid
-  anchorMonth     DateTime @map("anchor_month") @db.Date
-  templateVersion Int      @map("template_version")
-  refreshedAt     DateTime @map("refreshed_at") @db.Timestamptz(3)
+/// Controle da redefinição de dados por dono (ADR 0013). Substitui demo_datasets.
+model OwnerDataReset {
+  ownerId         String    @id @map("owner_id") @db.Uuid
+  owner           User      @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Restrict)
+  anchorMonth     DateTime? @map("anchor_month") @db.Date
+  templateVersion Int?      @map("template_version")
+  lastResetAt     DateTime  @map("last_reset_at") @db.Timestamptz(3)
 
-  @@map("demo_datasets")
+  @@map("owner_data_resets")
 }
 
 model Card {

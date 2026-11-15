@@ -21,7 +21,7 @@ import { Logout } from './application/use-cases/auth/logout.js';
 import { PurgeExpiredSessions } from './application/use-cases/auth/purge-expired-sessions.js';
 import { BootstrapFirstAdmin } from './application/use-cases/bootstrap/bootstrap-first-admin.js';
 import { EnsureShowcaseAccount } from './application/use-cases/bootstrap/ensure-showcase-account.js';
-import { EnsureDemoUser } from './application/use-cases/bootstrap/ensure-demo-user.js';
+import { GetShowcaseAccountState } from './application/use-cases/bootstrap/get-showcase-account-state.js';
 import { RecoverAdminAccess } from './application/use-cases/bootstrap/recover-admin-access.js';
 import { CreateUser } from './application/use-cases/user-admin/create-user.js';
 import { DeactivateUser } from './application/use-cases/user-admin/deactivate-user.js';
@@ -199,9 +199,9 @@ const USE_CASE_PROVIDERS: Provider[] = [
     inject: [IDENTITY_UNIT_OF_WORK, PASSWORD_HASHER, CLOCK, DOMAIN_EVENT_PUBLISHER],
   },
   {
-    provide: EnsureDemoUser,
-    useFactory: (users: UserRepository, clock: Clock) => new EnsureDemoUser(users, clock),
-    inject: [USER_REPOSITORY, CLOCK],
+    provide: GetShowcaseAccountState,
+    useFactory: (users: UserRepository) => new GetShowcaseAccountState(users),
+    inject: [USER_REPOSITORY],
   },
 ];
 
@@ -236,7 +236,7 @@ const GUARD_PROVIDERS: Provider[] = [
     PASSWORD_HASHER,
     SESSION_TOKEN_ISSUER,
     IDENTITY_AUDIT_LOG,
-    EnsureDemoUser,
+    GetShowcaseAccountState,
     EnsureShowcaseAccount,
     BootstrapFirstAdmin,
     RecoverAdminAccess,

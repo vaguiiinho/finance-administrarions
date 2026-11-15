@@ -8,7 +8,7 @@ import type { SessionRepository } from '../../../domain/session/session.reposito
 import { SessionId } from '../../../domain/session/value-objects/session-id.js';
 import { InvalidCredentialsError, TooManyAttemptsError, UserValidationError } from '../../../domain/user/errors/user-errors.js';
 import type { UserRepository } from '../../../domain/user/user.repository.js';
-import { EmailAddress } from '../../../domain/user/value-objects/email-address.js';
+import { LoginIdentifier } from '../../../domain/user/value-objects/login-identifier.js';
 import { PlainPassword } from '../../../domain/user/value-objects/plain-password.js';
 import { toCurrentUserView } from '../../mappers/user-view.mapper.js';
 import type { AttemptKey, AttemptLimiter } from '../../ports/attempt-limiter.js';
@@ -40,7 +40,7 @@ export class LoginWithPassword {
       violations.push({ field: 'password', code: 'REQUIRED', message: 'Campo obrigatório.' });
     }
     if (violations.length > 0) throw new UserValidationError(violations);
-    const rawEmail = input.email as string;
+    const rawIdentifier = input.email as string;
     const rawPassword = input.password as string;
 
     const now = this.clock.now();
@@ -49,9 +49,13 @@ export class LoginWithPassword {
       kind: input.client?.kind ?? 'WEB',
       appVersion: input.client?.appVersion?.toString() ?? null,
     };
-    const key: AttemptKey = { scope: 'login-email-failures', value: rawEmail.trim().toLowerCase() };
-    const email = EmailAddress.create(rawEmail);
-    const user = email.ok ? await this.users.findByEmail(email.value) : null;
+    // Uma só normalização (LoginIdentifier): o alias e o e-mail canônico da conta demo compartilham a chave do limite.
+    const identifier = LoginIdentifier.parse(rawIdentifier);
+    const key: AttemptKey = {
+      scope: 'login-email-failures',
+      value: identifier.ok ? identifier.value.email.value : LoginIdentifier.normalize(rawIdentifier),
+    };
+    const user = identifier.ok ? await this.users.findByEmail(identifier.value.email) : null;
     // O lookup vem antes do `peek` de propósito: a isenção vale só para a conta SHOWCASE, que só se conhece após buscar
     // o usuário. O custo extra de leitura é limitado pelo `AuthQuotaGuard` (cota por IP).
     // ADR 0011 3.4: a senha da conta de demonstração é pública; o bloqueio por e-mail só serviria para negar acesso.
@@ -63,7 +67,7 @@ export class LoginWithPassword {
       throw new TooManyAttemptsError(decision.retryAfterSeconds);
     }
 
-    // RNF05: a verificação roda sempre; usuário inexistente, inativo, demo ou marcador caem no hash fictício.
+    // RNF05: a verificação roda sempre; usuário inexistente, inativo, conta demo inativa ou marcador caem no hash fictício.
     const verified = await this.hasher.verify(
       PlainPassword.forVerification(rawPassword),
       user?.canAuthenticate() ? user.passwordHash : null,
@@ -73,7 +77,7 @@ export class LoginWithPassword {
       this.audit.loginFailed({
         clientIp: input.clientIp,
         at: now,
-        email: email.ok ? email.value : null,
+        email: identifier.ok ? identifier.value.email : null,
         userId: user?.id.value ?? null,
         client,
       });

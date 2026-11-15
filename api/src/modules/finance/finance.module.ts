@@ -14,9 +14,7 @@ import {
   MONTHLY_SUMMARY_READ_MODEL,
   type MonthlySummaryReadModel,
 } from './application/ports/monthly-summary-read-model.js';
-import { SHOWCASE_DATA_PURGER } from './application/ports/showcase-data-purger.js';
-import { DEMO_DATASET_STORE, type DemoDatasetStore } from './application/demo/demo-dataset-store.js';
-import { RefreshDemoDataset } from './application/demo/refresh-demo-dataset.js';
+import { OWNER_DATA_RESET_STORE, type OwnerDataResetStore } from './application/ports/owner-data-reset-store.js';
 import { CreateCard } from './application/use-cases/cards/create-card.js';
 import { ListCards } from './application/use-cases/cards/list-cards.js';
 import { UpdateCard } from './application/use-cases/cards/update-card.js';
@@ -34,6 +32,7 @@ import { MarkEntryAsPaid } from './application/use-cases/entries/mark-entry-as-p
 import { PayEntriesInBatch } from './application/use-cases/entries/pay-entries-in-batch.js';
 import { ListInvoiceEntries } from './application/use-cases/invoices/list-invoice-entries.js';
 import { ListInvoices } from './application/use-cases/invoices/list-invoices.js';
+import { ResetOwnerData } from './application/use-cases/maintenance/reset-owner-data.js';
 import { PayInvoice } from './application/use-cases/invoices/pay-invoice.js';
 import { GetMonthlySummary } from './application/use-cases/summary/get-monthly-summary.js';
 import { CARD_REPOSITORY, type CardRepository } from './domain/card/card.repository.js';
@@ -46,7 +45,6 @@ import { CategoriesController } from './presentation/http/categories.controller.
 import { DashboardController } from './presentation/http/dashboard.controller.js';
 import { EntriesController } from './presentation/http/entries.controller.js';
 import { InvoicesController } from './presentation/http/invoices.controller.js';
-import { DemoController } from './presentation/http/demo.controller.js';
 import { FinanceReadHandlers } from './presentation/http/finance-read-handlers.js';
 import { SummaryController } from './presentation/http/summary.controller.js';
 
@@ -55,10 +53,10 @@ const ENTRY_PAYMENT_SERVICE = Symbol('ENTRY_PAYMENT_SERVICE');
 /** Use cases são classes simples: instanciadas por factory com as dependências injetadas por token. */
 const USE_CASE_PROVIDERS: Provider[] = [
   {
-    provide: RefreshDemoDataset,
-    useFactory: (store: DemoDatasetStore, calendar: BusinessCalendar, ids: IdGenerator, clock: Clock) =>
-      new RefreshDemoDataset(store, calendar, ids, clock),
-    inject: [DEMO_DATASET_STORE, BUSINESS_CALENDAR, ID_GENERATOR, CLOCK],
+    provide: ResetOwnerData,
+    useFactory: (store: OwnerDataResetStore, calendar: BusinessCalendar, ids: IdGenerator, clock: Clock) =>
+      new ResetOwnerData(store, calendar, ids, clock),
+    inject: [OWNER_DATA_RESET_STORE, BUSINESS_CALENDAR, ID_GENERATOR, CLOCK],
   },
   { provide: ENTRY_PAYMENT_SERVICE, useFactory: () => new EntryPaymentService() },
   {
@@ -180,9 +178,8 @@ const USE_CASE_PROVIDERS: Provider[] = [
     CategoriesController,
     SummaryController,
     DashboardController,
-    DemoController,
   ],
   providers: [...FINANCE_INFRASTRUCTURE_PROVIDERS, ...USE_CASE_PROVIDERS, FinanceReadHandlers],
-  exports: [RefreshDemoDataset, SHOWCASE_DATA_PURGER],
+  exports: [ResetOwnerData],
 })
 export class FinanceModule {}

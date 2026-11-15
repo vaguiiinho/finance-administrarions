@@ -79,8 +79,4 @@ export class PrismaEntryRepository implements EntryRepository {
       throw new Error(`saveAll: ${affected} de ${entries.length} linhas atualizadas (contrato de lock violado).`);
     }
   }
-
-  async deleteAllOf(ownerId: OwnerId): Promise<void> {
-    await this.prisma.entry.deleteMany({ where: { userId: ownerId.value } });
-  }
 }

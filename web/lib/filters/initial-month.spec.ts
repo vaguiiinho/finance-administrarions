@@ -3,7 +3,7 @@ import { fallbackMonthHref, hasMonthParam, initialMonthHref, parseAdvanceSignal,
 
 /**
  * Modulo puro do mes inicial (ADR 0007 7.2/7.3). CONTRATO PROPOSTO PELO TESTER (o ADR fixa comportamento, nao nomes):
- *  hasMonthParam(raw) | initialMonthHref(raw, decision, basePath) | fallbackMonthHref(raw, now, basePath)
+ *  hasMonthParam(raw) | initialMonthHref(raw, decision) | fallbackMonthHref(raw, now)  (ADR 0013 9.4: sem basePath)
  *  parseAdvanceSignal(raw, month) -> { advance, from } | null | stripAdvanceSignal(href).
  */
 const qs = (href: string) => new URLSearchParams(href.split("?")[1]);
@@ -34,7 +34,7 @@ describe("initialMonthHref: redirecionamento para o mes resolvido (T2, RF03, P05
   });
 
   it("CA01: sem avanco, so acrescenta month (sem sinal de aviso)", () => {
-    const href = initialMonthHref({}, decision(), "");
+    const href = initialMonthHref({}, decision());
     expect(pathOf(href)).toBe("/entries");
     expect(qs(href).get("month")).toBe("2026-10");
     expect(qs(href).has("adv")).toBe(false);
@@ -42,36 +42,37 @@ describe("initialMonthHref: redirecionamento para o mes resolvido (T2, RF03, P05
   });
 
   it("CA06: NEXT_PENDING acrescenta adv e adv_from (= M, o mes sem pendencia)", () => {
-    const href = initialMonthHref({}, decision({ month: "2026-12", advance: "NEXT_PENDING" }), "");
+    const href = initialMonthHref({}, decision({ month: "2026-12", advance: "NEXT_PENDING" }));
     expect(qs(href).get("month")).toBe("2026-12");
     expect(qs(href).get("adv")).toBe("NEXT_PENDING");
     expect(qs(href).get("adv_from")).toBe("2026-10");
   });
 
   it("CA02: NO_PENDING_AHEAD acrescenta adv e adv_from = M", () => {
-    const href = initialMonthHref({}, decision({ month: "2026-11", advance: "NO_PENDING_AHEAD" }), "");
+    const href = initialMonthHref({}, decision({ month: "2026-11", advance: "NO_PENDING_AHEAD" }));
     expect(qs(href).get("adv")).toBe("NO_PENDING_AHEAD");
     expect(qs(href).get("adv_from")).toBe("2026-10");
   });
 
   it("CA16: virada de ano com salto de varios meses", () => {
-    const href = initialMonthHref({}, { currentMonth: "2026-11", month: "2027-02", advance: "NEXT_PENDING" }, "");
+    const href = initialMonthHref({}, { currentMonth: "2026-11", month: "2027-02", advance: "NEXT_PENDING" });
     expect(qs(href).get("month")).toBe("2027-02");
     expect(qs(href).get("adv_from")).toBe("2026-11");
   });
 
   it("P05: os demais parametros sao mantidos (aba, filtros, cartao, pagina)", () => {
-    const href = initialMonthHref({ tab: "invoices", f_status: "ALL", d_status: "PAID", d_card: "pix", d_category: "Moradia", r_category: "Salário", page: "2" }, decision({ month: "2026-12", advance: "NEXT_PENDING" }), "");
+    const href = initialMonthHref({ tab: "invoices", f_status: "ALL", d_status: "PAID", d_card: "pix", d_category: "Moradia", r_category: "Salário", page: "2" }, decision({ month: "2026-12", advance: "NEXT_PENDING" }));
     const q = qs(href);
     expect(Object.fromEntries(q)).toMatchObject({ tab: "invoices", f_status: "ALL", d_status: "PAID", d_card: "pix", d_category: "Moradia", r_category: "Salário", page: "2", month: "2026-12" });
   });
 
-  it("basePath /demo gera /demo/entries (mesma funcao na demo)", () => {
-    expect(pathOf(initialMonthHref({}, decision(), "/demo"))).toBe("/demo/entries");
+  it("sem basePath: o caminho e sempre /entries (a demonstracao publica saiu, ADR 0013 9.4)", () => {
+    expect(pathOf(initialMonthHref({}, decision()))).toBe("/entries");
+    expect(initialMonthHref({}, decision())).not.toMatch(/\/demo/);
   });
 
   it("valores de parametro sao codificados (sem injecao de query)", () => {
-    const href = initialMonthHref({ d_category: "A&month=2000-01" }, decision(), "");
+    const href = initialMonthHref({ d_category: "A&month=2000-01" }, decision());
     expect(qs(href).get("month")).toBe("2026-10");
     expect(qs(href).get("d_category")).toBe("A&month=2000-01");
   });
@@ -79,14 +80,14 @@ describe("initialMonthHref: redirecionamento para o mes resolvido (T2, RF03, P05
 
 describe("fallbackMonthHref: falha na verificacao -> M do web, sem aviso (RNF02, RNF03, CA22)", () => {
   it("usa o mes corrente em America/Sao_Paulo, nunca UTC", () => {
-    expect(qs(fallbackMonthHref({}, new Date("2026-11-01T02:30:00.000Z"), "")).get("month")).toBe("2026-10"); // 31/10 23:30 em SP
-    expect(qs(fallbackMonthHref({}, new Date("2026-11-01T03:30:00.000Z"), "")).get("month")).toBe("2026-11");
-    expect(qs(fallbackMonthHref({}, new Date("2027-01-01T02:30:00.000Z"), "")).get("month")).toBe("2026-12");
+    expect(qs(fallbackMonthHref({}, new Date("2026-11-01T02:30:00.000Z"))).get("month")).toBe("2026-10"); // 31/10 23:30 em SP
+    expect(qs(fallbackMonthHref({}, new Date("2026-11-01T03:30:00.000Z"))).get("month")).toBe("2026-11");
+    expect(qs(fallbackMonthHref({}, new Date("2027-01-01T02:30:00.000Z"))).get("month")).toBe("2026-12");
   });
 
-  it("nao carrega sinal de aviso, mantem os demais parametros e respeita /demo", () => {
-    const href = fallbackMonthHref({ tab: "invoices", f_status: "PAID" }, new Date("2026-10-30T15:00:00.000Z"), "/demo");
-    expect(pathOf(href)).toBe("/demo/entries");
+  it("nao carrega sinal de aviso e mantem os demais parametros", () => {
+    const href = fallbackMonthHref({ tab: "invoices", f_status: "PAID" }, new Date("2026-10-30T15:00:00.000Z"));
+    expect(pathOf(href)).toBe("/entries");
     expect(qs(href).has("adv")).toBe(false);
     expect(qs(href).get("tab")).toBe("invoices");
     expect(qs(href).get("f_status")).toBe("PAID");

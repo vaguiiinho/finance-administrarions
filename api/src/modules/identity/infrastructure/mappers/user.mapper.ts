@@ -1,10 +1,24 @@
 import { unwrapPersisted } from '@shared/domain/unwrap.js';
 import type { Prisma, User as UserRow } from '@shared/infrastructure/prisma/generated/client.js';
+import { InvariantViolationError } from '@shared/domain/app-error.js';
 import { User } from '../../domain/user/user.js';
+import type { UserKind } from '../../domain/user/value-objects/user-status.js';
 import { EmailAddress } from '../../domain/user/value-objects/email-address.js';
 import { PasswordHash } from '../../domain/user/value-objects/password-hash.js';
 import { UserId } from '../../domain/user/value-objects/user-id.js';
 import { UserName } from '../../domain/user/value-objects/user-name.js';
+
+/** O valor legado do enum do banco não é mais suportado (barrado por users_kind_not_demo_chk). */
+function toUserKind(kind: UserRow['kind']): UserKind {
+  switch (kind) {
+    case 'REGULAR':
+    case 'PENDING_FIRST_ADMIN':
+    case 'SHOWCASE':
+      return kind;
+    default:
+      throw new InvariantViolationError(`users.kind ${String(kind)} não é mais suportado.`);
+  }
+}
 
 export const UserMapper = {
   toDomain(row: UserRow): User {
@@ -14,7 +28,7 @@ export const UserMapper = {
       email: unwrapPersisted(EmailAddress.create(row.email), 'users.email'),
       passwordHash:
         row.passwordHash === null ? null : unwrapPersisted(PasswordHash.create(row.passwordHash), 'users.password_hash'),
-      kind: row.kind,
+      kind: toUserKind(row.kind),
       role: row.role,
       status: row.status,
       mustChangePassword: row.mustChangePassword,

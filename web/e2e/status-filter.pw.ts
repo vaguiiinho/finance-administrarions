@@ -1,7 +1,7 @@
 import { type Page } from "@playwright/test";
 import { expect, test } from "./auth-support";
 import { signInAsAna } from "./legacy-auth";
-import { PAGE_BG_REGION, audit, gotoReady, setScenario, setThemeCookie } from "./support";
+import { PAGE_BG_REGION, audit, gotoReady, setThemeCookie } from "./support";
 import { cardExpense, currentMonthSP, income, longMonth, monthFromNow, pixExpense, stubCard, seedData } from "./entries-data";
 
 /**
@@ -531,18 +531,6 @@ test.describe("Faturas: filtro de status (CA45-CA59)", () => {
     await expect(link).toHaveAttribute("href", /d_status=ALL/);
   });
 
-  test("CA59: demo - alternar Pendente / Pago / Todos segue o filtro e nao ha 'Pagar fatura'", async ({ page }) => {
-    await setScenario("default");
-    await gotoReady(page, `/demo/entries?month=${M()}&tab=invoices`);
-    await expect(radio(page, "Pendente")).toBeChecked();
-    await expect(page.getByRole("heading", { level: 3 }).first()).toBeVisible(); // a fatura demo tem pendencia
-    await radio(page, "Pago").click();
-    await expect(page.getByText(`Nenhuma fatura para os filtros selecionados em ${longMonth(M())}`)).toBeVisible();
-    await radio(page, "Todos").click();
-    await expect(page.getByRole("heading", { level: 3 }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /Pagar fatura/ })).toHaveCount(0);
-    await expect(page).toHaveURL(/\/demo\/entries/);
-  });
 });
 
 test.describe("acessibilidade do filtro de status (RNF06; design 14)", () => {
